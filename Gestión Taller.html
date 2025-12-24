@@ -2944,7 +2944,7 @@
                 document.getElementById('mesPlanificacion').value = `${anio}-${mes}`;
             }
 
-            openTab('registro', { currentTarget: document.querySelector('.tab') });
+            openTab('registro', { currentTarget: document.querySelector('.tab'), preventDefault: () => {} });
             setInterval(() => { syncToGoogleSheets(false); }, AUTO_SYNC_INTERVAL_MIN * 60 * 1000);
 
             // Auto-generate recurring expenses on startup
