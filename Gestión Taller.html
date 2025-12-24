@@ -2117,7 +2117,7 @@
                 <div class="form-group">
                     <label for="codigoCompleto">Código Completo:</label>
                     <input type="text" id="codigoCompleto" required style="background: var(--color-neutro-suave);"
-                        oninput="if(document.getElementById('proveedor').value === 'rosa_clara') actualizarProcesamiento()">
+                        oninput="actualizarProcesamiento()">
                 </div>
                 <div class="form-group" id="codigoBarrasSection" style="display: none;">
                     <label for="codigoBarras">Código de Barras (Rosa Clará):</label>
@@ -2138,7 +2138,7 @@
                 </div>
                 <div class="form-group" id="numeroOFSection" style="display: none;"> <label for="numeroOF">Número OF:
                         <span style="color: var(--color-error);">*</span></label> <input type="text" id="numeroOF"
-                        placeholder="Obligatorio para Pronovias" required> </div>
+                        placeholder="Obligatorio para Pronovias"> </div>
                 <div class="grid-3">
                     <div class="form-group"> <label for="horasEstimadas">Horas Estimadas:</label> <input type="number"
                             id="horasEstimadas" step="0.01" required> </div>
@@ -2995,10 +2995,12 @@
             if (proveedor === 'pronovias') {
                 seccionOF.style.display = 'block';
                 campoOF.classList.add('resaltar-campo');
+                campoOF.setAttribute('required', 'required');
             } else {
                 seccionOF.style.display = 'none';
                 campoOF.classList.remove('resaltar-campo');
                 campoOF.value = ''; // Clear the field when hiding
+                campoOF.removeAttribute('required'); // Remove required attribute when hiding
             }
         }
 
