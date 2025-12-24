@@ -2183,7 +2183,7 @@
                     </div>
                     <div id="incrementoPrecioSection" style="display: none; margin-top: 15px;">
                         <label class="toggle-btn">
-                            <input type="checkbox" id="incrementaPrecio">
+                            <input type="checkbox" id="incrementaPrecio" name="incrementaPrecio">
                             <span class="toggle-label">Incrementa el precio</span>
                         </label>
                     </div>
@@ -3815,6 +3815,8 @@
                 const fechaFacturaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
                 if (vestido.alertaEspecial && !confirm(`⚠️ ATENCIÓN: Este vestido está marcado como ESPECIAL.\n¿Continuar con el pago?`)) return;
+                
+                if (vestido.incrementoPrecio && !confirm(`💰 ATENCIÓN: Este vestido tiene marcado "Incrementa el precio".\n¿Continuar con el pago?`)) return;
 
                 vestido.numeroFactura = numeroFacturaInput;
                 vestido.fechaFactura = fechaFacturaISO;
@@ -3945,6 +3947,13 @@
         function generarFacturaEnLote() {
             const vestidosSeleccionados = getVestidosSeleccionadosEnLote();
             if (vestidosSeleccionados.length === 0) return alert('No hay vestidos seleccionados.');
+
+            // Check if any dress has incrementoPrecio set to true
+            const vestidosConIncrementoPrecio = vestidosSeleccionados.filter(v => v.incrementoPrecio);
+            if (vestidosConIncrementoPrecio.length > 0) {
+                const nombres = vestidosConIncrementoPrecio.map(v => `- ${v.nombreModelo} (${v.lote})`).join('\n');
+                if (!confirm(`💰 ATENCIÓN: Los siguientes ${vestidosConIncrementoPrecio.length} vestido(s) tienen marcado "Incrementa el precio":\n\n${nombres}\n\n¿Continuar con la factura?`)) return;
+            }
 
             const numeroFacturaInput = prompt('Introduce el número de factura:', numeroFactura);
             if (!numeroFacturaInput) return;
