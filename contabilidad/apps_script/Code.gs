@@ -318,7 +318,8 @@ function importFacturasFromSheet() {
  * Genera asiento contable para una factura
  */
 function generateInvoiceEntry(asientosSheet, facturaId, numFactura, fecha, base, cuotaIVA, total, concepto) {
-  const numAsiento = findNextId(asientosSheet);
+  const nextLineId = findNextId(asientosSheet);
+  const numAsiento = findNextAsientoNumber(asientosSheet);
   const timestamp = new Date();
   const usuario = Session.getActiveUser().getEmail();
   
@@ -329,9 +330,9 @@ function generateInvoiceEntry(asientosSheet, facturaId, numFactura, fecha, base,
   const asientos = [
     // Línea 1: Compras (DEBE)
     [
-      numAsiento,                      // ID
+      nextLineId,                      // ID (unique line identifier)
       fecha,                           // Fecha
-      numAsiento,                      // Num_Asiento
+      numAsiento,                      // Num_Asiento (groups related lines)
       '600',                           // Cuenta (Compras)
       base,                            // Debe
       0,                               // Haber
@@ -343,7 +344,7 @@ function generateInvoiceEntry(asientosSheet, facturaId, numFactura, fecha, base,
     ],
     // Línea 2: IVA Soportado (DEBE)
     [
-      numAsiento + 1,
+      nextLineId + 1,
       fecha,
       numAsiento,
       '472',                           // Cuenta (IVA Soportado)
@@ -357,7 +358,7 @@ function generateInvoiceEntry(asientosSheet, facturaId, numFactura, fecha, base,
     ],
     // Línea 3: Proveedores (HABER)
     [
-      numAsiento + 2,
+      nextLineId + 2,
       fecha,
       numAsiento,
       '400',                           // Cuenta (Proveedores)
@@ -694,6 +695,27 @@ function findNextId(sheet) {
   });
   
   return maxId + 1;
+}
+
+/**
+ * Encuentra el siguiente número de asiento disponible
+ * (busca en la columna Num_Asiento, que es la columna 3)
+ */
+function findNextAsientoNumber(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return 1;
+  
+  const numAsientos = sheet.getRange(2, 3, lastRow - 1, 1).getValues();
+  let maxNumAsiento = 0;
+  
+  numAsientos.forEach(row => {
+    const num = parseInt(row[0]);
+    if (!isNaN(num) && num > maxNumAsiento) {
+      maxNumAsiento = num;
+    }
+  });
+  
+  return maxNumAsiento + 1;
 }
 
 /**
