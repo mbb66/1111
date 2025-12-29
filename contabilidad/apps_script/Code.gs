@@ -322,7 +322,7 @@ function generateInvoiceEntry(asientosSheet, facturaId, numFactura, fecha, base,
   const nextLineId = findNextId(asientosSheet);
   const numAsiento = findNextAsientoNumber(asientosSheet);
   const timestamp = new Date();
-  const usuario = Session.getActiveUser().getEmail();
+  const usuario = Session.getActiveUser().getEmail() || 'Sistema';
   
   // Asiento: 
   // DEBE: 600 Compras (base) + 472 IVA soportado (cuota)
