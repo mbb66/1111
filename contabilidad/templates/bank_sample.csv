@@ -1,0 +1,4 @@
+Fecha,Fecha_Valor,Descripción,Importe,Saldo
+01/01/2024,01/01/2024,Ejemplo de ingreso,1000.00,1000.00
+02/01/2024,02/01/2024,Ejemplo de pago,-250.50,749.50
+03/01/2024,03/01/2024,Transferencia recibida,500.00,1249.50
