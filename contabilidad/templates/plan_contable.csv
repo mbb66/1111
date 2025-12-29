@@ -1,26 +1,17 @@
-Código,Nombre,Tipo,Descripción
-100,Capital Social,Patrimonio Neto,Capital de la empresa
-129,Resultado del Ejercicio,Patrimonio Neto,Beneficio o pérdida del año
-170,Deudas a Largo Plazo,Pasivo No Corriente,Préstamos a más de un año
-400,Proveedores,Pasivo Corriente,Deudas con proveedores
-410,Acreedores,Pasivo Corriente,Otras deudas a corto plazo
-430,Clientes,Activo Corriente,Deudas de clientes
-472,HP IVA Soportado,Activo Corriente,IVA en compras
-477,HP IVA Repercutido,Pasivo Corriente,IVA en ventas
-520,Deudas a Corto Plazo,Pasivo Corriente,Préstamos a menos de un año
-572,Banco c/c,Activo Corriente,Cuenta corriente bancaria
-600,Compras,Gasto,Compras de mercaderías
-621,Arrendamientos,Gasto,Alquiler local
-622,Reparaciones,Gasto,Reparaciones y conservación
-623,Servicios Profesionales,Gasto,Gestoría, abogados, etc
-624,Transportes,Gasto,Gastos de transporte
-625,Primas de Seguros,Gasto,Seguros varios
-626,Servicios Bancarios,Gasto,Comisiones bancarias
-627,Publicidad,Gasto,Marketing y publicidad
-628,Suministros,Gasto,Luz, agua, gas, teléfono
-629,Otros Servicios,Gasto,Otros gastos de explotación
-640,Sueldos y Salarios,Gasto,Nóminas personal
-642,Seguridad Social,Gasto,Cotizaciones SS empresa
-700,Ventas,Ingreso,Ventas de productos/servicios
-705,Prestaciones de Servicios,Ingreso,Ingresos por servicios
-759,Ingresos Diversos,Ingreso,Otros ingresos
+codigo,cuenta,tipo,descripcion
+1000,Caja,Activo,Caja y efectivo
+5720,Banco,Activo,Cuenta bancaria principal
+600,Compras,Gasto,Compras mercaderias/materiales
+620,Servicios exteriores,Gasto,Subcontratacion/confeccion
+630,Suministros,Gasto,Luz/agua/telefono/internet
+640,Sueldos y salarios,Gasto,Remuneraciones
+641,Seguridad Social a cargo empresa,Gasto,Cotizaciones empresa
+663,Gastos financieros,Gasto,Intereses y comisiones
+672,Seguros,Gasto,Seguros varios
+627,Gestoria,Gasto,Honorarios gestor
+472,IVA Soportado,Impuesto,IVA soportado
+477,IVA Repercutido,Impuesto,IVA repercutido
+400,Proveedores,Pasivo,Proveedores
+170,Prestamos,Pasivo,Prestamos a largo plazo
+129,Resultado ejercicio,Patrimonio,Resultado del ejercicio
+136,Retiros propietarios,Patrimonio,Retiros/retiradas

@@ -1,4 +1,2 @@
-Fecha,Proveedor_Nombre,Num_Factura,Base_Imponible,IVA_%,Total,Forma_Pago,Días_Vencimiento
-01/01/2024,Proveedor Ejemplo S.L.,F-2024-001,100.00,21,121.00,Transferencia,30
-15/01/2024,Suministros Test S.A.,F-2024-002,250.50,21,303.11,Transferencia,30
-20/01/2024,Servicios Ficticios S.L.,F-2024-003,500.00,21,605.00,Transferencia,60
+proveedor_id,fecha_emision,fecha_recepcion,n_factura,forma_pago,fecha_pago,base,tipo_iva,iva_importe,total,tipo_operacion,notas
+# Plantilla vacía para importación de facturas. Rellena filas a partir de la segunda.
