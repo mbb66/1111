@@ -53,8 +53,8 @@ export default function Facturas() {
     setFormData({
       ...formData,
       base_imponible: value,
-      cuota_iva: cuota.toFixed(2),
-      total: (base + cuota).toFixed(2),
+      cuota_iva: cuota,
+      total: base + cuota,
     });
   };
 
@@ -64,8 +64,8 @@ export default function Facturas() {
     setFormData({
       ...formData,
       tipo_iva: value,
-      cuota_iva: cuota.toFixed(2),
-      total: (base + cuota).toFixed(2),
+      cuota_iva: cuota,
+      total: base + cuota,
     });
   };
 
@@ -244,20 +244,18 @@ export default function Facturas() {
                   Cuota IVA (€)
                 </label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   readOnly
-                  value={formData.cuota_iva}
+                  value={(formData.cuota_iva || 0).toFixed(2)}
                   className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Total (€)</label>
                 <input
-                  type="number"
-                  step="0.01"
+                  type="text"
                   readOnly
-                  value={formData.total}
+                  value={(formData.total || 0).toFixed(2)}
                   className="w-full px-3 py-2 border border-gray-300 rounded bg-gray-100 font-semibold"
                 />
               </div>

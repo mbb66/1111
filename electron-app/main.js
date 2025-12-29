@@ -11,13 +11,13 @@ const userDataPath = app.getPath('userData');
 const dbPath = path.join(userDataPath, 'contabilidad.db');
 const backupsPath = path.join(userDataPath, 'backups');
 
-// Crear directorio de backups si no existe
-if (!fs.existsSync(backupsPath)) {
-  fs.mkdirSync(backupsPath, { recursive: true });
-}
-
 function initializeDatabase() {
   try {
+    // Crear directorio de backups si no existe
+    if (!fs.existsSync(backupsPath)) {
+      fs.mkdirSync(backupsPath, { recursive: true });
+    }
+    
     db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     
@@ -206,10 +206,12 @@ ipcMain.handle('facturas:create', async (event, factura) => {
     `);
     
     // Asiento 1: Base imponible (Debe: Gasto, Haber: Proveedor)
+    // TODO Phase 2: Implement dynamic account selection based on factura.categoria
+    // For now using 600 (Compras) as default for MVP
     insertAsiento.run(
       facturaData.fecha_emision,
       numeroAsiento,
-      '600', // Compras (o código de gasto según categoría)
+      '600', // Compras - default expense account
       '400', // Proveedores
       facturaData.base_imponible,
       `Factura ${facturaData.numero_factura} - Base imponible`,
@@ -404,7 +406,9 @@ ipcMain.handle('backup:create', async () => {
     const backupFileName = `contabilidad_backup_${timestamp}.db`;
     const backupFilePath = path.join(backupsPath, backupFileName);
     
-    // Cerrar WAL mode temporalmente para hacer backup
+    // Checkpoint WAL to ensure backup consistency
+    // Note: TRUNCATE mode used for simplicity in Phase 1 MVP
+    // TODO Phase 2: Consider PASSIVE mode or background thread for large databases
     db.pragma('wal_checkpoint(TRUNCATE)');
     
     // Copiar archivo de base de datos

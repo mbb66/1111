@@ -1,4 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+const CATEGORIAS_DEFAULT = [
+  'Suministros',
+  'Reparaciones',
+  'Servicios profesionales',
+  'Transportes',
+  'Seguros',
+  'Publicidad',
+  'Otros servicios',
+];
 
 export default function Gastos() {
   const [gastos, setGastos] = useState([]);
@@ -17,17 +27,7 @@ export default function Gastos() {
     notas: '',
   });
 
-  const CATEGORIAS_DEFAULT = [
-    'Suministros',
-    'Reparaciones',
-    'Servicios profesionales',
-    'Transportes',
-    'Seguros',
-    'Publicidad',
-    'Otros servicios',
-  ];
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       const [gastosRes, proveedoresRes, categoriasRes] = await Promise.all([
@@ -49,12 +49,11 @@ export default function Gastos() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // No dependencies needed as CATEGORIAS_DEFAULT is constant
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

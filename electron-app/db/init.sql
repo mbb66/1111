@@ -88,6 +88,8 @@ CREATE TABLE IF NOT EXISTS asientos (
     tipo TEXT DEFAULT 'automatico' CHECK(tipo IN ('automatico', 'manual')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (factura_id) REFERENCES facturas(id),
+    -- Using codigo (account code) for FK to maintain accounting standard references
+    -- Account codes are stable identifiers in accounting practice (e.g., 472, 600, 400)
     FOREIGN KEY (cuenta_debe) REFERENCES plan_contable(codigo),
     FOREIGN KEY (cuenta_haber) REFERENCES plan_contable(codigo)
 );
