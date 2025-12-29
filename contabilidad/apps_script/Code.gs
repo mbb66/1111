@@ -270,8 +270,9 @@ function importFacturasFromSheet() {
     let fechaNormalizada = fecha instanceof Date ? fecha : new Date(fecha);
     const baseNum = normalizeNumber(baseImponible);
     const ivaNum = normalizeNumber(tipoIVA);
-    const cuotaIVA = baseNum * (ivaNum / 100);
-    const total = baseNum + cuotaIVA;
+    // Redondear cuota de IVA a 2 decimales para precisión monetaria
+    const cuotaIVA = Math.round(baseNum * (ivaNum / 100) * 100) / 100;
+    const total = Math.round((baseNum + cuotaIVA) * 100) / 100;
     
     // Calcular fecha de vencimiento (30 días por defecto)
     const fechaVencimiento = new Date(fechaNormalizada);
