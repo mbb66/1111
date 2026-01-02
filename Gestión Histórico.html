@@ -637,6 +637,72 @@
             margin: 5px 0;
         }
 
+        .toggle-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .toggle-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+            background: var(--color-superficie);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn input[type="checkbox"] {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--color-primario-suave);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn input[type="checkbox"]:checked {
+            background: var(--color-primario);
+            border-color: var(--color-primario);
+        }
+
+        .toggle-btn input[type="checkbox"]:checked::after {
+            content: '✔';
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+        }
+
+        .toggle-btn:hover {
+            background: var(--color-fondo);
+        }
+
+        .toggle-label {
+            font-weight: 500;
+            color: var(--color-texto-principal);
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .filter-actions .btn {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3, .grid-4 {
                 grid-template-columns: 1fr;
@@ -699,23 +765,58 @@
         <!-- TAB: Inventario -->
         <div id="inventario" class="tab-content">
             <h2>Inventario Actual</h2>
-            <div class="grid-3" style="margin-bottom: 20px;">
-                <input type="text" id="buscadorVestidos" placeholder="🔍 Buscar por código, modelo, talla, lote..." 
-                       oninput="renderizarInventario()">
-                <select id="filtroProveedorInventario" onchange="renderizarInventario()">
-                    <option value="todos">Todos los proveedores</option>
-                    <option value="pronovias">Pronovias</option>
-                    <option value="rosa_clara">Rosa Clará</option>
-                    <option value="traka">Traka</option>
-                </select>
-                <select id="filtroEstadoInventario" onchange="renderizarInventario()">
-                    <option value="todos">Todos los estados</option>
-                    <option value="en_taller">En Taller</option>
-                    <option value="enviado">Enviado</option>
-                    <option value="pagado">Pagado</option>
-                    <option value="con_tara">Con Tara</option>
-                    <option value="reparado">Reparado</option>
-                </select>
+            <div style="margin-bottom: 20px;">
+                <div class="grid-3" style="margin-bottom: 15px;">
+                    <input type="text" id="buscadorVestidos" placeholder="🔍 Buscar por código, modelo, talla, lote..." 
+                           oninput="renderizarInventario()">
+                    <select id="filtroProveedorInventario" onchange="renderizarInventario()">
+                        <option value="todos">Todos los proveedores</option>
+                        <option value="pronovias">Pronovias</option>
+                        <option value="rosa_clara">Rosa Clará</option>
+                        <option value="traka">Traka</option>
+                    </select>
+                    <div></div>
+                </div>
+                <div class="grid-2" style="margin-bottom: 15px;">
+                    <div class="form-group">
+                        <label>Fecha Desde:</label>
+                        <input type="date" id="filtroFechaDesde" onchange="renderizarInventario()">
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha Hasta:</label>
+                        <input type="date" id="filtroFechaHasta" onchange="renderizarInventario()">
+                    </div>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 10px; color: var(--color-texto-principal);">Filtrar por Estados:</h4>
+                    <div class="filter-actions">
+                        <button class="btn" onclick="selectAllEstadosInventario()">✓ Todos</button>
+                        <button class="btn" onclick="clearAllEstadosInventario()">✗ Ninguno</button>
+                        <button class="btn" onclick="selectPendingEstadosInventario()">⏳ Pendientes</button>
+                    </div>
+                    <div class="toggle-group">
+                        <label class="toggle-btn estado-filter-toggle">
+                            <input type="checkbox" value="en_taller" onchange="renderizarInventario()" checked>
+                            <span class="toggle-label">🏭 En taller</span>
+                        </label>
+                        <label class="toggle-btn estado-filter-toggle">
+                            <input type="checkbox" value="con_tara" onchange="renderizarInventario()" checked>
+                            <span class="toggle-label">⚠️ Con tara</span>
+                        </label>
+                        <label class="toggle-btn estado-filter-toggle">
+                            <input type="checkbox" value="reparado" onchange="renderizarInventario()" checked>
+                            <span class="toggle-label">🔧 Reparado</span>
+                        </label>
+                        <label class="toggle-btn estado-filter-toggle">
+                            <input type="checkbox" value="enviado" onchange="renderizarInventario()" checked>
+                            <span class="toggle-label">📦 Enviado</span>
+                        </label>
+                        <label class="toggle-btn estado-filter-toggle">
+                            <input type="checkbox" value="pagado" onchange="renderizarInventario()">
+                            <span class="toggle-label">💰 Pagado</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             <div id="inventario-container"></div>
             <div id="paginacion-inventario" class="paginacion-controles"></div>
@@ -731,7 +832,24 @@
                 <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('rosa_clara')">Rosa Clará</button>
                 <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('traka')">Traka</button>
             </div>
-            <div id="facturacion-container"></div>
+            <div class="grid-2" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>Fecha Desde:</label>
+                    <input type="date" id="filtroFechaDesdeFacturacion" onchange="renderizarFacturacion()">
+                </div>
+                <div class="form-group">
+                    <label>Fecha Hasta:</label>
+                    <input type="date" id="filtroFechaHastaFacturacion" onchange="renderizarFacturacion()">
+                </div>
+            </div>
+            <div class="grid-2">
+                <div id="factura-container">
+                    <h3>📄 Facturas</h3>
+                </div>
+                <div id="albaran-container">
+                    <h3>📦 Albaranes</h3>
+                </div>
+            </div>
         </div>
 
         <!-- TAB: Finanzas -->
@@ -1100,7 +1218,16 @@
             const container = document.getElementById('inventario-container');
             const buscador = document.getElementById('buscadorVestidos').value.toLowerCase();
             const filtroProveedor = document.getElementById('filtroProveedorInventario').value;
-            const filtroEstado = document.getElementById('filtroEstadoInventario').value;
+            
+            // Get selected states from checkboxes
+            const estadoCheckboxes = document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]');
+            const estadosSeleccionados = Array.from(estadoCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            // Get date filters
+            const fechaDesde = document.getElementById('filtroFechaDesde').value;
+            const fechaHasta = document.getElementById('filtroFechaHasta').value;
 
             if (!respaldoActivo || datosActivos.vestidos.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
@@ -1115,12 +1242,26 @@
                     v.nombreModelo.toLowerCase().includes(buscador) ||
                     v.talla.toLowerCase().includes(buscador) ||
                     (v.lote && v.lote.toLowerCase().includes(buscador)) ||
-                    (v.of && v.of.toLowerCase().includes(buscador));
+                    (v.numeroOF && v.numeroOF.toLowerCase().includes(buscador));
 
                 const matchProveedor = filtroProveedor === 'todos' || v.proveedor === filtroProveedor;
-                const matchEstado = filtroEstado === 'todos' || v.estado === filtroEstado;
+                
+                // Match estado using checkboxes
+                const matchEstado = estadosSeleccionados.length === 0 || estadosSeleccionados.includes(v.estado);
+                
+                // Match date range
+                let matchFecha = true;
+                if (fechaDesde || fechaHasta) {
+                    const fechaVestido = v.fechaEntrada ? new Date(v.fechaEntrada) : null;
+                    if (fechaVestido) {
+                        if (fechaDesde && fechaVestido < new Date(fechaDesde)) matchFecha = false;
+                        if (fechaHasta && fechaVestido > new Date(fechaHasta)) matchFecha = false;
+                    } else {
+                        matchFecha = false; // If no date, exclude from date filter
+                    }
+                }
 
-                return matchBuscador && matchProveedor && matchEstado;
+                return matchBuscador && matchProveedor && matchEstado && matchFecha;
             });
 
             // Paginación
@@ -1141,7 +1282,7 @@
                             <div class="nombre-modelo">${v.nombreModelo}</div>
                             <div class="talla-texto">Talla: ${v.talla} | Código: ${v.codigo}</div>
                             ${v.lote ? `<div class="lote-texto">Lote: ${v.lote}</div>` : ''}
-                            ${v.of ? `<div class="of-texto">OF: ${v.of}</div>` : ''}
+                            ${v.numeroOF ? `<div class="of-texto">OF: ${v.numeroOF}</div>` : ''}
                         </div>
                         <div class="etiquetas-derecha">
                             <span class="chip">${obtenerNombreEstado(v.estado)}</span>
@@ -1232,6 +1373,32 @@
             return proveedores[proveedor] || proveedor;
         }
 
+        function selectAllEstadosInventario() {
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
+                cb.checked = true;
+            });
+            renderizarInventario();
+        }
+
+        function clearAllEstadosInventario() {
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            renderizarInventario();
+        }
+
+        function selectPendingEstadosInventario() {
+            // Select only "pending" states: en_taller, con_tara, reparado
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
+                if (cb.value === 'en_taller' || cb.value === 'con_tara' || cb.value === 'reparado') {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+            renderizarInventario();
+        }
+
         // ===============================================
         // === RENDERIZADO DE FACTURACIÓN ===============
         // ===============================================
@@ -1248,10 +1415,17 @@
         }
 
         function renderizarFacturacion() {
-            const container = document.getElementById('facturacion-container');
+            const facturaContainer = document.getElementById('factura-container');
+            const albaranContainer = document.getElementById('albaran-container');
+            
+            // Get date filters
+            const fechaDesde = document.getElementById('filtroFechaDesdeFacturacion').value;
+            const fechaHasta = document.getElementById('filtroFechaHastaFacturacion').value;
 
             if (!respaldoActivo || datosActivos.vestidos.length === 0) {
-                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                const emptyMsg = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                facturaContainer.innerHTML = '<h3>📄 Facturas</h3>' + emptyMsg;
+                albaranContainer.innerHTML = '<h3>📦 Albaranes</h3>' + emptyMsg;
                 return;
             }
 
@@ -1266,7 +1440,19 @@
             const albaranes = {};
 
             vestidosFiltrados.forEach(v => {
-                if (v.numeroFactura) {
+                // Filter by date range for facturas
+                let includeFact = true;
+                if (v.numeroFactura && (fechaDesde || fechaHasta)) {
+                    const fechaFactura = v.fechaFactura ? new Date(v.fechaFactura) : null;
+                    if (fechaFactura) {
+                        if (fechaDesde && fechaFactura < new Date(fechaDesde)) includeFact = false;
+                        if (fechaHasta && fechaFactura > new Date(fechaHasta)) includeFact = false;
+                    } else if (fechaDesde || fechaHasta) {
+                        includeFact = false;
+                    }
+                }
+                
+                if (v.numeroFactura && includeFact) {
                     if (!facturas[v.numeroFactura]) {
                         facturas[v.numeroFactura] = {
                             numero: v.numeroFactura,
@@ -1279,7 +1465,19 @@
                     facturas[v.numeroFactura].total += v.precioBase;
                 }
 
-                if (v.numeroAlbaran) {
+                // Filter by date range for albaranes
+                let includeAlb = true;
+                if (v.numeroAlbaran && (fechaDesde || fechaHasta)) {
+                    const fechaEnvio = v.fechaEnvio ? new Date(v.fechaEnvio) : null;
+                    if (fechaEnvio) {
+                        if (fechaDesde && fechaEnvio < new Date(fechaDesde)) includeAlb = false;
+                        if (fechaHasta && fechaEnvio > new Date(fechaHasta)) includeAlb = false;
+                    } else if (fechaDesde || fechaHasta) {
+                        includeAlb = false;
+                    }
+                }
+
+                if (v.numeroAlbaran && includeAlb) {
                     if (!albaranes[v.numeroAlbaran]) {
                         albaranes[v.numeroAlbaran] = {
                             numero: v.numeroAlbaran,
@@ -1294,14 +1492,14 @@
             });
 
             // Renderizar facturas
-            let html = '<h3>📄 Facturas</h3>';
+            let htmlFacturas = '<h3>📄 Facturas</h3>';
             const facturasArray = Object.values(facturas).sort((a, b) => b.numero - a.numero);
             
             if (facturasArray.length === 0) {
-                html += '<p style="color: var(--color-texto-secundario);">No hay facturas en este filtro.</p>';
+                htmlFacturas += '<p style="color: var(--color-texto-secundario); padding: 20px;">No hay facturas en este filtro.</p>';
             } else {
                 facturasArray.forEach(f => {
-                    html += `
+                    htmlFacturas += `
                     <div class="grupo-factura">
                         <div class="grupo-header">
                             <div class="grupo-header-titulo" onclick="toggleGrupo('factura-${f.numero}')">
@@ -1310,7 +1508,13 @@
                         </div>
                         <div class="grupo-detalles" id="factura-${f.numero}">
                             <ul>
-                                ${f.vestidos.map(v => `<li>${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€</li>`).join('')}
+                                ${f.vestidos.map(v => {
+                                    let detalle = `${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€`;
+                                    if (v.lote) detalle += ` - Lote: ${v.lote}`;
+                                    if (v.proveedor === 'pronovias' && v.numeroOF) detalle += ` - OF: ${v.numeroOF}`;
+                                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) detalle += ` - Serie: ${v.numeroSerie}`;
+                                    return `<li>${detalle}</li>`;
+                                }).join('')}
                             </ul>
                             <div class="total-grupo">Total: ${f.total.toFixed(2)}€</div>
                         </div>
@@ -1320,14 +1524,14 @@
             }
 
             // Renderizar albaranes
-            html += '<h3 style="margin-top: 30px;">📦 Albaranes de Envío</h3>';
+            let htmlAlbaranes = '<h3>📦 Albaranes</h3>';
             const albaranesArray = Object.values(albaranes).sort((a, b) => b.numero - a.numero);
             
             if (albaranesArray.length === 0) {
-                html += '<p style="color: var(--color-texto-secundario);">No hay albaranes en este filtro.</p>';
+                htmlAlbaranes += '<p style="color: var(--color-texto-secundario); padding: 20px;">No hay albaranes en este filtro.</p>';
             } else {
                 albaranesArray.forEach(a => {
-                    html += `
+                    htmlAlbaranes += `
                     <div class="grupo-albaran">
                         <div class="grupo-header">
                             <div class="grupo-header-titulo" onclick="toggleGrupo('albaran-${a.numero}')">
@@ -1336,7 +1540,13 @@
                         </div>
                         <div class="grupo-detalles" id="albaran-${a.numero}">
                             <ul>
-                                ${a.vestidos.map(v => `<li>${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€</li>`).join('')}
+                                ${a.vestidos.map(v => {
+                                    let detalle = `${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€`;
+                                    if (v.lote) detalle += ` - Lote: ${v.lote}`;
+                                    if (v.proveedor === 'pronovias' && v.numeroOF) detalle += ` - OF: ${v.numeroOF}`;
+                                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) detalle += ` - Serie: ${v.numeroSerie}`;
+                                    return `<li>${detalle}</li>`;
+                                }).join('')}
                             </ul>
                             <div class="total-grupo">Total: ${a.total.toFixed(2)}€</div>
                         </div>
@@ -1345,7 +1555,8 @@
                 });
             }
 
-            container.innerHTML = html;
+            facturaContainer.innerHTML = htmlFacturas;
+            albaranContainer.innerHTML = htmlAlbaranes;
         }
 
         function toggleGrupo(id) {
