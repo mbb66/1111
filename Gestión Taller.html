@@ -2204,15 +2204,50 @@
                     <option value="rosa_clara">Rosa Clará</option>
                     <option value="traka">Traka</option>
                 </select>
-                <select id="filtroEstado" onchange="filtrarVestidos()">
-                    <option value="">Todos los estados</option>
-                    <option value="en_taller">En taller (y taras)</option>
-                    <option value="enviado">Enviado</option>
-                    <option value="pagado">Pagado</option>
-                    <option value="con_tara">Con tara (sólo)</option>
-                    <option value="reparado">Reparado (sólo)</option>
-                </select>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="btn btn-small" onclick="toggleEstadoFilters()" style="white-space: nowrap;">
+                        🔽 Filtrar Estados
+                    </button>
+                    <span id="estadoFilterSummary" style="color: var(--color-texto-secundario); font-size: 0.9em;"></span>
+                </div>
             </div>
+            
+            <!-- Multi-state filter panel -->
+            <div id="estadoFilterPanel" style="display: none; margin-top: 15px; padding: 20px; background: var(--color-neutro-suave); border-radius: 12px; border: 1px solid var(--color-borde);">
+                <h4 style="margin-bottom: 15px; color: var(--color-texto-principal);">Filtrar por Estados:</h4>
+                <div class="toggle-group" style="gap: 10px;">
+                    <label class="toggle-btn estado-filter-toggle">
+                        <input type="checkbox" value="en_taller" onchange="filtrarVestidos()" checked>
+                        <span class="toggle-label">🏭 En taller</span>
+                    </label>
+                    <label class="toggle-btn estado-filter-toggle">
+                        <input type="checkbox" value="con_tara" onchange="filtrarVestidos()" checked>
+                        <span class="toggle-label">⚠️ Con tara</span>
+                    </label>
+                    <label class="toggle-btn estado-filter-toggle">
+                        <input type="checkbox" value="reparado" onchange="filtrarVestidos()" checked>
+                        <span class="toggle-label">🔧 Reparado</span>
+                    </label>
+                    <label class="toggle-btn estado-filter-toggle">
+                        <input type="checkbox" value="enviado" onchange="filtrarVestidos()" checked>
+                        <span class="toggle-label">📦 Enviado</span>
+                    </label>
+                    <label class="toggle-btn estado-filter-toggle">
+                        <input type="checkbox" value="pagado" onchange="filtrarVestidos()">
+                        <span class="toggle-label">💰 Pagado</span>
+                    </label>
+                    <label class="toggle-btn estado-filter-toggle" style="border: 2px solid var(--color-alerta);">
+                        <input type="checkbox" id="filtroTuvoTara" onchange="filtrarVestidos()">
+                        <span class="toggle-label">🔍 Tuvo tara (histórico)</span>
+                    </label>
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="btn btn-small" onclick="selectAllEstados()">✓ Todos</button>
+                    <button class="btn btn-small" onclick="clearAllEstados()">✗ Ninguno</button>
+                    <button class="btn btn-small" onclick="selectPendingEstados()">📋 Solo pendientes</button>
+                </div>
+            </div>
+            
             <div id="bulkSelectionControls"
                 style="margin-top: 15px; padding: 15px; background: var(--color-neutro-suave); border-radius: 8px; display: none;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -2792,6 +2827,15 @@
         let modelos = JSON.parse(localStorage.getItem('modelos')) || [];
         let vestidos = JSON.parse(localStorage.getItem('vestidos')) || [];
         let vestidosPlanificadosAuto = new Set(JSON.parse(localStorage.getItem('vestidosPlanificadosAuto')) || []);
+        
+        // Migrate existing dresses to have tuvoTara flag based on historialTaras
+        vestidos = vestidos.map(v => {
+            if (v.tuvoTara === undefined) {
+                v.tuvoTara = v.estado === 'con_tara' || (v.historialTaras && v.historialTaras.length > 0);
+            }
+            return v;
+        });
+        
         let numeroFactura = parseInt(localStorage.getItem('ultimaFactura')) || 58;
         let numeroAlbaranPronovias = parseInt(localStorage.getItem('ultimoAlbaranPronovias')) || 112;
         let numeroAlbaranOtros = parseInt(localStorage.getItem('ultimoAlbaranOtros')) || 29;
@@ -3452,6 +3496,7 @@
                 facturado: false, numeroFactura: null, fechaFactura: null, numeroAlbaran: null, fechaEnvio: null, historialAlbaranes: [],
                 codigoBarras: proveedor === 'rosa_clara' ? codigoBarras : null, numeroSerie: proveedor === 'rosa_clara' ? numeroSerie : null,
                 precioManual: false, horasManual: false,
+                tuvoTara: form.estado.value === 'con_tara', // Track if dress ever had tara
             };
 
             if (vestido.estado === 'con_tara') {
@@ -3477,26 +3522,99 @@
 
         function filtrarVestidos() {
             const filtroProveedor = document.getElementById('filtroProveedor').value;
-            const filtroEstado = document.getElementById('filtroEstado').value;
             const textoBusqueda = document.getElementById('buscadorVestidos').value.toLowerCase();
+            
+            // Get selected states from checkboxes
+            const estadoCheckboxes = document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]:not(#filtroTuvoTara)');
+            const estadosSeleccionados = Array.from(estadoCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
+            
+            const filtroTuvoTara = document.getElementById('filtroTuvoTara').checked;
 
             let vestidosFiltrados = vestidos.filter(v => {
                 const proveedorOk = !filtroProveedor || v.proveedor === filtroProveedor;
                 const busquedaOk = !textoBusqueda || Object.values(v).some(val => String(val).toLowerCase().includes(textoBusqueda));
 
+                // Multi-state filter logic
                 let estadoOk = true;
-                if (filtroEstado) {
-                    if (filtroEstado === 'en_taller') {
-                        estadoOk = ['en_taller', 'con_tara', 'reparado'].includes(v.estado);
-                    } else {
-                        estadoOk = v.estado === filtroEstado;
-                    }
+                if (estadosSeleccionados.length > 0) {
+                    estadoOk = estadosSeleccionados.includes(v.estado);
+                }
+                
+                // Filter for dresses that have ever had a tara
+                let taraHistoricoOk = true;
+                if (filtroTuvoTara) {
+                    taraHistoricoOk = v.tuvoTara === true || (v.historialTaras && v.historialTaras.length > 0);
                 }
 
-                return proveedorOk && busquedaOk && estadoOk;
+                return proveedorOk && busquedaOk && estadoOk && taraHistoricoOk;
             }).sort((a, b) => b.id - a.id);
 
             renderizarVestidos(vestidosFiltrados);
+            updateEstadoFilterSummary(estadosSeleccionados, filtroTuvoTara);
+        }
+        
+        function updateEstadoFilterSummary(estadosSeleccionados, filtroTuvoTara) {
+            const summary = document.getElementById('estadoFilterSummary');
+            if (!summary) return;
+            
+            const estadoLabels = {
+                'en_taller': 'En taller',
+                'con_tara': 'Con tara',
+                'reparado': 'Reparado',
+                'enviado': 'Enviado',
+                'pagado': 'Pagado'
+            };
+            
+            let text = '';
+            if (estadosSeleccionados.length === 0 && !filtroTuvoTara) {
+                text = 'Sin filtros de estado';
+            } else if (estadosSeleccionados.length === 5 && !filtroTuvoTara) {
+                text = 'Todos los estados';
+            } else {
+                const parts = [];
+                if (estadosSeleccionados.length > 0) {
+                    parts.push(estadosSeleccionados.map(e => estadoLabels[e]).join(', '));
+                }
+                if (filtroTuvoTara) {
+                    parts.push('+ Histórico tara');
+                }
+                text = parts.join(' | ');
+            }
+            
+            summary.textContent = text;
+        }
+        
+        function toggleEstadoFilters() {
+            const panel = document.getElementById('estadoFilterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function selectAllEstados() {
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]:not(#filtroTuvoTara)').forEach(cb => {
+                cb.checked = true;
+            });
+            filtrarVestidos();
+        }
+        
+        function clearAllEstados() {
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
+                cb.checked = false;
+            });
+            filtrarVestidos();
+        }
+        
+        function selectPendingEstados() {
+            // Select only "pending" states: en_taller, con_tara, reparado
+            document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
+                if (cb.value === 'en_taller' || cb.value === 'con_tara' || cb.value === 'reparado') {
+                    cb.checked = true;
+                } else {
+                    cb.checked = false;
+                }
+            });
+            filtrarVestidos();
         }
 
         function renderizarVestidos(lista) {
@@ -3554,6 +3672,8 @@
                         <div class="etiquetas-derecha">
                             ${albaranNumeros.length > 0 ? albaranNumeros.map(num => `<span class="chip">📦 ${num}</span>`).join('') : ''}
                             ${vestido.numeroFactura ? `<span class="chip">🧾 ${vestido.numeroFactura}</span>` : ''}
+                            <span class="chip">${vestido.estado.replace('_', ' ').toUpperCase()}</span>
+                            ${(vestido.tuvoTara || (vestido.historialTaras && vestido.historialTaras.length > 0)) ? `<span class="chip" style="background-color: var(--color-alerta); color: white;" title="Este vestido tuvo una tara">⚠️ TARA</span>` : ''}
                         </div>
                         <span class="toggle-icon" id="icon-${vestido.id}">▼</span>
                     </div>
@@ -3832,6 +3952,7 @@
             }
 
             vestido.estado = 'con_tara';
+            vestido.tuvoTara = true; // Mark that this dress has had a tara
             if (!vestido.historialTaras) vestido.historialTaras = [];
             vestido.historialTaras.push(tara);
 
