@@ -4336,10 +4336,13 @@
                 const totalBase = lista.reduce((sum, v) => sum + (v.precioBase || 0), 0);
                 const totalConIva = totalBase * 1.21;
 
+                // Format date for display
+                const fechaDisplay = fecha && fecha !== 'null' ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES') : '';
+
                 return `<div class="grupo-${tipo}">
                     <div class="grupo-header">
                         <div class="grupo-header-titulo" onclick="this.parentElement.nextElementSibling.style.display = this.parentElement.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-                            <span>${tipo.charAt(0).toUpperCase() + tipo.slice(1)} ${numero} (${lista.length})</span>
+                            <span>${tipo.charAt(0).toUpperCase() + tipo.slice(1)} ${numero} (${lista.length})${fechaDisplay ? ` - <span style="font-weight: 400; color: var(--color-texto-secundario);">${fechaDisplay}</span>` : ''}</span>
                         </div>
                         <div class="grupo-header-acciones">
                             ${!esAlbaran ?
@@ -8119,7 +8122,7 @@
                 const icono = getStatusIcon(estado);
                 const claseEstado = `estado-${estado}`;
 
-                html += `<div class="worker-card-mini ${claseEstado}" onclick="abrirModalDiaWorker('${fecha}', ${worker.id}); event.stopPropagation();" title="Click para editar">
+                html += `<div class="worker-card-mini ${claseEstado}" onclick="event.stopPropagation(); abrirModalDiaWorker('${fecha}', ${worker.id});" title="Click para editar">
                     <span class="worker-name-mini">${worker.nombre}</span>
                     <span class="worker-status-mini">${icono}</span>
                 </div>`;
