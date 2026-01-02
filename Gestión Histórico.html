@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taller Novias - Gestión Histórico (Solo Lectura)</title>
+    <style>
+        :root {
+            --color-fondo: #F7F8FA;
+            --color-superficie: #FFFFFF;
+            --color-borde: #E0E0E0;
+            --color-neutro-suave: #F2F3F5;
+
+            --color-texto-principal: #1F2937;
+            --color-texto-secundario: #6B7280;
+            --color-texto-deshabilitado: #BCC1C9;
+
+            --color-primario: #374151;
+            --color-primario-suave: #9CA3AF;
+            --color-primario-oscuro: #111827;
+            --color-primario-fondo: #F3F4F6;
+
+            --color-exito: #10B981;
+            --color-exito-fondo: #E6F8F2;
+            --color-alerta: #F59E0B;
+            --color-alerta-fondo: #FFFBEB;
+            --color-error: #EF4444;
+            --color-error-fondo: #FEF2F2;
+            --color-info: #3B82F6;
+            --color-info-fondo: #EFF6FF;
+
+            --color-pronovias: #E0F2FE;
+            --color-pronovias-borde: #7DD3FC;
+            --color-traka: #DCFCE7;
+            --color-traka-borde: #86EFAC;
+            --color-rosa_clara: #FCE7F3;
+            --color-rosa_clara-borde: #F9A8D4;
+
+            --sombra-suave: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --sombra-media: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --sombra-grande: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--color-fondo);
+            color: var(--color-texto-principal);
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: var(--color-superficie);
+            border-radius: 12px;
+            box-shadow: var(--sombra-grande);
+            overflow: hidden;
+            border: 1px solid var(--color-borde);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--color-primario) 0%, #4B5563 100%);
+            padding: 25px;
+            text-align: center;
+            color: var(--color-superficie);
+            position: relative;
+        }
+
+        h1 {
+            color: var(--color-superficie);
+            font-weight: 700;
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #D1D5DB;
+            font-size: 0.9em;
+            font-weight: 400;
+        }
+
+        .readonly-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--color-alerta);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            box-shadow: var(--sombra-media);
+        }
+
+        h2, h3, h4 {
+            color: var(--color-texto-principal);
+            font-weight: 600;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 1.7em;
+            border-bottom: 1px solid var(--color-borde);
+            padding-bottom: 15px;
+        }
+
+        h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--color-neutro-suave);
+            padding: 0;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--color-borde);
+            box-shadow: var(--sombra-suave);
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            flex-grow: 1;
+            text-align: center;
+            font-size: 16px;
+            transition: background 0.3s, color 0.3s;
+            color: var(--color-texto-secundario);
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            color: var(--color-primario);
+            background: #E5E7EB;
+        }
+
+        .tab.active {
+            background: var(--color-superficie);
+            color: var(--color-info);
+            border-bottom-color: var(--color-info);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .upload-area {
+            border: 2px dashed var(--color-primario-suave);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: var(--color-primario-fondo);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--color-info);
+            background: var(--color-info-fondo);
+            transform: scale(1.02);
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: var(--color-primario);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            text-align: center;
+            box-shadow: var(--sombra-media);
+        }
+
+        .btn:hover {
+            background: var(--color-primario-oscuro);
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-grande);
+        }
+
+        .btn-eliminar {
+            background: var(--color-error);
+        }
+
+        .btn-eliminar:hover {
+            background: #D92A2A;
+        }
+
+        .btn-success {
+            background: var(--color-exito);
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        .btn-exportar {
+            background: var(--color-texto-secundario);
+        }
+
+        .btn-exportar:hover {
+            background: #4B5563;
+        }
+
+        .stats-card {
+            background: var(--color-neutro-suave);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--color-borde);
+        }
+
+        .backups-loaded {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .backup-card {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--sombra-media);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .backup-card:hover {
+            box-shadow: var(--sombra-grande);
+            transform: translateY(-2px);
+        }
+
+        .backup-card.selected {
+            border-color: var(--color-info);
+            background: var(--color-info-fondo);
+        }
+
+        .backup-card h4 {
+            margin-bottom: 10px;
+            color: var(--color-primario);
+            font-size: 1.1em;
+        }
+
+        .backup-card p {
+            font-size: 0.9em;
+            color: var(--color-texto-secundario);
+            margin: 5px 0;
+        }
+
+        .backup-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .vestido-card {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: box-shadow 0.3s, background-color 0.3s, transform 0.2s;
+            position: relative;
+            box-shadow: var(--sombra-media);
+        }
+
+        .vestido-card.pronovias {
+            background-color: var(--color-pronovias);
+        }
+
+        .vestido-card.rosa_clara {
+            background-color: var(--color-rosa_clara);
+        }
+
+        .vestido-card.traka {
+            background-color: var(--color-traka);
+        }
+
+        .vestido-card:hover {
+            box-shadow: var(--sombra-grande);
+            transform: translateY(-2px);
+        }
+
+        .vestido-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .vestido-details {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--color-borde);
+        }
+
+        .toggle-icon {
+            font-size: 24px;
+            color: var(--color-primario);
+            transition: transform 0.3s;
+            font-weight: bold;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .nombre-modelo {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .talla-texto, .lote-texto, .of-texto {
+            color: var(--color-texto-secundario);
+            font-size: 0.9em;
+        }
+
+        .chip {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--color-texto-principal);
+            background: #E5E7EB;
+        }
+
+        .etiquetas-derecha {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 25px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 25px;
+        }
+
+        .grupo-factura, .grupo-albaran {
+            border: 1px solid var(--color-borde);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+            box-shadow: var(--sombra-media);
+        }
+
+        .grupo-header {
+            background: var(--color-neutro-suave);
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .grupo-header-titulo {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        .grupo-detalles {
+            display: none;
+            padding: 15px;
+            background: var(--color-superficie);
+        }
+
+        .grupo-detalles ul {
+            list-style-type: none;
+        }
+
+        .grupo-detalles li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--color-borde);
+        }
+
+        .total-grupo {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 10px;
+            font-size: 1.1em;
+        }
+
+        .proveedor-subtabs {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .proveedor-subtab {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 25px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--color-texto-secundario);
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .proveedor-subtab:hover {
+            background: var(--color-neutro-suave);
+            border-color: var(--color-primario-suave);
+        }
+
+        .proveedor-subtab.active {
+            background: var(--color-primario);
+            color: white;
+            border-color: var(--color-primario);
+        }
+
+        .finanzas-subtabs {
+            display: flex;
+            border-bottom: 2px solid var(--color-borde);
+            margin-bottom: 20px;
+        }
+
+        .finanzas-subtab {
+            padding: 12px 25px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-texto-secundario);
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .finanzas-subtab.active {
+            color: var(--color-info);
+            border-bottom-color: var(--color-info);
+        }
+
+        .finanzas-subtab-content {
+            display: none;
+        }
+
+        .finanzas-subtab-content.active {
+            display: block;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: var(--color-superficie);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 5px solid;
+            box-shadow: var(--sombra-media);
+        }
+
+        .kpi-title {
+            font-size: 14px;
+            color: var(--color-texto-secundario);
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--color-texto-principal);
+        }
+
+        .kpi-subvalue {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--color-texto-secundario);
+        }
+
+        .kpi-ingresos {
+            border-left-color: var(--color-exito);
+        }
+
+        .kpi-gastos {
+            border-left-color: var(--color-error);
+        }
+
+        .kpi-beneficio {
+            border-left-color: var(--color-info);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--color-texto-secundario);
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .proveedor-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .proveedor-card {
+            background: var(--color-superficie);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--color-borde);
+            box-shadow: var(--sombra-suave);
+        }
+
+        .proveedor-card.pronovias {
+            border-top: 4px solid var(--color-pronovias-borde);
+        }
+
+        .proveedor-card.rosa_clara {
+            border-top: 4px solid var(--color-rosa_clara-borde);
+        }
+
+        .proveedor-card.traka {
+            border-top: 4px solid var(--color-traka-borde);
+        }
+
+        .paginacion-controles {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .paginacion-controles .btn {
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+
+        .paginacion-controles span {
+            padding: 0 15px;
+            vertical-align: middle;
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: var(--color-superficie);
+            color: var(--color-texto-principal);
+            box-shadow: var(--sombra-suave);
+        }
+
+        input:focus, select:focus {
+            border-color: var(--color-info);
+            box-shadow: 0 0 0 3px var(--color-info-fondo);
+            outline: none;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--color-texto-secundario);
+            font-size: 0.9em;
+        }
+
+        .info-banner {
+            background: var(--color-info-fondo);
+            border-left: 4px solid var(--color-info);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .info-banner p {
+            margin: 5px 0;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .grid-4 {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Gestión Histórico</h1>
+            <p class="subtitle">Visualización de datos históricos en modo solo lectura</p>
+            <span class="readonly-badge">🔒 SOLO LECTURA</span>
+        </header>
+
+        <div class="nav-tabs">
+            <button class="tab active" onclick="openTab('carga', event)">📂 Cargar Datos</button>
+            <button class="tab" onclick="openTab('inventario', event)">📦 Inventario</button>
+            <button class="tab" onclick="openTab('facturacion', event)">📄 Facturación</button>
+            <button class="tab" onclick="openTab('finanzas', event)">💰 Finanzas</button>
+        </div>
+
+        <!-- TAB: Cargar Datos -->
+        <div id="carga" class="tab-content active">
+            <h2>Cargar Datos Históricos</h2>
+            
+            <div class="info-banner">
+                <p><strong>📌 Información:</strong></p>
+                <p>• Carga archivos JSON de <strong>respaldos completos</strong> (generados con "Exportar Todo")</p>
+                <p>• Los datos se guardan localmente en tu navegador (IndexedDB)</p>
+                <p>• Selecciona un respaldo para visualizar sus datos en las otras pestañas</p>
+                <p>• Los informes anuales deben cargarse en la aplicación principal</p>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <h3>📁 Arrastra archivos JSON aquí</h3>
+                <p style="color: var(--color-texto-secundario); margin: 15px 0;">o</p>
+                <button class="btn btn-success" onclick="document.getElementById('fileInput').click()">
+                    Seleccionar Archivos
+                </button>
+                <input type="file" id="fileInput" accept=".json" multiple onchange="cargarArchivos(event)">
+            </div>
+
+            <div id="respaldos-cargados-container">
+                <h3>Respaldos Cargados</h3>
+                <div id="respaldos-lista" class="backups-loaded"></div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <button class="btn btn-eliminar" onclick="limpiarTodosLosDatos()">
+                    🗑️ Limpiar Todos los Datos
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB: Inventario -->
+        <div id="inventario" class="tab-content">
+            <h2>Inventario Actual</h2>
+            <div class="grid-3" style="margin-bottom: 20px;">
+                <input type="text" id="buscadorVestidos" placeholder="🔍 Buscar por código, modelo, talla, lote..." 
+                       oninput="renderizarInventario()">
+                <select id="filtroProveedorInventario" onchange="renderizarInventario()">
+                    <option value="todos">Todos los proveedores</option>
+                    <option value="pronovias">Pronovias</option>
+                    <option value="rosa_clara">Rosa Clará</option>
+                    <option value="traka">Traka</option>
+                </select>
+                <select id="filtroEstadoInventario" onchange="renderizarInventario()">
+                    <option value="todos">Todos los estados</option>
+                    <option value="en_taller">En Taller</option>
+                    <option value="enviado">Enviado</option>
+                    <option value="pagado">Pagado</option>
+                    <option value="con_tara">Con Tara</option>
+                    <option value="reparado">Reparado</option>
+                </select>
+            </div>
+            <div id="inventario-container"></div>
+            <div id="paginacion-inventario" class="paginacion-controles"></div>
+        </div>
+
+        <!-- TAB: Facturación -->
+        <div id="facturacion" class="tab-content">
+            <h2>Facturación y Albaranes</h2>
+            <p style="margin-bottom: 20px;">Revisa los vestidos agrupados por factura o albarán de envío.</p>
+            <div class="proveedor-subtabs">
+                <button class="proveedor-subtab active" onclick="mostrarProveedorSubtab('todos')">Todos</button>
+                <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('pronovias')">Pronovias</button>
+                <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('rosa_clara')">Rosa Clará</button>
+                <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('traka')">Traka</button>
+            </div>
+            <div id="facturacion-container"></div>
+        </div>
+
+        <!-- TAB: Finanzas -->
+        <div id="finanzas" class="tab-content">
+            <div class="finanzas-container">
+                <div class="finanzas-subtabs">
+                    <button class="finanzas-subtab active" onclick="openFinanceSubTab('dashboard', event.target)">
+                        📊 Dashboard
+                    </button>
+                    <button class="finanzas-subtab" onclick="openFinanceSubTab('breakdown', event.target)">
+                        📈 Desglose por Proveedor
+                    </button>
+                </div>
+
+                <div id="dashboard" class="finanzas-subtab-content active">
+                    <div id="dashboard-content"></div>
+                </div>
+
+                <div id="breakdown" class="finanzas-subtab-content">
+                    <div id="breakdown-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===============================================
+        // === GESTIÓN DE BASE DE DATOS (IndexedDB) ====
+        // ===============================================
+        
+        let db = null;
+        let respaldoActivo = null;
+        let datosActivos = {
+            modelos: [],
+            vestidos: [],
+            gastos: [],
+            otrosIngresos: [],
+            planificacion: {},
+            configuracion: {}
+        };
+
+        // Inicializar IndexedDB
+        function inicializarDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('GestionHistoricoDB', 1);
+
+                request.onerror = () => {
+                    console.error('Error al abrir IndexedDB');
+                    reject(request.error);
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    // Crear almacén para respaldos
+                    if (!db.objectStoreNames.contains('respaldos')) {
+                        const respaldosStore = db.createObjectStore('respaldos', { keyPath: 'id', autoIncrement: true });
+                        respaldosStore.createIndex('nombre', 'nombre', { unique: false });
+                        respaldosStore.createIndex('fecha', 'fecha', { unique: false });
+                    }
+                };
+            });
+        }
+
+        // Guardar respaldo en IndexedDB
+        function guardarRespaldo(nombre, datos) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['respaldos'], 'readwrite');
+                const store = transaction.objectStore('respaldos');
+                
+                const respaldo = {
+                    nombre: nombre,
+                    fecha: new Date().toISOString(),
+                    datos: datos,
+                    vestidosCount: datos.vestidos ? datos.vestidos.length : 0
+                };
+
+                const request = store.add(respaldo);
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        }
+
+        // Obtener todos los respaldos
+        function obtenerRespaldos() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['respaldos'], 'readonly');
+                const store = transaction.objectStore('respaldos');
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        }
+
+        // Obtener un respaldo por ID
+        function obtenerRespaldo(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['respaldos'], 'readonly');
+                const store = transaction.objectStore('respaldos');
+                const request = store.get(id);
+
+                request.onsuccess = () => {
+                    resolve(request.result);
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        }
+
+        // Eliminar respaldo
+        function eliminarRespaldo(id) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['respaldos'], 'readwrite');
+                const store = transaction.objectStore('respaldos');
+                const request = store.delete(id);
+
+                request.onsuccess = () => {
+                    resolve();
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        }
+
+        // Limpiar todos los datos
+        function limpiarDB() {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['respaldos'], 'readwrite');
+                const store = transaction.objectStore('respaldos');
+                const request = store.clear();
+
+                request.onsuccess = () => {
+                    resolve();
+                };
+
+                request.onerror = () => {
+                    reject(request.error);
+                };
+            });
+        }
+
+        // ===============================================
+        // === MANEJO DE ARCHIVOS Y CARGA ==============
+        // ===============================================
+
+        // Configurar drag & drop
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            procesarArchivos(files);
+        });
+
+        // Cargar archivos desde input
+        function cargarArchivos(event) {
+            const files = event.target.files;
+            procesarArchivos(files);
+        }
+
+        // Procesar archivos JSON
+        async function procesarArchivos(files) {
+            for (let file of files) {
+                if (file.type === 'application/json' || file.name.endsWith('.json')) {
+                    const reader = new FileReader();
+                    
+                    reader.onload = async (e) => {
+                        try {
+                            const contenido = JSON.parse(e.target.result);
+                            
+                            // Validar que el JSON tiene estructura válida
+                            if (!contenido.vestidos || !Array.isArray(contenido.vestidos)) {
+                                if (contenido.año) {
+                                    alert(`❌ El archivo "${file.name}" parece ser un informe anual.\n\nGestión Histórico solo acepta respaldos completos.\nCarga los informes anuales en la aplicación principal para ver comparativas.`);
+                                } else {
+                                    alert(`❌ El archivo "${file.name}" no tiene un formato válido.\n\nDebe ser un respaldo completo con un array de vestidos.`);
+                                }
+                                return;
+                            }
+
+                            // Guardar en IndexedDB
+                            await guardarRespaldo(file.name, contenido);
+                            alert(`✅ Archivo "${file.name}" cargado correctamente.`);
+                            await cargarListaRespaldos();
+                        } catch (error) {
+                            console.error('Error al procesar archivo:', error);
+                            alert(`❌ Error al procesar "${file.name}": ${error.message}`);
+                        }
+                    };
+
+                    reader.readAsText(file);
+                } else {
+                    alert(`❌ El archivo "${file.name}" no es un JSON válido.`);
+                }
+            }
+        }
+
+        // Cargar lista de respaldos
+        async function cargarListaRespaldos() {
+            const respaldos = await obtenerRespaldos();
+            const container = document.getElementById('respaldos-lista');
+            
+            if (respaldos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay respaldos cargados</p></div>';
+                return;
+            }
+
+            container.innerHTML = respaldos.map(r => {
+                const fecha = new Date(r.fecha);
+                const isSelected = respaldoActivo && respaldoActivo.id === r.id;
+                
+                return `
+                <div class="backup-card ${isSelected ? 'selected' : ''}" id="backup-${r.id}">
+                    <h4>${r.nombre}</h4>
+                    <p>📅 ${fecha.toLocaleDateString('es-ES')} ${fecha.toLocaleTimeString('es-ES')}</p>
+                    <p>📦 ${r.vestidosCount} vestidos</p>
+                    ${r.datos.año ? `<p>📊 Informe anual ${r.datos.año}</p>` : ''}
+                    <div class="backup-actions">
+                        <button class="btn btn-success btn-small" onclick="seleccionarRespaldo(${r.id})">
+                            ${isSelected ? '✓ Seleccionado' : 'Seleccionar'}
+                        </button>
+                        <button class="btn btn-eliminar btn-small" onclick="eliminarRespaldoUI(${r.id})">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        // Seleccionar un respaldo para visualizar
+        async function seleccionarRespaldo(id) {
+            const respaldo = await obtenerRespaldo(id);
+            if (!respaldo) {
+                alert('❌ Error al cargar el respaldo.');
+                return;
+            }
+
+            respaldoActivo = respaldo;
+            
+            // Cargar datos en la estructura activa
+            datosActivos.modelos = respaldo.datos.modelos || [];
+            datosActivos.vestidos = respaldo.datos.vestidos || [];
+            datosActivos.gastos = respaldo.datos.gastos || [];
+            datosActivos.otrosIngresos = respaldo.datos.otrosIngresos || [];
+            datosActivos.planificacion = respaldo.datos.planificacion || {};
+            datosActivos.configuracion = respaldo.datos.configuracion || {};
+
+            // Actualizar UI
+            await cargarListaRespaldos();
+            renderizarInventario();
+            renderizarFacturacion();
+            renderizarFinanzas();
+
+            alert(`✅ Respaldo "${respaldo.nombre}" cargado correctamente.`);
+        }
+
+        // Eliminar respaldo de la UI
+        async function eliminarRespaldoUI(id) {
+            if (!confirm('¿Estás seguro de eliminar este respaldo?')) return;
+
+            await eliminarRespaldo(id);
+            
+            if (respaldoActivo && respaldoActivo.id === id) {
+                respaldoActivo = null;
+                datosActivos = {
+                    modelos: [],
+                    vestidos: [],
+                    gastos: [],
+                    otrosIngresos: [],
+                    planificacion: {},
+                    configuracion: {}
+                };
+                renderizarInventario();
+                renderizarFacturacion();
+                renderizarFinanzas();
+            }
+
+            await cargarListaRespaldos();
+            alert('✅ Respaldo eliminado correctamente.');
+        }
+
+        // Limpiar todos los datos
+        async function limpiarTodosLosDatos() {
+            if (!confirm('¿Estás seguro de eliminar TODOS los respaldos? Esta acción no se puede deshacer.')) return;
+
+            await limpiarDB();
+            respaldoActivo = null;
+            datosActivos = {
+                modelos: [],
+                vestidos: [],
+                gastos: [],
+                otrosIngresos: [],
+                planificacion: {},
+                configuracion: {}
+            };
+
+            await cargarListaRespaldos();
+            renderizarInventario();
+            renderizarFacturacion();
+            renderizarFinanzas();
+
+            alert('✅ Todos los datos han sido eliminados.');
+        }
+
+        // ===============================================
+        // === NAVEGACIÓN DE PESTAÑAS ===================
+        // ===============================================
+
+        function openTab(tabName, event) {
+            if (event) event.preventDefault();
+            
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+        }
+
+        function openFinanceSubTab(tabName, element) {
+            document.querySelectorAll('.finanzas-subtab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.finanzas-subtab').forEach(t => t.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // ===============================================
+        // === RENDERIZADO DE INVENTARIO ================
+        // ===============================================
+
+        let paginaActualInventario = 1;
+        const vestidosPorPagina = 10;
+
+        function renderizarInventario() {
+            const container = document.getElementById('inventario-container');
+            const buscador = document.getElementById('buscadorVestidos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtroProveedorInventario').value;
+            const filtroEstado = document.getElementById('filtroEstadoInventario').value;
+
+            if (!respaldoActivo || datosActivos.vestidos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                document.getElementById('paginacion-inventario').innerHTML = '';
+                return;
+            }
+
+            // Filtrar vestidos
+            let vestidosFiltrados = datosActivos.vestidos.filter(v => {
+                const matchBuscador = !buscador || 
+                    v.codigo.toLowerCase().includes(buscador) ||
+                    v.nombreModelo.toLowerCase().includes(buscador) ||
+                    v.talla.toLowerCase().includes(buscador) ||
+                    (v.lote && v.lote.toLowerCase().includes(buscador)) ||
+                    (v.of && v.of.toLowerCase().includes(buscador));
+
+                const matchProveedor = filtroProveedor === 'todos' || v.proveedor === filtroProveedor;
+                const matchEstado = filtroEstado === 'todos' || v.estado === filtroEstado;
+
+                return matchBuscador && matchProveedor && matchEstado;
+            });
+
+            // Paginación
+            const totalPaginas = Math.ceil(vestidosFiltrados.length / vestidosPorPagina);
+            if (paginaActualInventario > totalPaginas && totalPaginas > 0) {
+                paginaActualInventario = totalPaginas;
+            }
+
+            const inicio = (paginaActualInventario - 1) * vestidosPorPagina;
+            const fin = inicio + vestidosPorPagina;
+            const vestidosPagina = vestidosFiltrados.slice(inicio, fin);
+
+            // Renderizar vestidos
+            container.innerHTML = vestidosPagina.map((v, idx) => `
+                <div class="vestido-card ${v.proveedor}" id="vestido-${v.id}">
+                    <div class="vestido-header" onclick="toggleVestidoDetails(${v.id})">
+                        <div>
+                            <div class="nombre-modelo">${v.nombreModelo}</div>
+                            <div class="talla-texto">Talla: ${v.talla} | Código: ${v.codigo}</div>
+                            ${v.lote ? `<div class="lote-texto">Lote: ${v.lote}</div>` : ''}
+                            ${v.of ? `<div class="of-texto">OF: ${v.of}</div>` : ''}
+                        </div>
+                        <div class="etiquetas-derecha">
+                            <span class="chip">${obtenerNombreEstado(v.estado)}</span>
+                            <span class="chip">${obtenerNombreProveedor(v.proveedor)}</span>
+                            <span class="toggle-icon" id="toggle-${v.id}">▼</span>
+                        </div>
+                    </div>
+                    <div class="vestido-details" id="details-${v.id}">
+                        <div class="grid-2">
+                            <div>
+                                <p><strong>Código Modelo:</strong> ${v.codigoModelo}</p>
+                                <p><strong>Precio Base:</strong> ${v.precioBase.toFixed(2)}€</p>
+                                <p><strong>Horas Estimadas:</strong> ${v.horasEstimadas}h</p>
+                                ${v.fechaEntrada ? `<p><strong>Fecha Entrada:</strong> ${new Date(v.fechaEntrada).toLocaleDateString('es-ES')}</p>` : ''}
+                                ${v.fechaLimite ? `<p><strong>Fecha Límite:</strong> ${new Date(v.fechaLimite).toLocaleDateString('es-ES')}</p>` : ''}
+                            </div>
+                            <div>
+                                ${v.numeroFactura ? `<p><strong>Nº Factura:</strong> ${v.numeroFactura}</p>` : ''}
+                                ${v.fechaFactura ? `<p><strong>Fecha Factura:</strong> ${new Date(v.fechaFactura).toLocaleDateString('es-ES')}</p>` : ''}
+                                ${v.numeroAlbaran ? `<p><strong>Nº Albarán:</strong> ${v.numeroAlbaran}</p>` : ''}
+                                ${v.fechaEnvio ? `<p><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio).toLocaleDateString('es-ES')}</p>` : ''}
+                            </div>
+                        </div>
+                        ${v.observaciones ? `<div style="margin-top: 15px;"><strong>Observaciones:</strong><br>${v.observaciones}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            // Renderizar paginación
+            renderizarPaginacionInventario(totalPaginas, vestidosFiltrados.length);
+        }
+
+        function renderizarPaginacionInventario(totalPaginas, totalVestidos) {
+            const container = document.getElementById('paginacion-inventario');
+            
+            if (totalPaginas <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <button class="btn" onclick="cambiarPaginaInventario(-1)" ${paginaActualInventario === 1 ? 'disabled' : ''}>
+                    ← Anterior
+                </button>
+                <span>Página ${paginaActualInventario} de ${totalPaginas} (${totalVestidos} vestidos)</span>
+                <button class="btn" onclick="cambiarPaginaInventario(1)" ${paginaActualInventario === totalPaginas ? 'disabled' : ''}>
+                    Siguiente →
+                </button>
+            `;
+        }
+
+        function cambiarPaginaInventario(delta) {
+            paginaActualInventario += delta;
+            renderizarInventario();
+        }
+
+        function toggleVestidoDetails(id) {
+            const details = document.getElementById(`details-${id}`);
+            const toggle = document.getElementById(`toggle-${id}`);
+            
+            if (details.style.display === 'block') {
+                details.style.display = 'none';
+                toggle.classList.remove('expanded');
+            } else {
+                details.style.display = 'block';
+                toggle.classList.add('expanded');
+            }
+        }
+
+        function obtenerNombreEstado(estado) {
+            const estados = {
+                'en_taller': 'En Taller',
+                'enviado': 'Enviado',
+                'pagado': 'Pagado',
+                'con_tara': 'Con Tara',
+                'reparado': 'Reparado',
+                'pendiente': 'Pendiente'
+            };
+            return estados[estado] || estado;
+        }
+
+        function obtenerNombreProveedor(proveedor) {
+            const proveedores = {
+                'pronovias': 'Pronovias',
+                'rosa_clara': 'Rosa Clará',
+                'traka': 'Traka'
+            };
+            return proveedores[proveedor] || proveedor;
+        }
+
+        // ===============================================
+        // === RENDERIZADO DE FACTURACIÓN ===============
+        // ===============================================
+
+        let proveedorSeleccionadoFacturacion = 'todos';
+
+        function mostrarProveedorSubtab(proveedor) {
+            proveedorSeleccionadoFacturacion = proveedor;
+            
+            document.querySelectorAll('.proveedor-subtab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderizarFacturacion();
+        }
+
+        function renderizarFacturacion() {
+            const container = document.getElementById('facturacion-container');
+
+            if (!respaldoActivo || datosActivos.vestidos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                return;
+            }
+
+            // Filtrar vestidos según proveedor
+            let vestidosFiltrados = datosActivos.vestidos;
+            if (proveedorSeleccionadoFacturacion !== 'todos') {
+                vestidosFiltrados = vestidosFiltrados.filter(v => v.proveedor === proveedorSeleccionadoFacturacion);
+            }
+
+            // Agrupar por factura
+            const facturas = {};
+            const albaranes = {};
+
+            vestidosFiltrados.forEach(v => {
+                if (v.numeroFactura) {
+                    if (!facturas[v.numeroFactura]) {
+                        facturas[v.numeroFactura] = {
+                            numero: v.numeroFactura,
+                            fecha: v.fechaFactura,
+                            vestidos: [],
+                            total: 0
+                        };
+                    }
+                    facturas[v.numeroFactura].vestidos.push(v);
+                    facturas[v.numeroFactura].total += v.precioBase;
+                }
+
+                if (v.numeroAlbaran) {
+                    if (!albaranes[v.numeroAlbaran]) {
+                        albaranes[v.numeroAlbaran] = {
+                            numero: v.numeroAlbaran,
+                            fecha: v.fechaEnvio,
+                            vestidos: [],
+                            total: 0
+                        };
+                    }
+                    albaranes[v.numeroAlbaran].vestidos.push(v);
+                    albaranes[v.numeroAlbaran].total += v.precioBase;
+                }
+            });
+
+            // Renderizar facturas
+            let html = '<h3>📄 Facturas</h3>';
+            const facturasArray = Object.values(facturas).sort((a, b) => b.numero - a.numero);
+            
+            if (facturasArray.length === 0) {
+                html += '<p style="color: var(--color-texto-secundario);">No hay facturas en este filtro.</p>';
+            } else {
+                facturasArray.forEach(f => {
+                    html += `
+                    <div class="grupo-factura">
+                        <div class="grupo-header">
+                            <div class="grupo-header-titulo" onclick="toggleGrupo('factura-${f.numero}')">
+                                <span>Factura #${f.numero} - ${new Date(f.fecha).toLocaleDateString('es-ES')} - ${f.total.toFixed(2)}€</span>
+                            </div>
+                        </div>
+                        <div class="grupo-detalles" id="factura-${f.numero}">
+                            <ul>
+                                ${f.vestidos.map(v => `<li>${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€</li>`).join('')}
+                            </ul>
+                            <div class="total-grupo">Total: ${f.total.toFixed(2)}€</div>
+                        </div>
+                    </div>
+                    `;
+                });
+            }
+
+            // Renderizar albaranes
+            html += '<h3 style="margin-top: 30px;">📦 Albaranes de Envío</h3>';
+            const albaranesArray = Object.values(albaranes).sort((a, b) => b.numero - a.numero);
+            
+            if (albaranesArray.length === 0) {
+                html += '<p style="color: var(--color-texto-secundario);">No hay albaranes en este filtro.</p>';
+            } else {
+                albaranesArray.forEach(a => {
+                    html += `
+                    <div class="grupo-albaran">
+                        <div class="grupo-header">
+                            <div class="grupo-header-titulo" onclick="toggleGrupo('albaran-${a.numero}')">
+                                <span>Albarán #${a.numero} - ${new Date(a.fecha).toLocaleDateString('es-ES')} - ${a.total.toFixed(2)}€</span>
+                            </div>
+                        </div>
+                        <div class="grupo-detalles" id="albaran-${a.numero}">
+                            <ul>
+                                ${a.vestidos.map(v => `<li>${v.nombreModelo} (${v.codigo}) - ${v.talla} - ${v.precioBase.toFixed(2)}€</li>`).join('')}
+                            </ul>
+                            <div class="total-grupo">Total: ${a.total.toFixed(2)}€</div>
+                        </div>
+                    </div>
+                    `;
+                });
+            }
+
+            container.innerHTML = html;
+        }
+
+        function toggleGrupo(id) {
+            const grupo = document.getElementById(id);
+            if (grupo.style.display === 'block') {
+                grupo.style.display = 'none';
+            } else {
+                grupo.style.display = 'block';
+            }
+        }
+
+        // ===============================================
+        // === RENDERIZADO DE FINANZAS ==================
+        // ===============================================
+
+        function renderizarFinanzas() {
+            renderizarDashboardFinanzas();
+            renderizarBreakdownFinanzas();
+        }
+
+        function renderizarDashboardFinanzas() {
+            const container = document.getElementById('dashboard-content');
+
+            if (!respaldoActivo || datosActivos.vestidos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                return;
+            }
+
+            // Calcular totales
+            const ingresosPorVestidos = datosActivos.vestidos.reduce((sum, v) => sum + (v.precioBase || 0), 0);
+            const ingresosOtros = (datosActivos.otrosIngresos || []).reduce((sum, i) => sum + (i.baseImponible || 0), 0);
+            const totalIngresos = ingresosPorVestidos + ingresosOtros;
+
+            const totalGastos = (datosActivos.gastos || []).reduce((sum, g) => sum + (g.baseImponible || 0), 0);
+            const beneficioNeto = totalIngresos - totalGastos;
+
+            // Calcular por proveedor
+            const porProveedor = {};
+            datosActivos.vestidos.forEach(v => {
+                if (!porProveedor[v.proveedor]) {
+                    porProveedor[v.proveedor] = { vestidos: 0, ingresos: 0 };
+                }
+                porProveedor[v.proveedor].vestidos++;
+                porProveedor[v.proveedor].ingresos += v.precioBase || 0;
+            });
+
+            let html = `
+                <h2>Dashboard Financiero</h2>
+                <div class="dashboard-grid">
+                    <div class="kpi-card kpi-ingresos">
+                        <div class="kpi-title">Ingresos Totales</div>
+                        <div class="kpi-value">${totalIngresos.toFixed(2)}€</div>
+                        <div class="kpi-subvalue">Vestidos: ${ingresosPorVestidos.toFixed(2)}€</div>
+                        ${ingresosOtros > 0 ? `<div class="kpi-subvalue">Otros: ${ingresosOtros.toFixed(2)}€</div>` : ''}
+                    </div>
+
+                    <div class="kpi-card kpi-gastos">
+                        <div class="kpi-title">Gastos Totales</div>
+                        <div class="kpi-value">${totalGastos.toFixed(2)}€</div>
+                        <div class="kpi-subvalue">${(datosActivos.gastos || []).length} registros</div>
+                    </div>
+
+                    <div class="kpi-card kpi-beneficio">
+                        <div class="kpi-title">Beneficio Neto</div>
+                        <div class="kpi-value" style="color: ${beneficioNeto >= 0 ? 'var(--color-exito)' : 'var(--color-error)'}">
+                            ${beneficioNeto.toFixed(2)}€
+                        </div>
+                        <div class="kpi-subvalue">Margen: ${totalIngresos > 0 ? ((beneficioNeto / totalIngresos) * 100).toFixed(1) : 0}%</div>
+                    </div>
+
+                    <div class="kpi-card kpi-ingresos">
+                        <div class="kpi-title">Vestidos Totales</div>
+                        <div class="kpi-value">${datosActivos.vestidos.length}</div>
+                        <div class="kpi-subvalue">Promedio: ${datosActivos.vestidos.length > 0 ? (ingresosPorVestidos / datosActivos.vestidos.length).toFixed(2) : 0}€/vestido</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        function renderizarBreakdownFinanzas() {
+            const container = document.getElementById('breakdown-content');
+
+            if (!respaldoActivo || datosActivos.vestidos.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No hay datos cargados. Selecciona un respaldo en la pestaña "Cargar Datos".</p></div>';
+                return;
+            }
+
+            // Calcular por proveedor
+            const porProveedor = {
+                pronovias: { vestidos: 0, ingresos: 0, horas: 0 },
+                rosa_clara: { vestidos: 0, ingresos: 0, horas: 0 },
+                traka: { vestidos: 0, ingresos: 0, horas: 0 }
+            };
+
+            datosActivos.vestidos.forEach(v => {
+                if (porProveedor[v.proveedor]) {
+                    porProveedor[v.proveedor].vestidos++;
+                    porProveedor[v.proveedor].ingresos += v.precioBase || 0;
+                    porProveedor[v.proveedor].horas += v.horasEstimadas || 0;
+                }
+            });
+
+            let html = `
+                <h2>Desglose por Proveedor</h2>
+                <div class="proveedor-breakdown">
+            `;
+
+            Object.keys(porProveedor).forEach(key => {
+                const data = porProveedor[key];
+                const promedio = data.vestidos > 0 ? (data.ingresos / data.vestidos).toFixed(2) : 0;
+                
+                html += `
+                    <div class="proveedor-card ${key}">
+                        <h3>${obtenerNombreProveedor(key)}</h3>
+                        <div style="margin-top: 15px;">
+                            <p><strong>Vestidos:</strong> ${data.vestidos}</p>
+                            <p><strong>Ingresos:</strong> ${data.ingresos.toFixed(2)}€</p>
+                            <p><strong>Promedio:</strong> ${promedio}€/vestido</p>
+                            <p><strong>Horas:</strong> ${data.horas.toFixed(2)}h</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ===============================================
+        // === INICIALIZACIÓN ===========================
+        // ===============================================
+
+        // Inicializar cuando la página carga
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await inicializarDB();
+                await cargarListaRespaldos();
+                
+                // Renderizar vistas vacías inicialmente
+                renderizarInventario();
+                renderizarFacturacion();
+                renderizarFinanzas();
+            } catch (error) {
+                console.error('Error al inicializar:', error);
+                alert('❌ Error al inicializar la aplicación. Verifica la consola para más detalles.');
+            }
+        });
+    </script>
+</body>
+</html>

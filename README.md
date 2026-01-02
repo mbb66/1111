@@ -7,12 +7,135 @@ Sistema de gestión para taller de vestidos de novia con funcionalidad de respal
 ### Gestión Taller.html
 Aplicación principal de gestión del taller con todas las funcionalidades completas.
 
+### Gestión Histórico.html
+**Visor Histórico - Solo Lectura**
+
+Aplicación dedicada para visualizar datos históricos de años anteriores o respaldos completos. Replica las pestañas principales del sistema (Inventario, Facturación, Finanzas) en modo solo lectura.
+
 ### gestion-taller-respaldo.html
 **Visor de Respaldos JSON - Solo Lectura**
 
 Aplicación dedicada para visualizar y analizar respaldos JSON del sistema principal.
 
-## Cómo usar el Visor de Respaldos
+## Cómo usar Gestión Histórico
+
+### Características Principales
+
+1. **Visualización de Datos Históricos**
+   - Visualiza datos de cierres anuales o respaldos completos
+   - Tres pestañas principales: Inventario, Facturación y Finanzas
+   - Modo solo lectura para proteger datos históricos
+
+2. **Carga de Archivos**
+   - **Arrastrar y soltar**: Arrastra archivos JSON sobre el área de carga
+   - **Selector de archivos**: Haz clic en "Seleccionar Archivos"
+   - Soporta respaldos completos y informes anuales
+
+3. **Persistencia Local**
+   - Los archivos se guardan en IndexedDB
+   - No es necesario volver a cargarlos entre sesiones
+   - Gestiona múltiples respaldos simultáneamente
+
+4. **Pestaña Inventario**
+   - Lista completa de vestidos del respaldo
+   - Filtros por proveedor y estado
+   - Búsqueda por código, modelo, talla, lote
+   - Paginación para navegación sencilla
+   - Vista detallada expandible por vestido
+
+5. **Pestaña Facturación**
+   - Agrupación por facturas y albaranes
+   - Filtros por proveedor (Todos, Pronovias, Rosa Clará, Traka)
+   - Visualización de totales y detalles
+
+6. **Pestaña Finanzas**
+   - Dashboard con KPIs principales
+   - Ingresos, gastos y beneficio neto
+   - Desglose detallado por proveedor
+   - Métricas de promedio por vestido
+
+7. **Gestión de Respaldos**
+   - Ver lista de todos los respaldos cargados
+   - Seleccionar respaldo activo para visualización
+   - Eliminar respaldos individuales
+   - Limpiar completamente la base de datos
+
+### Instrucciones de Uso
+
+1. **Primera Vez**
+   - Abre `Gestión Histórico.html` en tu navegador
+   - Ve a la pestaña "Cargar Datos"
+   - Arrastra o selecciona archivos JSON
+   - Los datos se guardarán automáticamente
+
+2. **Seleccionar Respaldo**
+   - En la lista de respaldos, haz clic en "Seleccionar"
+   - Los datos se cargarán en las pestañas de visualización
+
+3. **Visualización**
+   - Navega por las pestañas Inventario, Facturación y Finanzas
+   - Usa filtros y búsqueda para encontrar información específica
+   - Expande detalles de vestidos, facturas o albaranes
+
+4. **Comparar Años**
+   - Carga múltiples informes anuales
+   - Cambia entre ellos seleccionando diferentes respaldos
+
+### Características Técnicas
+
+- **100% Cliente**: Funciona completamente offline
+- **Sin Dependencias**: Archivo HTML auto-contenido
+- **Persistencia**: IndexedDB para almacenamiento robusto
+- **Diseño Consistente**: Misma estética que la aplicación principal
+- **Modo Solo Lectura**: Protección de datos históricos
+
+### Compatibilidad
+
+- Navegadores modernos con soporte para IndexedDB, Drag & Drop API, ES6+
+- Probado en: Chrome/Edge 90+, Firefox 88+, Safari 14+
+
+### Integración con la Aplicación Principal
+
+Desde la pestaña "Respaldos" de la aplicación principal:
+- Haz clic en "📖 Abrir Gestión Histórico" para abrir el visor
+- Carga informes anuales para comparativas rápidas
+
+### Formatos Soportados
+
+**Respaldos Completos** (Exportar Todo):
+```json
+{
+  "modelos": [...],
+  "vestidos": [...],
+  "gastos": [...],
+  "otrosIngresos": [...],
+  "planificacion": {...},
+  "configuracion": {...}
+}
+```
+
+⚠️ **Nota importante**: Gestión Histórico solo acepta **respaldos completos**. Los informes anuales (generados con "Cierre de Año") tienen un formato resumido y deben cargarse en la aplicación principal para comparativas.
+
+**Informes Anuales** (formato de referencia - para uso en aplicación principal):
+```json
+{
+  "año": 2024,
+  "fecha_cierre": "2024-12-31",
+  "vestidos": {...},
+  "finanzas": {...},
+  "horas": {...},
+  "top_modelos": [...]
+}
+```
+
+### Notas de Seguridad
+
+- Los datos solo se almacenan localmente en tu navegador
+- No se envían datos a servicios externos
+- Los respaldos persisten por navegador y perfil de usuario
+- Limpia la base de datos si cambias de equipo o compartes el navegador
+
+## Cómo usar el Visor de Respaldos (gestion-taller-respaldo.html)
 
 ### Características Principales
 
