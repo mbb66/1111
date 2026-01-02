@@ -3672,8 +3672,16 @@
                         <div class="etiquetas-derecha">
                             ${albaranNumeros.length > 0 ? albaranNumeros.map(num => `<span class="chip">📦 ${num}</span>`).join('') : ''}
                             ${vestido.numeroFactura ? `<span class="chip">🧾 ${vestido.numeroFactura}</span>` : ''}
-                            <span class="chip">${vestido.estado.replace('_', ' ').toUpperCase()}</span>
-                            ${(vestido.tuvoTara || (vestido.historialTaras && vestido.historialTaras.length > 0)) ? `<span class="chip" style="background-color: var(--color-alerta); color: white;" title="Este vestido tuvo una tara">⚠️ TARA</span>` : ''}
+                            ${(vestido.tuvoTara || (vestido.historialTaras && vestido.historialTaras.length > 0)) ? (() => {
+                                // Determine tara badge color based on estado
+                                const estadosEnTaller = ['en_taller', 'con_tara', 'reparado'];
+                                const estadosEnviadosPagados = ['enviado', 'pagado'];
+                                let taraColor = 'var(--color-alerta)'; // Default yellow
+                                if (estadosEnviadosPagados.includes(vestido.estado)) {
+                                    taraColor = 'var(--color-exito)'; // Green
+                                }
+                                return `<span class="chip" style="background-color: ${taraColor}; color: white;" title="Este vestido tuvo una tara">⚠️ TARA</span>`;
+                            })() : ''}
                         </div>
                         <span class="toggle-icon" id="icon-${vestido.id}">▼</span>
                     </div>
