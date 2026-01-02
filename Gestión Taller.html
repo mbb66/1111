@@ -3332,11 +3332,87 @@
                     ${grupo.vestidos.map(v => `
                         <li style="margin: 5px 0;">
                             <strong>${v.nombreModelo}</strong> (${v.codigoModelo}) - Talla: ${v.talla || 'N/A'} - Estado: ${v.estado}
-                            <button class="btn btn-small btn-editar" style="margin-left: 10px;" onclick="openTab('inventario', event); setTimeout(() => { document.getElementById('vestido-${v.id}').scrollIntoView({behavior: 'smooth'}); toggleVestidoDetails(${v.id}); }, 200);">Ver</button>
+                            <button class="btn btn-small btn-editar" style="margin-left: 10px;" onclick="mostrarDetallesVestidoDuplicado(${v.id});">Ver</button>
                         </li>
                     `).join('')}
                 </ul>
             </div>`;
+        }
+
+        function mostrarDetallesVestidoDuplicado(vestidoId) {
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) {
+                alert('❌ Vestido no encontrado.');
+                return;
+            }
+
+            // Crear modal para mostrar detalles del vestido
+            let modalExistente = document.getElementById('modal-detalles-vestido-duplicado');
+            if (!modalExistente) {
+                modalExistente = document.createElement('div');
+                modalExistente.id = 'modal-detalles-vestido-duplicado';
+                modalExistente.className = 'modal-overlay';
+                document.body.appendChild(modalExistente);
+            }
+
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            const horasEstimadas = modelo ? modelo.horasEstimadas : (vestido.horasEstimadas || 0);
+            const horasReales = obtenerHorasRealesVestido(vestido);
+            const precioConIva = (vestido.precioBase * 1.21).toFixed(2);
+
+            const html = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>👗 Detalles del Vestido</h3>
+                        <button class="modal-close" onclick="cerrarModalDetallesVestido()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="vestido-card ${vestido.proveedor}" style="margin: 0;">
+                            <div class="vestido-header">
+                                <div>
+                                    <div class="nombre-modelo">${vestido.nombreModelo}</div>
+                                    <div class="talla-texto">Talla: ${vestido.talla || 'N/A'}</div>
+                                    <div class="lote-texto">Lote: ${vestido.lote || 'N/A'}</div>
+                                    ${vestido.numeroOF ? `<div class="of-texto">OF: ${vestido.numeroOF}</div>` : ''}
+                                    ${vestido.numeroSerie ? `<div class="of-texto">Serie: ${vestido.numeroSerie}</div>` : ''}
+                                </div>
+                                <div class="etiquetas-derecha">
+                                    <span class="chip">${vestido.estado.replace('_', ' ').toUpperCase()}</span>
+                                    <span class="chip">${vestido.proveedor.toUpperCase()}</span>
+                                </div>
+                            </div>
+                            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--color-borde);">
+                                <p><strong>Código:</strong> ${vestido.codigoModelo}</p>
+                                <p><strong>Precio Base:</strong> ${vestido.precioBase.toFixed(2)}€ (IVA inc: ${precioConIva}€)</p>
+                                <p><strong>Horas Estimadas:</strong> ${horasEstimadas}h</p>
+                                ${horasReales ? `<p><strong>Horas Reales:</strong> ${horasReales.toFixed(2)}h</p>` : ''}
+                                ${vestido.fechaLimite ? `<p><strong>Fecha Límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</p>` : ''}
+                                ${vestido.fechaEnvio ? `<p><strong>Fecha Envío:</strong> ${new Date(vestido.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</p>` : ''}
+                                ${vestido.numeroAlbaran ? `<p><strong>Albarán:</strong> ${vestido.numeroAlbaran}</p>` : ''}
+                                ${vestido.fechaFactura ? `<p><strong>Fecha Factura:</strong> ${new Date(vestido.fechaFactura + 'T00:00:00').toLocaleDateString('es-ES')}</p>` : ''}
+                                ${vestido.numeroFactura ? `<p><strong>Nº Factura:</strong> ${vestido.numeroFactura}</p>` : ''}
+                                ${vestido.observaciones ? `<p><strong>Observaciones:</strong> ${vestido.observaciones}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn" onclick="cerrarModalDetallesVestido()">Cerrar</button>
+                        <button class="btn btn-editar" onclick="cerrarModalDetallesVestido(); openTab('inventario', event); setTimeout(() => { document.getElementById('vestido-${vestido.id}')?.scrollIntoView({behavior: 'smooth'}); toggleVestidoDetails(${vestido.id}); }, 300);">Ir al Inventario</button>
+                    </div>
+                </div>
+            `;
+
+            modalExistente.innerHTML = html;
+            modalExistente.classList.add('active');
+            modalExistente.style.display = 'flex';
+        }
+
+        function cerrarModalDetallesVestido() {
+            const modal = document.getElementById('modal-detalles-vestido-duplicado');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.style.display = 'none';
+            }
         }
 
         function registrarVestido(e) {
@@ -4063,8 +4139,10 @@
                         </div>
                         <div class="grupo-header-acciones">
                             ${!esAlbaran ?
-                        `<button class="btn-edit-date" title="Editar fecha de factura" onclick="event.stopPropagation(); editarFechaFactura('${numero}', '${fecha}')">📅</button>` :
+                        `<button class="btn-edit-date" title="Editar fecha de factura" onclick="event.stopPropagation(); editarFechaFactura('${numero}', '${fecha}')">📅</button>
+                         <button class="btn-edit-date" title="Editar vestidos de la factura" onclick="event.stopPropagation(); editarVestidosFactura('${numero}')">✏️</button>` :
                         `<button class="btn-edit-date" title="Editar fecha de albarán" onclick="event.stopPropagation(); editarFechaAlbaran('${numero}', '${proveedor}', '${fecha}')">📅</button>
+                         <button class="btn-edit-date" title="Editar vestidos del albarán" onclick="event.stopPropagation(); editarVestidosAlbaran('${numero}', '${proveedor}')">✏️</button>
                          <button class="btn-copy-group" title="Copiar detalles del albarán" onclick="event.stopPropagation(); copiarDetallesAlbaran('${numero}', '${proveedor}')">📋</button>`
                     }
                             <span title="Total con IVA: ${totalConIva.toFixed(2)}€">${totalBase.toFixed(2)}€</span>
@@ -4165,6 +4243,133 @@
 
             guardarTodo();
             alert(`Fecha del albarán ${numeroAlbaran} actualizada.`);
+            const proveedorActivo = document.querySelector('.proveedor-subtab.active').getAttribute('onclick').match(/'([^']+)'/)[1];
+            generarVistaFacturacion(proveedorActivo);
+        }
+
+        // Variables globales para el modal de editar vestidos
+        let modalEditarVestidos = {
+            tipo: '', // 'factura' o 'albaran'
+            numero: '',
+            proveedor: ''
+        };
+
+        function editarVestidosFactura(numeroFactura) {
+            modalEditarVestidos.tipo = 'factura';
+            modalEditarVestidos.numero = numeroFactura;
+            modalEditarVestidos.proveedor = '';
+
+            const vestidosFactura = vestidos.filter(v => v.numeroFactura === numeroFactura);
+            
+            if (vestidosFactura.length === 0) {
+                alert('No hay vestidos en esta factura.');
+                return;
+            }
+
+            mostrarModalEditarVestidos(vestidosFactura, `Factura ${numeroFactura}`);
+        }
+
+        function editarVestidosAlbaran(numeroAlbaran, proveedor) {
+            modalEditarVestidos.tipo = 'albaran';
+            modalEditarVestidos.numero = numeroAlbaran;
+            modalEditarVestidos.proveedor = proveedor;
+
+            const vestidosAlbaran = vestidos.filter(v => 
+                v.proveedor === proveedor && v.numeroAlbaran === numeroAlbaran
+            );
+            
+            if (vestidosAlbaran.length === 0) {
+                alert('No hay vestidos en este albarán.');
+                return;
+            }
+
+            mostrarModalEditarVestidos(vestidosAlbaran, `Albarán ${numeroAlbaran} (${proveedor})`);
+        }
+
+        function mostrarModalEditarVestidos(vestidosLista, titulo) {
+            const modal = document.getElementById('modal-editar-vestidos');
+            const tituloElement = document.getElementById('modal-editar-vestidos-titulo');
+            const listaElement = document.getElementById('modal-editar-vestidos-lista');
+
+            tituloElement.textContent = `✏️ Editar Vestidos - ${titulo}`;
+
+            let html = '<div class="toggle-group" style="flex-direction: column; align-items: stretch;">';
+            vestidosLista.forEach(vestido => {
+                html += `
+                    <label class="toggle-btn" style="justify-content: flex-start; padding: 12px;">
+                        <input type="checkbox" value="${vestido.id}" data-vestido-id="${vestido.id}">
+                        <span class="toggle-label" style="flex-grow: 1;">
+                            <strong>${vestido.nombreModelo}</strong> (${vestido.codigoModelo})
+                            - Talla: ${vestido.talla || 'N/A'}
+                            - Lote: ${vestido.lote || 'N/A'}
+                            ${vestido.numeroOF ? `- OF: ${vestido.numeroOF}` : ''}
+                            - ${vestido.precioBase.toFixed(2)}€
+                        </span>
+                    </label>
+                `;
+            });
+            html += '</div>';
+
+            listaElement.innerHTML = html;
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        function cerrarModalEditarVestidos() {
+            const modal = document.getElementById('modal-editar-vestidos');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            
+            // Limpiar selecciones
+            const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        function confirmarEliminarVestidos() {
+            const modal = document.getElementById('modal-editar-vestidos');
+            const checkboxes = modal.querySelectorAll('input[type="checkbox"]:checked');
+            
+            if (checkboxes.length === 0) {
+                alert('⚠️ No has seleccionado ningún vestido.');
+                return;
+            }
+
+            const confirmacion = confirm(`¿Estás seguro de que deseas eliminar ${checkboxes.length} vestido(s) de este documento?\n\nLos vestidos volverán a su estado anterior.`);
+            
+            if (!confirmacion) return;
+
+            const vestidosIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            vestidosIds.forEach(id => {
+                const vestido = vestidos.find(v => v.id === id);
+                if (!vestido) return;
+
+                if (modalEditarVestidos.tipo === 'factura') {
+                    // Eliminar de factura: volver a estado "enviado"
+                    vestido.numeroFactura = null;
+                    vestido.fechaFactura = null;
+                    vestido.estado = 'enviado';
+                } else if (modalEditarVestidos.tipo === 'albaran') {
+                    // Eliminar de albarán: volver a estado "en_taller"
+                    vestido.numeroAlbaran = null;
+                    vestido.fechaEnvio = null;
+                    vestido.estado = 'en_taller';
+                    
+                    // Limpiar historial de albaranes si existe
+                    if (vestido.historialAlbaranes && vestido.historialAlbaranes.length > 0) {
+                        vestido.historialAlbaranes = vestido.historialAlbaranes.filter(
+                            h => h.albaran !== modalEditarVestidos.numero
+                        );
+                    }
+                }
+            });
+
+            guardarTodo();
+            cerrarModalEditarVestidos();
+            
+            alert(`✅ ${checkboxes.length} vestido(s) eliminado(s) correctamente.`);
+            
+            // Recargar la vista de facturación
             const proveedorActivo = document.querySelector('.proveedor-subtab.active').getAttribute('onclick').match(/'([^']+)'/)[1];
             generarVistaFacturacion(proveedorActivo);
         }
@@ -9119,6 +9324,26 @@
                         🏢 Empresa
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for editing dresses in invoice/delivery note -->
+    <div id="modal-editar-vestidos" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="modal-editar-vestidos-titulo">✏️ Editar Vestidos</h3>
+                <button class="modal-close" onclick="cerrarModalEditarVestidos()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px;">Selecciona los vestidos que deseas eliminar de este documento. Al eliminarlos, volverán a su estado anterior.</p>
+                <div id="modal-editar-vestidos-lista" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Lista de vestidos será generada dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="cerrarModalEditarVestidos()">Cancelar</button>
+                <button class="btn btn-eliminar" onclick="confirmarEliminarVestidos()">Eliminar Seleccionados</button>
             </div>
         </div>
     </div>
