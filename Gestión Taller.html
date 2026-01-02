@@ -8573,19 +8573,34 @@
         let informesAnuales = [];
 
         function iniciarCierreAnual() {
-            const anioActual = new Date().getFullYear();
-            const confirmacion = prompt(`Esta acción realizará el cierre del año ${anioActual}.\n\nSe exportará:\n- Respaldo completo\n- Informe anual con estadísticas\n\nSe eliminará:\n- Vestidos pagados\n- Gastos e ingresos\n- Planificación\n\nSe mantendrá:\n- Base de modelos\n- Vestidos en taller/enviados\n\nEscribe "CIERRE ${anioActual}" para confirmar.`);
+            // Determine which year to close - default to previous year
+            const añoActualCalendario = new Date().getFullYear();
+            const añoPorDefecto = añoActualCalendario - 1;
+            
+            const añoACerrarInput = prompt(`Introduce el año a cerrar (por defecto ${añoPorDefecto}):`, añoPorDefecto);
+            if (!añoACerrarInput) {
+                alert('Acción cancelada.');
+                return;
+            }
+            
+            const añoACerrar = parseInt(añoACerrarInput);
+            if (isNaN(añoACerrar) || añoACerrar < 2000 || añoACerrar > añoActualCalendario) {
+                alert('Año inválido.');
+                return;
+            }
+            
+            const confirmacion = prompt(`Esta acción realizará el cierre del año ${añoACerrar}.\n\nSe exportará:\n- Respaldo completo\n- Informe anual con estadísticas completas\n\nSe eliminará:\n- Vestidos pagados\n- Gastos e ingresos\n- Planificación\n\nSe mantendrá:\n- Base de modelos\n- Vestidos en taller/enviados\n\nEscribe "CIERRE ${añoACerrar}" para confirmar.`);
 
-            if (confirmacion !== `CIERRE ${anioActual}`) {
+            if (confirmacion !== `CIERRE ${añoACerrar}`) {
                 alert('Acción cancelada.');
                 return;
             }
 
             // Generate annual report
-            const informeAnual = generarInformeAnual(anioActual);
+            const informeAnual = generarInformeAnual(añoACerrar);
 
             // Export complete backup
-            exportarRespaldoCompleto(anioActual);
+            exportarRespaldoCompleto(añoACerrar);
 
             // Export annual report
             setTimeout(() => {
@@ -8595,7 +8610,7 @@
             // Clean up data
             setTimeout(() => {
                 realizarLimpiezaCierreAnual();
-                alert(`✅ Cierre del año ${anioActual} completado.\n\nSe han exportado los respaldos y el sistema está listo para el nuevo año.`);
+                alert(`✅ Cierre del año ${añoACerrar} completado.\n\nSe han exportado los respaldos y el sistema está listo para el nuevo año.`);
                 location.reload();
             }, 1000);
         }
@@ -8604,22 +8619,32 @@
             const fechaInicio = `${anio}-01-01`;
             const fechaFin = `${anio}-12-31`;
 
-            // Filter dresses from the year
-            const vestidosDelAnio = vestidos.filter(v => v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin);
+            // Filter dresses from the year - include dresses with invoice date, entry date, or send date in the year
+            const vestidosDelAnio = vestidos.filter(v => {
+                // Include if any relevant date falls within the year
+                const fechaFacturaEnRango = v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin;
+                const fechaEntradaEnRango = v.fechaEntrada && v.fechaEntrada >= fechaInicio && v.fechaEntrada <= fechaFin;
+                const fechaEnvioEnRango = v.fechaEnvio && v.fechaEnvio >= fechaInicio && v.fechaEnvio <= fechaFin;
+                return fechaFacturaEnRango || fechaEntradaEnRango || fechaEnvioEnRango;
+            });
 
             // Calculate statistics by provider
             const porProveedor = {
                 pronovias: vestidosDelAnio.filter(v => v.proveedor === 'pronovias').length,
                 rosa_clara: vestidosDelAnio.filter(v => v.proveedor === 'rosa_clara').length,
-                traka: vestidosDelAnio.filter(v => v.proveedor === 'traka').length
+                traka: vestidosDelAnio.filter(v => v.proveedor === 'traka').length,
+                otros: vestidosDelAnio.filter(v => v.proveedor === 'otros').length
             };
 
-            // Calculate by month
+            // Calculate by month (based on invoice date or entry date if no invoice)
             const porMes = {};
             const nombresMeses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
             nombresMeses.forEach((mes, i) => {
                 const mesNum = String(i + 1).padStart(2, '0');
-                porMes[mes] = vestidosDelAnio.filter(v => v.fechaFactura && v.fechaFactura.substring(5, 7) === mesNum).length;
+                porMes[mes] = vestidosDelAnio.filter(v => {
+                    const fechaReferencia = v.fechaFactura || v.fechaEntrada;
+                    return fechaReferencia && fechaReferencia.substring(5, 7) === mesNum;
+                }).length;
             });
 
             // Calculate financials
@@ -8647,7 +8672,10 @@
             const finanzasPorMes = {};
             nombresMeses.forEach((mes, i) => {
                 const mesNum = String(i + 1).padStart(2, '0');
-                const vestidosMes = vestidosDelAnio.filter(v => v.fechaFactura && v.fechaFactura.substring(5, 7) === mesNum);
+                const vestidosMes = vestidosDelAnio.filter(v => {
+                    const fechaReferencia = v.fechaFactura || v.fechaEntrada;
+                    return fechaReferencia && fechaReferencia.substring(5, 7) === mesNum;
+                });
                 const gastosMes = gastosPeriodo.filter(g => g.fecha.substring(5, 7) === mesNum);
                 const ingresosMes = otrosIngresosPeriodo.filter(i => i.fecha.substring(5, 7) === mesNum);
                 finanzasPorMes[mes] = {
@@ -8656,25 +8684,107 @@
                 };
             });
 
+            // Prepare detailed dress data with all relevant fields
+            const vestidosDetallados = vestidosDelAnio.map(v => ({
+                // Basic identification
+                id: v.id,
+                codigoCompleto: v.codigoCompleto,
+                codigoModelo: v.codigoModelo,
+                nombreModelo: v.nombreModelo,
+                proveedor: v.proveedor,
+                talla: v.talla,
+                lote: v.lote,
+                numeroOF: v.numeroOF,
+                numeroSerie: v.numeroSerie,
+                codigoBarras: v.codigoBarras,
+                
+                // Dates
+                fechaEntrada: v.fechaEntrada,
+                fechaLimite: v.fechaLimite,
+                fechaEnvio: v.fechaEnvio,
+                fechaFactura: v.fechaFactura,
+                fechaRegistro: v.fechaRegistro,
+                
+                // Financial
+                precioBase: v.precioBase,
+                numeroFactura: v.numeroFactura,
+                numeroAlbaran: v.numeroAlbaran,
+                
+                // Delivery notes history
+                historialAlbaranes: v.historialAlbaranes || [],
+                
+                // Work info
+                horasEstimadas: v.horasEstimadas,
+                horasReales: obtenerHorasRealesVestido(v),
+                estado: v.estado,
+                
+                // Flags
+                cabezaSerie: v.cabezaSerie,
+                variante: v.variante,
+                incrementoPrecio: v.incrementoPrecio,
+                alertaEspecial: v.alertaEspecial,
+                tuvoTara: v.tuvoTara,
+                
+                // Additional info
+                observaciones: v.observaciones,
+                historialTaras: v.historialTaras || [],
+                reenvio: v.reenvio
+            }));
+
+            // Prepare detailed expense data with all fields
+            const gastosDetallados = gastosPeriodo.map(g => ({
+                id: g.id,
+                concepto: g.concepto,
+                fecha: g.fecha,
+                baseImponible: g.baseImponible,
+                iva: g.iva,
+                total: g.total,
+                tipoGasto: g.tipoGasto,
+                proveedor: g.proveedor,
+                observaciones: g.observaciones
+            }));
+
+            // Prepare detailed other income data
+            const otrosIngresosDetallados = otrosIngresosPeriodo.map(i => ({
+                id: i.id,
+                concepto: i.concepto,
+                fecha: i.fecha,
+                baseImponible: i.baseImponible,
+                iva: i.iva,
+                total: i.total,
+                observaciones: i.observaciones
+            }));
+
             return {
                 año: anio,
                 fecha_cierre: new Date().toISOString().split('T')[0],
-                vestidos: {
-                    total: vestidosDelAnio.length,
-                    por_proveedor: porProveedor,
-                    por_mes: porMes
+                
+                // Summary statistics
+                resumen: {
+                    vestidos: {
+                        total: vestidosDelAnio.length,
+                        por_proveedor: porProveedor,
+                        por_mes: porMes
+                    },
+                    finanzas: {
+                        ingresos_totales: ingresosTotales,
+                        gastos_totales: gastosTotales,
+                        beneficio_neto: beneficioNeto,
+                        por_mes: finanzasPorMes
+                    },
+                    horas: {
+                        total_facturadas: horasTotales,
+                        media_por_vestido: mediaHoras
+                    },
+                    top_modelos: topModelos
                 },
-                finanzas: {
-                    ingresos_totales: ingresosTotales,
-                    gastos_totales: gastosTotales,
-                    beneficio_neto: beneficioNeto,
-                    por_mes: finanzasPorMes
-                },
-                horas: {
-                    total_facturadas: horasTotales,
-                    media_por_vestido: mediaHoras
-                },
-                top_modelos: topModelos
+                
+                // Detailed individual data
+                datos_individuales: {
+                    vestidos: vestidosDetallados,
+                    gastos: gastosDetallados,
+                    otros_ingresos: otrosIngresosDetallados
+                }
             };
         }
 
