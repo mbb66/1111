@@ -3331,7 +3331,7 @@
                 <ul style="margin-top: 10px; padding-left: 20px;">
                     ${grupo.vestidos.map(v => `
                         <li style="margin: 5px 0;">
-                            <strong>${v.nombreModelo}</strong> (${v.codigoModelo}) - Talla: ${v.talla || 'N/A'} - Estado: ${v.estado}
+                            <strong>${v.nombreModelo}</strong> (${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - Talla: ${v.talla || 'N/A'} - Estado: ${v.estado}
                             <button class="btn btn-small btn-editar" style="margin-left: 10px;" onclick="mostrarDetallesVestidoDuplicado(${v.id});">Ver</button>
                         </li>
                     `).join('')}
@@ -4029,7 +4029,7 @@
             // Check if any dress has incrementoPrecio set to true
             const vestidosConIncrementoPrecio = vestidosSeleccionados.filter(v => v.incrementoPrecio);
             if (vestidosConIncrementoPrecio.length > 0) {
-                const nombres = vestidosConIncrementoPrecio.map(v => `- ${v.nombreModelo} (${v.lote})`).join('\n');
+                const nombres = vestidosConIncrementoPrecio.map(v => `- ${v.nombreModelo} (${v.lote}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''})`).join('\n');
                 if (!confirm(`💰 ATENCIÓN: Los siguientes ${vestidosConIncrementoPrecio.length} vestido(s) tienen marcado "Incrementa el precio":\n\n${nombres}\n\n¿Continuar con la factura?`)) return;
             }
 
@@ -4149,7 +4149,7 @@
                         </div>
                     </div>
                     <div class="grupo-detalles">
-                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
+                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
                         <div class="total-grupo">
                             Total Base: ${totalBase.toFixed(2)}€<br>
                             <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong>
@@ -4175,7 +4175,7 @@
             };
 
             const textoACopiar = vestidosDelAlbaran.map(v =>
-                `${v.nombreModelo} | Talla: ${v.talla || 'N/A'} | Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? ` | OF: ${v.numeroOF}` : ''}`
+                `${v.nombreModelo} | Talla: ${v.talla || 'N/A'} | Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? ` | OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? ` | Serie: ${v.numeroSerie}` : ''}`
             ).join('\n');
 
             navigator.clipboard.writeText(textoACopiar).then(() => {
@@ -4302,7 +4302,8 @@
                             <strong>${vestido.nombreModelo}</strong> (${vestido.codigoModelo})
                             - Talla: ${vestido.talla || 'N/A'}
                             - Lote: ${vestido.lote || 'N/A'}
-                            ${vestido.numeroOF ? `- OF: ${vestido.numeroOF}` : ''}
+                            ${vestido.proveedor === 'pronovias' && vestido.numeroOF ? `- OF: ${vestido.numeroOF}` : ''}
+                            ${vestido.proveedor === 'rosa_clara' && vestido.numeroSerie ? `- Serie: ${vestido.numeroSerie}` : ''}
                             - ${vestido.precioBase.toFixed(2)}€
                         </span>
                     </label>
@@ -4391,7 +4392,7 @@
                     if (diasRestantes <= 2) {
                         alertas.push({
                             tipo: diasRestantes <= 0 ? '🔴 CRÍTICO' : '🟡 ALERTA',
-                            mensaje: `Vestido ${vestido.nombreModelo} (${vestido.lote || 'Sin lote'}) ${diasRestantes <= 0 ? 'venció hace ' + Math.abs(diasRestantes) + ' día(s)' : 'vence en ' + diasRestantes + ' día(s)'}`,
+                            mensaje: `Vestido ${vestido.nombreModelo} (${vestido.lote || 'Sin lote'}${vestido.proveedor === 'pronovias' && vestido.numeroOF ? `, OF: ${vestido.numeroOF}` : ''}${vestido.proveedor === 'rosa_clara' && vestido.numeroSerie ? `, Serie: ${vestido.numeroSerie}` : ''}) ${diasRestantes <= 0 ? 'venció hace ' + Math.abs(diasRestantes) + ' día(s)' : 'vence en ' + diasRestantes + ' día(s)'}`,
                             vestidoId: vestido.id,
                             urgencia: diasRestantes
                         });
@@ -4487,7 +4488,7 @@
             return `<div class="vestido-card ${v.proveedor}" style="margin: 10px 0;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong>${v.nombreModelo}</strong> (${v.lote || 'Sin lote'})<br>
+                        <strong>${v.nombreModelo}</strong> (${v.lote || 'Sin lote'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''})<br>
                         <small>Proveedor: ${v.proveedor} | ${alerta.diasSinPagar} días sin pagar</small><br>
                         <small>Enviado: ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')} | Precio: ${v.precioBase.toFixed(2)}€</small>
                     </div>
@@ -4542,7 +4543,8 @@
                     return 'N/A';
                 })()}</div>
                             <div><strong>Precio Base:</strong> ${v.precioBase?.toFixed(2) || 'N/A'}€</div>
-                            ${v.numeroOF ? `<div><strong>Nº OF:</strong> ${v.numeroOF}</div>` : ''}
+                            ${v.proveedor === 'pronovias' && v.numeroOF ? `<div><strong>Nº OF:</strong> ${v.numeroOF}</div>` : ''}
+                            ${v.proveedor === 'rosa_clara' && v.numeroSerie ? `<div><strong>Nº Serie:</strong> ${v.numeroSerie}</div>` : ''}
                             ${v.fechaLimite ? `<div><strong>Fecha Límite:</strong> ${new Date(v.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
                             ${v.fechaEnvio ? `<div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
                             ${v.fechaFactura ? `<div><strong>Fecha Factura:</strong> ${new Date(v.fechaFactura + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
