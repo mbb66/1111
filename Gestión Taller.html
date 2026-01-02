@@ -2362,6 +2362,16 @@
                 <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('rosa_clara')">Rosa Clará</button>
                 <button class="proveedor-subtab" onclick="mostrarProveedorSubtab('traka')">Traka</button>
             </div>
+            <div class="grid-2" style="margin-bottom: 20px;">
+                <div class="form-group">
+                    <label>📅 Fecha Desde:</label>
+                    <input type="date" id="filtroFechaDesdeFacturacion" onchange="aplicarFiltroFechasFacturacion()">
+                </div>
+                <div class="form-group">
+                    <label>📅 Fecha Hasta:</label>
+                    <input type="date" id="filtroFechaHastaFacturacion" onchange="aplicarFiltroFechasFacturacion()">
+                </div>
+            </div>
             <div class="grid-2">
                 <div id="factura-container">
                     <h3>Facturas</h3>
@@ -4270,18 +4280,49 @@
             generarVistaFacturacion(proveedor);
         }
 
+        function aplicarFiltroFechasFacturacion() {
+            // Obtener el proveedor actualmente seleccionado
+            const proveedorActivo = document.querySelector('.proveedor-subtab.active')?.textContent.trim().toLowerCase();
+            const proveedorFiltro = proveedorActivo === 'todos' ? 'todos' : 
+                                    proveedorActivo === 'pronovias' ? 'pronovias' :
+                                    proveedorActivo === 'rosa clará' ? 'rosa_clara' :
+                                    proveedorActivo === 'traka' ? 'traka' : 'todos';
+            generarVistaFacturacion(proveedorFiltro);
+        }
+
         function generarVistaFacturacion(proveedorFiltro) {
-            const vestidosFiltrados = proveedorFiltro === 'todos' ? vestidos : vestidos.filter(v => v.proveedor === proveedorFiltro);
+            let vestidosFiltrados = proveedorFiltro === 'todos' ? vestidos : vestidos.filter(v => v.proveedor === proveedorFiltro);
+            
+            // Aplicar filtros de fecha
+            const fechaDesde = document.getElementById('filtroFechaDesdeFacturacion')?.value;
+            const fechaHasta = document.getElementById('filtroFechaHastaFacturacion')?.value;
 
             const facturas = {};
             const albaranes = {};
 
             vestidosFiltrados.forEach(v => {
+                // Filtrar facturas por fecha
                 if (v.numeroFactura) {
-                    if (!facturas[v.numeroFactura]) facturas[v.numeroFactura] = [];
-                    facturas[v.numeroFactura].push(v);
+                    let incluirEnFactura = true;
+                    
+                    if (fechaDesde || fechaHasta) {
+                        const fechaFactura = v.fechaFactura ? new Date(v.fechaFactura) : null;
+                        if (fechaFactura) {
+                            if (fechaDesde && fechaFactura < new Date(fechaDesde)) incluirEnFactura = false;
+                            if (fechaHasta && fechaFactura > new Date(fechaHasta)) incluirEnFactura = false;
+                        } else if (fechaDesde || fechaHasta) {
+                            // Si hay filtro de fechas pero la factura no tiene fecha, no incluir
+                            incluirEnFactura = false;
+                        }
+                    }
+                    
+                    if (incluirEnFactura) {
+                        if (!facturas[v.numeroFactura]) facturas[v.numeroFactura] = [];
+                        facturas[v.numeroFactura].push(v);
+                    }
                 }
 
+                // Procesar albaranes (historial y actual)
                 const todosLosAlbaranes = (v.historialAlbaranes || [])
                     .map(h => ({ ...h, proveedor: v.proveedor, vestidoId: v.id }));
                 if (v.numeroAlbaran) {
@@ -4290,12 +4331,28 @@
 
                 todosLosAlbaranes.forEach(alb => {
                     if (alb.albaran) {
-                        const claveGrupo = `${alb.proveedor}-${alb.albaran}`;
-                        if (!albaranes[claveGrupo]) {
-                            albaranes[claveGrupo] = { lista: [], fecha: alb.fecha, proveedor: alb.proveedor, numero: alb.albaran };
+                        let incluirEnAlbaran = true;
+                        
+                        // Filtrar albaranes por fecha
+                        if (fechaDesde || fechaHasta) {
+                            const fechaAlbaran = alb.fecha ? new Date(alb.fecha) : null;
+                            if (fechaAlbaran) {
+                                if (fechaDesde && fechaAlbaran < new Date(fechaDesde)) incluirEnAlbaran = false;
+                                if (fechaHasta && fechaAlbaran > new Date(fechaHasta)) incluirEnAlbaran = false;
+                            } else if (fechaDesde || fechaHasta) {
+                                // Si hay filtro de fechas pero el albarán no tiene fecha, no incluir
+                                incluirEnAlbaran = false;
+                            }
                         }
-                        if (!albaranes[claveGrupo].lista.some(vest => vest.id === v.id)) {
-                            albaranes[claveGrupo].lista.push(v);
+                        
+                        if (incluirEnAlbaran) {
+                            const claveGrupo = `${alb.proveedor}-${alb.albaran}`;
+                            if (!albaranes[claveGrupo]) {
+                                albaranes[claveGrupo] = { lista: [], fecha: alb.fecha, proveedor: alb.proveedor, numero: alb.albaran };
+                            }
+                            if (!albaranes[claveGrupo].lista.some(vest => vest.id === v.id)) {
+                                albaranes[claveGrupo].lista.push(v);
+                            }
                         }
                     }
                 });
@@ -4335,10 +4392,19 @@
 
                 const totalBase = lista.reduce((sum, v) => sum + (v.precioBase || 0), 0);
                 const totalConIva = totalBase * 1.21;
+                
+                // Formatear fecha para mostrar
+                let fechaTexto = '';
+                if (fecha) {
+                    const fechaObj = new Date(fecha);
+                    fechaTexto = fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                } else {
+                    fechaTexto = 'Sin fecha';
+                }
 
                 return `<div class="grupo-${tipo}">
                     <div class="grupo-header">
-                        <div class="grupo-header-titulo" onclick="this.parentElement.nextElementSibling.style.display = this.parentElement.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+                        <div class="grupo-header-titulo" onclick="this.parentElement.nextElementSibling.nextElementSibling.style.display = this.parentElement.nextElementSibling.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
                             <span>${tipo.charAt(0).toUpperCase() + tipo.slice(1)} ${numero} (${lista.length})</span>
                         </div>
                         <div class="grupo-header-acciones">
@@ -4351,6 +4417,10 @@
                     }
                             <span title="Total con IVA: ${totalConIva.toFixed(2)}€">${totalBase.toFixed(2)}€</span>
                         </div>
+                    </div>
+                    <div style="background: var(--color-neutro-suave); padding: 8px 15px; border-bottom: 1px solid var(--color-borde); font-size: 0.9em; color: var(--color-texto-secundario); display: flex; justify-content: space-between; align-items: center;">
+                        <span><strong>📅 Fecha ${esAlbaran ? 'albarán' : 'factura'}:</strong> ${fechaTexto}</span>
+                        <span><strong>${esAlbaran ? '📦' : '📄'} ${tipo.charAt(0).toUpperCase() + tipo.slice(1)}:</strong> ${numero}</span>
                     </div>
                     <div class="grupo-detalles">
                         <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
@@ -8327,10 +8397,21 @@
             if (!diaSeleccionado) return;
 
             workers.forEach(worker => {
-                const estado = document.getElementById(`estado-${worker.id}`).value;
+                // Solo procesar workers que están activos en esta fecha y tienen elementos en el modal
+                if (!trabajadorActivoEnFecha(worker, diaSeleccionado)) {
+                    return;
+                }
+                
+                const estadoElement = document.getElementById(`estado-${worker.id}`);
                 const horasInput = document.getElementById(`horas-${worker.id}`);
                 const notaInput = document.getElementById(`nota-${worker.id}`);
+                
+                // Si los elementos no existen en el DOM, saltarlos (no fueron renderizados en el modal)
+                if (!estadoElement || !horasInput || !notaInput) {
+                    return;
+                }
 
+                const estado = estadoElement.value;
                 let horas = parseFloat(horasInput.value) || 0;
                 if (estado === 'jornada_completa') horas = worker.jornada_maxima;
                 if (['falta_completa', 'baja', 'festivo'].includes(estado)) horas = 0;
