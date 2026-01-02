@@ -7,12 +7,89 @@ Sistema de gestión para taller de vestidos de novia con funcionalidad de respal
 ### Gestión Taller.html
 Aplicación principal de gestión del taller con todas las funcionalidades completas.
 
+### Gestión Histórico.html
+**Visor Histórico - Solo Lectura**
+
+Aplicación dedicada para visualizar datos históricos de años anteriores o respaldos completos. Replica las pestañas principales del sistema (Inventario, Facturación, Finanzas) en modo solo lectura.
+
 ### gestion-taller-respaldo.html
 **Visor de Respaldos JSON - Solo Lectura**
 
 Aplicación dedicada para visualizar y analizar respaldos JSON del sistema principal.
 
-## Cómo usar el Visor de Respaldos
+## Cómo usar Gestión Histórico
+
+### Características Principales
+
+1. **Visualización de Datos Históricos**
+   - Visualiza datos de cierres anuales o respaldos completos
+   - Tres pestañas principales: Inventario, Facturación y Finanzas
+   - Modo solo lectura para proteger datos históricos
+
+2. **Carga de Archivos**
+   - **Arrastrar y soltar**: Arrastra archivos JSON sobre el área de carga
+   - **Selector de archivos**: Haz clic en "Seleccionar Archivos"
+   - Soporta respaldos completos y informes anuales
+
+3. **Persistencia Local**
+   - Los archivos se guardan en IndexedDB
+   - No es necesario volver a cargarlos entre sesiones
+   - Gestiona múltiples respaldos simultáneamente
+
+4. **Pestaña Inventario**
+   - Lista completa de vestidos del respaldo
+   - Filtros por proveedor y estado
+   - Búsqueda por código, modelo, talla, lote
+   - Paginación para navegación sencilla
+   - Vista detallada expandible por vestido
+
+5. **Pestaña Facturación**
+   - Agrupación por facturas y albaranes
+   - Filtros por proveedor (Todos, Pronovias, Rosa Clará, Traka)
+   - Visualización de totales y detalles
+
+6. **Pestaña Finanzas**
+   - Dashboard con KPIs principales
+   - Ingresos, gastos y beneficio neto
+   - Desglose detallado por proveedor
+   - Métricas de promedio por vestido
+
+7. **Gestión de Respaldos**
+   - Ver lista de todos los respaldos cargados
+   - Seleccionar respaldo activo para visualización
+   - Eliminar respaldos individuales
+   - Limpiar completamente la base de datos
+
+### Instrucciones de Uso
+
+1. **Primera Vez**
+   - Abre `Gestión Histórico.html` en tu navegador
+   - Ve a la pestaña "Cargar Datos"
+   - Arrastra o selecciona archivos JSON
+   - Los datos se guardarán automáticamente
+
+2. **Seleccionar Respaldo**
+   - En la lista de respaldos, haz clic en "Seleccionar"
+   - Los datos se cargarán en las pestañas de visualización
+
+3. **Visualización**
+   - Navega por las pestañas Inventario, Facturación y Finanzas
+   - Usa filtros y búsqueda para encontrar información específica
+   - Expande detalles de vestidos, facturas o albaranes
+
+4. **Comparar Años**
+   - Carga múltiples informes anuales
+   - Cambia entre ellos seleccionando diferentes respaldos
+
+### Características Técnicas
+
+- **100% Cliente**: Funciona completamente offline
+- **Sin Dependencias**: Archivo HTML auto-contenido
+- **Persistencia**: IndexedDB para almacenamiento robusto
+- **Diseño Consistente**: Misma estética que la aplicación principal
+- **Modo Solo Lectura**: Protección de datos históricos
+
+## Cómo usar el Visor de Respaldos (gestion-taller-respaldo.html)
 
 ### Características Principales
 
