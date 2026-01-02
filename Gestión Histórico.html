@@ -669,9 +669,10 @@
             
             <div class="info-banner">
                 <p><strong>📌 Información:</strong></p>
-                <p>• Puedes cargar archivos JSON de respaldos completos o informes anuales</p>
+                <p>• Carga archivos JSON de <strong>respaldos completos</strong> (generados con "Exportar Todo")</p>
                 <p>• Los datos se guardan localmente en tu navegador (IndexedDB)</p>
                 <p>• Selecciona un respaldo para visualizar sus datos en las otras pestañas</p>
+                <p>• Los informes anuales deben cargarse en la aplicación principal</p>
             </div>
 
             <div class="upload-area" id="uploadArea">
@@ -933,8 +934,12 @@
                             const contenido = JSON.parse(e.target.result);
                             
                             // Validar que el JSON tiene estructura válida
-                            if (!contenido.vestidos && !contenido.año) {
-                                alert(`❌ El archivo "${file.name}" no tiene un formato válido.`);
+                            if (!contenido.vestidos || !Array.isArray(contenido.vestidos)) {
+                                if (contenido.año) {
+                                    alert(`❌ El archivo "${file.name}" parece ser un informe anual.\n\nGestión Histórico solo acepta respaldos completos.\nCarga los informes anuales en la aplicación principal para ver comparativas.`);
+                                } else {
+                                    alert(`❌ El archivo "${file.name}" no tiene un formato válido.\n\nDebe ser un respaldo completo con un array de vestidos.`);
+                                }
                                 return;
                             }
 

@@ -114,7 +114,9 @@ Desde la pestaña "Respaldos" de la aplicación principal:
 }
 ```
 
-**Informes Anuales** (Cierre de Año):
+⚠️ **Nota importante**: Gestión Histórico solo acepta **respaldos completos**. Los informes anuales (generados con "Cierre de Año") tienen un formato resumido y deben cargarse en la aplicación principal para comparativas.
+
+**Informes Anuales** (formato de referencia - para uso en aplicación principal):
 ```json
 {
   "año": 2024,
