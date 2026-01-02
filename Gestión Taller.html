@@ -3331,7 +3331,7 @@
                 <ul style="margin-top: 10px; padding-left: 20px;">
                     ${grupo.vestidos.map(v => `
                         <li style="margin: 5px 0;">
-                            <strong>${v.nombreModelo}</strong> (${v.codigoModelo}) - Talla: ${v.talla || 'N/A'} - Estado: ${v.estado}
+                            <strong>${v.nombreModelo}</strong> (${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - Talla: ${v.talla || 'N/A'} - Estado: ${v.estado}
                             <button class="btn btn-small btn-editar" style="margin-left: 10px;" onclick="mostrarDetallesVestidoDuplicado(${v.id});">Ver</button>
                         </li>
                     `).join('')}
@@ -4149,7 +4149,7 @@
                         </div>
                     </div>
                     <div class="grupo-detalles">
-                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
+                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
                         <div class="total-grupo">
                             Total Base: ${totalBase.toFixed(2)}€<br>
                             <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong>
@@ -4175,7 +4175,7 @@
             };
 
             const textoACopiar = vestidosDelAlbaran.map(v =>
-                `${v.nombreModelo} | Talla: ${v.talla || 'N/A'} | Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? ` | OF: ${v.numeroOF}` : ''}`
+                `${v.nombreModelo} | Talla: ${v.talla || 'N/A'} | Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? ` | OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? ` | Serie: ${v.numeroSerie}` : ''}`
             ).join('\n');
 
             navigator.clipboard.writeText(textoACopiar).then(() => {
