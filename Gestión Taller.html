@@ -2805,7 +2805,14 @@
                 </div>
                 <div class="stats-card">
                     <h3>📊 Histórico y Comparativas</h3>
-                    <p style="margin-bottom: 15px;">Carga informes anuales anteriores para ver comparativas.</p>
+                    <p style="margin-bottom: 15px;">Visualiza datos históricos de años anteriores o respaldos completos en modo solo lectura.</p>
+                    <button class="btn btn-success" onclick="window.open('Gestión Histórico.html', '_blank')" 
+                            style="margin-bottom: 10px;">
+                        📖 Abrir Gestión Histórico
+                    </button>
+                    <p style="margin: 15px 0; font-size: 0.9em; color: var(--color-texto-secundario);">
+                        O carga informes anuales aquí para ver comparativas rápidas:
+                    </p>
                     <input type="file" id="importInformeAnual" style="display: none" accept=".json"
                         onchange="cargarInformeAnual(event)">
                     <button class="btn btn-info" onclick="document.getElementById('importInformeAnual').click()">📥

@@ -89,6 +89,50 @@ Aplicación dedicada para visualizar y analizar respaldos JSON del sistema princ
 - **Diseño Consistente**: Misma estética que la aplicación principal
 - **Modo Solo Lectura**: Protección de datos históricos
 
+### Compatibilidad
+
+- Navegadores modernos con soporte para IndexedDB, Drag & Drop API, ES6+
+- Probado en: Chrome/Edge 90+, Firefox 88+, Safari 14+
+
+### Integración con la Aplicación Principal
+
+Desde la pestaña "Respaldos" de la aplicación principal:
+- Haz clic en "📖 Abrir Gestión Histórico" para abrir el visor
+- Carga informes anuales para comparativas rápidas
+
+### Formatos Soportados
+
+**Respaldos Completos** (Exportar Todo):
+```json
+{
+  "modelos": [...],
+  "vestidos": [...],
+  "gastos": [...],
+  "otrosIngresos": [...],
+  "planificacion": {...},
+  "configuracion": {...}
+}
+```
+
+**Informes Anuales** (Cierre de Año):
+```json
+{
+  "año": 2024,
+  "fecha_cierre": "2024-12-31",
+  "vestidos": {...},
+  "finanzas": {...},
+  "horas": {...},
+  "top_modelos": [...]
+}
+```
+
+### Notas de Seguridad
+
+- Los datos solo se almacenan localmente en tu navegador
+- No se envían datos a servicios externos
+- Los respaldos persisten por navegador y perfil de usuario
+- Limpia la base de datos si cambias de equipo o compartes el navegador
+
 ## Cómo usar el Visor de Respaldos (gestion-taller-respaldo.html)
 
 ### Características Principales
