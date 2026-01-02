@@ -584,22 +584,31 @@
 
         .dia-calendario {
             background: var(--color-superficie);
-            padding: 10px;
-            min-height: 110px;
+            padding: 8px;
+            min-height: 140px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
         }
 
         .dia-calendario:hover {
             background: var(--color-neutro-suave);
-            transform: scale(1.02);
+            transform: scale(1.01);
             z-index: 1;
             box-shadow: var(--sombra-media);
         }
 
         .dia-calendario.fin-semana {
             background-color: #F9FAFB;
+            cursor: default;
+        }
+
+        .dia-calendario.fin-semana:hover {
+            background-color: #F9FAFB;
+            transform: none;
+            box-shadow: none;
         }
 
         .dia-calendario.hoy {
@@ -609,20 +618,33 @@
         }
 
         .numero-dia {
-            font-weight: bold;
-            margin-bottom: 8px;
+            font-weight: 700;
+            margin-bottom: 6px;
             color: var(--color-texto-principal);
-            font-size: 1.1em;
+            font-size: 1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .dia-calendario.fin-semana .numero-dia {
             color: var(--color-texto-secundario);
         }
 
+        .horas-totales-dia {
+            font-size: 0.7em;
+            font-weight: 500;
+            color: var(--color-texto-secundario);
+            background: var(--color-neutro-suave);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
         .workers-status {
             display: flex;
-            flex-wrap: wrap;
-            gap: 3px;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
         }
 
         .vestido-planificado {
@@ -1639,27 +1661,73 @@
         }
 
         .worker-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            margin: 2px;
+            display: none;
+        }
+
+        .worker-card-mini {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 0.75em;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--sombra-suave);
         }
 
-        .worker-status-badge:hover {
-            transform: scale(1.05);
+        .worker-card-mini:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-media);
+            background: var(--color-neutro-suave);
         }
 
-        .worker-status-badge .worker-initial {
-            font-weight: 700;
+        .worker-card-mini .worker-name-mini {
+            font-weight: 600;
+            color: var(--color-texto-principal);
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .worker-status-badge .status-icon {
-            font-size: 9px;
+        .worker-card-mini .worker-status-mini {
+            font-size: 0.9em;
+            margin-left: 4px;
+        }
+
+        .worker-card-mini.estado-jornada_completa {
+            background: #D1FAE5;
+            border-color: #10B981;
+        }
+
+        .worker-card-mini.estado-falta_parcial {
+            background: #FEF3C7;
+            border-color: #F59E0B;
+        }
+
+        .worker-card-mini.estado-falta_completa,
+        .worker-card-mini.estado-baja {
+            background: #FEE2E2;
+            border-color: #EF4444;
+        }
+
+        .worker-card-mini.estado-vacaciones,
+        .worker-card-mini.estado-vacaciones_anterior {
+            background: #DBEAFE;
+            border-color: #3B82F6;
+        }
+
+        .worker-card-mini.estado-festivo {
+            background: #E0E7FF;
+            border-color: #818CF8;
+        }
+
+        .worker-card-mini.estado-otro {
+            background: #F3F4F6;
+            border-color: #9CA3AF;
         }
 
         /* Gestión de trabajadores - estilos mejorados */
@@ -7990,14 +8058,22 @@
                 const colorDia = obtenerColorDia(fecha, esFestivo, esFinDeSemana);
                 if (colorDia) celda.classList.add(colorDia);
 
+                const horasTotales = calcularHorasTotalesDia(fecha, esFestivo);
+                const horasDisplay = esFinDeSemana ? '' : `<span class="horas-totales-dia">${horasTotales}h</span>`;
+
                 celda.innerHTML = `
-                    <div class="numero-dia">${dia}</div>
+                    <div class="numero-dia">
+                        <span>${dia}</span>
+                        ${horasDisplay}
+                    </div>
                     <div class="workers-status" id="workers-${fecha}">
                         ${renderWorkersStatus(fecha, esFestivo)}
                     </div>
                 `;
 
-                celda.addEventListener('click', () => abrirModalDia(fecha, esFestivo));
+                if (!esFinDeSemana) {
+                    celda.addEventListener('click', () => abrirModalDia(fecha, esFestivo));
+                }
                 grid.appendChild(celda);
             }
 
@@ -8016,10 +8092,20 @@
 
         // Renderizar estado de trabajadores para un día
         function renderWorkersStatus(fecha, esFestivo) {
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const diaSemana = fechaObj.getDay();
+            const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+            
+            // No mostrar trabajadores en fin de semana
+            if (esFinDeSemana) {
+                return '';
+            }
+            
             let html = '';
+            let horasTotales = 0;
+            
             workers.forEach(worker => {
                 // Verificar si el trabajador está activo en esta fecha
-                // Si no está contratado en esta fecha, no mostrar nada (ocultamos completamente)
                 if (!trabajadorActivoEnFecha(worker, fecha)) {
                     return; // No mostrar trabajadores no contratados en la fecha
                 }
@@ -8027,17 +8113,45 @@
                 const registro = scheduleRecords.find(r => r.worker_id === worker.id && r.date === fecha);
                 let estado = registro ? registro.status : (esFestivo ? 'festivo' : 'jornada_completa');
                 let horas = registro ? registro.hours_worked : (esFestivo ? 0 : worker.jornada_maxima);
+                
+                horasTotales += horas;
 
-                const inicial = worker.nombre.charAt(0);
                 const icono = getStatusIcon(estado);
                 const claseEstado = `estado-${estado}`;
 
-                html += `<span class="worker-status-badge ${claseEstado}" title="${worker.nombre}: ${getStatusLabel(estado)} (${horas}h)">
-                    <span class="worker-initial">${inicial}</span>
-                    <span class="status-icon">${icono}</span>
-                </span>`;
+                html += `<div class="worker-card-mini ${claseEstado}" onclick="abrirModalDiaWorker('${fecha}', ${worker.id}); event.stopPropagation();" title="Click para editar">
+                    <span class="worker-name-mini">${worker.nombre}</span>
+                    <span class="worker-status-mini">${icono}</span>
+                </div>`;
             });
+            
             return html;
+        }
+        
+        // Calcular horas totales de un día
+        function calcularHorasTotalesDia(fecha, esFestivo) {
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const diaSemana = fechaObj.getDay();
+            const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+            
+            // No hay horas en fin de semana
+            if (esFinDeSemana) {
+                return 0;
+            }
+            
+            let horasTotales = 0;
+            
+            workers.forEach(worker => {
+                if (!trabajadorActivoEnFecha(worker, fecha)) {
+                    return;
+                }
+
+                const registro = scheduleRecords.find(r => r.worker_id === worker.id && r.date === fecha);
+                let horas = registro ? registro.hours_worked : (esFestivo ? 0 : worker.jornada_maxima);
+                horasTotales += horas;
+            });
+            
+            return horasTotales;
         }
 
         // Obtener icono del estado
@@ -8088,6 +8202,11 @@
 
             let html = '';
             workers.forEach(worker => {
+                // Solo mostrar trabajadores activos en esta fecha
+                if (!trabajadorActivoEnFecha(worker, fecha)) {
+                    return;
+                }
+                
                 const registro = scheduleRecords.find(r => r.worker_id === worker.id && r.date === fecha);
                 const estado = registro ? registro.status : (esFestivo ? 'festivo' : 'jornada_completa');
                 const horas = registro ? registro.hours_worked : (esFestivo ? 0 : worker.jornada_maxima);
@@ -8100,6 +8219,65 @@
                         <option value="jornada_completa" ${estado === 'jornada_completa' ? 'selected' : ''}>✅ Jornada Completa</option>
                         <option value="falta_parcial" ${estado === 'falta_parcial' ? 'selected' : ''}>⏱️ Falta Parcial</option>
                         <option value="falta_completa" ${estado === 'falta_completa' ? 'selected' : ''}>❌ Falta Completa</option>
+                        <option value="festivo" ${estado === 'festivo' ? 'selected' : ''}>🎉 Festivo</option>
+                        <option value="vacaciones" ${estado === 'vacaciones' ? 'selected' : ''}>🏖️ Vacaciones</option>
+                        <option value="vacaciones_anterior" ${estado === 'vacaciones_anterior' ? 'selected' : ''}>🏖️ Vacaciones Año Anterior</option>
+                        <option value="baja" ${estado === 'baja' ? 'selected' : ''}>🏥 Baja</option>
+                        <option value="otro" ${estado === 'otro' ? 'selected' : ''}>📝 Otro</option>
+                    </select>
+                    <input type="number" id="horas-${worker.id}" class="horas-input" 
+                           value="${horas}" step="0.5" min="0" max="${worker.jornada_maxima}"
+                           placeholder="Horas" style="${estado === 'falta_parcial' ? '' : 'display:none;'}">
+                    <input type="text" id="nota-${worker.id}" class="nota-input" 
+                           value="${nota}" placeholder="Nota (opcional)" style="width: 150px;">
+                </div>`;
+            });
+
+            body.innerHTML = html;
+            modal.style.display = 'flex';
+        }
+        
+        // Abrir modal para editar un trabajador específico en un día
+        function abrirModalDiaWorker(fecha, workerId) {
+            diaSeleccionado = fecha;
+            const modal = document.getElementById('modal-dia-laboral');
+            const titulo = document.getElementById('modal-dia-titulo');
+            const body = document.getElementById('modal-dia-body');
+
+            const fechaObj = new Date(fecha + 'T12:00:00');
+            const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const esFestivo = holidays.some(h => h.fecha === fecha);
+            
+            titulo.textContent = `📅 ${fechaObj.toLocaleDateString('es-ES', opciones)}`;
+
+            if (esFestivo) {
+                const festivo = holidays.find(h => h.fecha === fecha);
+                titulo.textContent += ` - 🎉 ${festivo ? festivo.nombre : 'Festivo'}`;
+            }
+
+            // Mostrar todos los trabajadores pero enfocar en el seleccionado
+            let html = '';
+            workers.forEach(worker => {
+                // Solo mostrar trabajadores activos en esta fecha
+                if (!trabajadorActivoEnFecha(worker, fecha)) {
+                    return;
+                }
+                
+                const registro = scheduleRecords.find(r => r.worker_id === worker.id && r.date === fecha);
+                const estado = registro ? registro.status : (esFestivo ? 'festivo' : 'jornada_completa');
+                const horas = registro ? registro.hours_worked : (esFestivo ? 0 : worker.jornada_maxima);
+                const nota = registro ? registro.note : '';
+                
+                const isSelected = worker.id === workerId;
+                const highlightClass = isSelected ? 'style="background: var(--color-info-fondo); border: 2px solid var(--color-info); padding: 8px; border-radius: 8px; margin: 5px 0;"' : '';
+
+                html += `
+                <div class="worker-day-row" ${highlightClass}>
+                    <span class="worker-name">${worker.nombre}${isSelected ? ' 👈' : ''}</span>
+                    <select id="estado-${worker.id}" onchange="toggleHorasInput(${worker.id})">
+                        <option value="jornada_completa" ${estado === 'jornada_completa' ? 'selected' : ''}>✅ Jornada Completa</option>
+                        <option value="falta_parcial" ${estado === 'falta_parcial' ? 'selected' : ''}>⏱️ Falta Parcial</option>
+                        <option value="falta_completa" ${estado === 'falta_completa' ? 'selected' : ''}>❌ Ausencia</option>
                         <option value="festivo" ${estado === 'festivo' ? 'selected' : ''}>🎉 Festivo</option>
                         <option value="vacaciones" ${estado === 'vacaciones' ? 'selected' : ''}>🏖️ Vacaciones</option>
                         <option value="vacaciones_anterior" ${estado === 'vacaciones_anterior' ? 'selected' : ''}>🏖️ Vacaciones Año Anterior</option>
