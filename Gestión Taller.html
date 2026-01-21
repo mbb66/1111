@@ -6072,9 +6072,20 @@
         }
 
         // Calendar drag and drop handlers
+        let draggedGrupoId = null;
+        
         function onDragStartCalendario(event, vestidoId, fechaOrigen) {
             draggedVestidoId = vestidoId;
             draggedVestidoFechaOrigen = fechaOrigen;
+            draggedGrupoId = null;
+            event.currentTarget.style.opacity = '0.4';
+            event.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function onDragStartCalendarioGrupo(event, grupoId, fechaOrigen) {
+            draggedGrupoId = grupoId;
+            draggedVestidoFechaOrigen = fechaOrigen;
+            draggedVestidoId = null;
             event.currentTarget.style.opacity = '0.4';
             event.dataTransfer.effectAllowed = 'move';
         }
@@ -6083,6 +6094,7 @@
             event.currentTarget.style.opacity = '1';
             draggedVestidoId = null;
             draggedVestidoFechaOrigen = null;
+            draggedGrupoId = null;
         }
 
         function onDragOverCalendario(event) {
@@ -6102,21 +6114,9 @@
             event.stopPropagation();
             event.currentTarget.classList.remove('drag-over');
             
-            if (!draggedVestidoId || !draggedVestidoFechaOrigen) return;
-            
-            const vestido = vestidos.find(v => v.id === draggedVestidoId);
-            if (!vestido) return;
-            
-            // Check if dress is sent - can't move sent dresses to future dates
-            const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
-            const hoy = new Date().toISOString().split('T')[0];
-            
-            if (esEnviado && fechaDestino > hoy) {
-                alert('⚠️ No se pueden mover vestidos enviados a fechas futuras');
-                draggedVestidoId = null;
-                draggedVestidoFechaOrigen = null;
-                return;
-            }
+            // Handle both individual dresses and groups
+            if (!draggedVestidoId && !draggedGrupoId) return;
+            if (!draggedVestidoFechaOrigen) return;
             
             // Don't allow moving to weekends
             const fecha = new Date(fechaDestino + 'T00:00:00');
@@ -6124,6 +6124,7 @@
             if (diaSemana === 0 || diaSemana === 6) {
                 alert('⚠️ No se pueden asignar vestidos a fines de semana');
                 draggedVestidoId = null;
+                draggedGrupoId = null;
                 draggedVestidoFechaOrigen = null;
                 return;
             }
@@ -6131,62 +6132,126 @@
             // Don't move if same date
             if (draggedVestidoFechaOrigen === fechaDestino) {
                 draggedVestidoId = null;
+                draggedGrupoId = null;
                 draggedVestidoFechaOrigen = null;
                 return;
             }
             
-            // Move dress intervals from origin date to destination date
-            const horas = horasConfeccion[draggedVestidoId];
-            if (horas && horas.intervalos && horas.intervalos.length > 0) {
-                // Update all intervals from origin date to destination date
-                horas.intervalos.forEach(intervalo => {
-                    if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
-                        // Change the date part but keep the time
-                        const [_, time] = intervalo.inicio.split('T');
-                        intervalo.inicio = `${fechaDestino}T${time}`;
-                        
-                        if (intervalo.fin) {
-                            const [__, timeEnd] = intervalo.fin.split('T');
-                            intervalo.fin = `${fechaDestino}T${timeEnd}`;
-                        }
-                    }
-                });
-                
-                // Save changes
-                localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
-                
-                // If in a group, update all dresses in the group
-                const grupoId = horas.grupoId;
-                if (grupoId) {
-                    const grupo = vestidosGrupos[grupoId];
-                    if (grupo) {
-                        grupo.vestidosIds.forEach(vestidoId => {
-                            if (vestidoId !== draggedVestidoId && horasConfeccion[vestidoId]) {
-                                // Deep copy to avoid sharing references
-                                horasConfeccion[vestidoId] = {
-                                    trabajadoras: horas.trabajadoras ? [...horas.trabajadoras] : [],
-                                    intervalos: horas.intervalos ? horas.intervalos.map(i => ({ ...i })) : [],
-                                    horasTotales: horas.horasTotales,
-                                    grupoId: grupoId
-                                };
+            // Determine which dresses to move
+            let vestidosAMover = [];
+            if (draggedGrupoId) {
+                // Moving a group
+                const grupo = vestidosGrupos[draggedGrupoId];
+                if (!grupo) return;
+                vestidosAMover = grupo.vestidosIds.map(id => vestidos.find(v => v.id === id)).filter(v => v);
+            } else if (draggedVestidoId) {
+                // Moving a single dress
+                const vestido = vestidos.find(v => v.id === draggedVestidoId);
+                if (!vestido) return;
+                vestidosAMover = [vestido];
+            }
+            
+            if (vestidosAMover.length === 0) return;
+            
+            // Check if any dress is sent - can't move sent dresses to future dates
+            const hoy = new Date().toISOString().split('T')[0];
+            const algunoEnviado = vestidosAMover.some(v => v.estado === 'enviado' || v.estado === 'pagado');
+            
+            if (algunoEnviado && fechaDestino > hoy) {
+                alert('⚠️ No se pueden mover vestidos enviados a fechas futuras');
+                draggedVestidoId = null;
+                draggedGrupoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Calculate hours needed for the dresses being moved
+            let horasNecesarias = 0;
+            vestidosAMover.forEach(v => {
+                const horas = horasConfeccion[v.id];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
+                            if (intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasNecesarias += diffHours;
                             }
-                        });
-                        localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
-                    }
+                        }
+                    });
                 }
-            } else {
-                // If dress has no intervals, just update its fechaLimite if it's a deadline move
-                // This allows moving pending dresses to different deadline dates
-                if (confirm(`¿Mover la fecha límite de "${vestido.nombreModelo}" a ${new Date(fechaDestino + 'T00:00:00').toLocaleDateString('es-ES')}?`)) {
-                    vestido.fechaLimite = fechaDestino;
-                    guardarVestidos();
+            });
+            
+            // Calculate current hours used on destination date (excluding dresses being moved if they're already there)
+            let horasYaUsadas = 0;
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vid = parseInt(vestidoId);
+                // Skip if this dress is being moved
+                if (vestidosAMover.some(v => v.id === vid)) return;
+                
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaDestino) {
+                            if (intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasYaUsadas += diffHours;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Get available capacity for destination date
+            const capacidadDisponible = obtenerLimiteHoras(fechaDestino);
+            const horasTotalesDestino = horasYaUsadas + horasNecesarias;
+            
+            // Validate capacity
+            if (horasTotalesDestino > capacidadDisponible) {
+                const exceso = (horasTotalesDestino - capacidadDisponible).toFixed(1);
+                if (!confirm(`⚠️ ADVERTENCIA: Esta operación excederá la capacidad del día.\n\nCapacidad disponible: ${capacidadDisponible.toFixed(1)}h\nHoras ya usadas: ${horasYaUsadas.toFixed(1)}h\nHoras necesarias: ${horasNecesarias.toFixed(1)}h\nTotal: ${horasTotalesDestino.toFixed(1)}h\nExceso: ${exceso}h\n\n¿Deseas continuar de todas formas?`)) {
+                    draggedVestidoId = null;
+                    draggedGrupoId = null;
+                    draggedVestidoFechaOrigen = null;
+                    return;
                 }
             }
+            
+            // Move all dresses in the group or individual dress
+            vestidosAMover.forEach(vestido => {
+                const horas = horasConfeccion[vestido.id];
+                if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                    // Update all intervals from origin date to destination date
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
+                            // Change the date part but keep the time
+                            const [_, time] = intervalo.inicio.split('T');
+                            intervalo.inicio = `${fechaDestino}T${time}`;
+                            
+                            if (intervalo.fin) {
+                                const [__, timeEnd] = intervalo.fin.split('T');
+                                intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                            }
+                        }
+                    });
+                } else {
+                    // If dress has no intervals, update its fechaLimite
+                    vestido.fechaLimite = fechaDestino;
+                }
+            });
+            
+            // Save changes
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+            guardarTodo();
             
             // Regenerate calendar
             generarCalendarioPlanificacion();
             
             draggedVestidoId = null;
+            draggedGrupoId = null;
             draggedVestidoFechaOrigen = null;
         }
 
@@ -6303,36 +6368,85 @@
                 // Generate dresses HTML - prioritize dresses with assigned intervals
                 let vestidosHtml = '';
                 
+                // Track processed groups to avoid duplicates
+                const gruposYaProcesados = new Set();
+                
                 // First, show dresses with hours (higher priority)
                 vestidosEnProceso.forEach(v => {
                     const horas = horasConfeccion[v.id];
                     const grupoId = horas ? horas.grupoId : null;
                     const grupo = grupoId ? vestidosGrupos[grupoId] : null;
-                    const grupoIcon = grupo ? '🔗 ' : '';
                     
-                    // Dresses with intervals are NOT draggable (fixed)
-                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
-                    const draggable = 'false'; // Fixed: dresses with intervals cannot be moved
-                    
-                    vestidosHtml += `<div 
-                        draggable="${draggable}" 
-                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: default; ${opacidad}" 
-                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''} - 🔒 Fijado (con intervalos)">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
+                    // If this dress is in a group and we haven't processed this group yet
+                    if (grupo && !gruposYaProcesados.has(grupoId)) {
+                        gruposYaProcesados.add(grupoId);
+                        
+                        // Get all dresses in the group that are in this date
+                        const vestidosDelGrupoEnFecha = grupo.vestidosIds
+                            .map(id => vestidos.find(v => v.id === id))
+                            .filter(v => v && vestidosEnProceso.some(vp => vp.id === v.id));
+                        
+                        if (vestidosDelGrupoEnFecha.length > 0) {
+                            // Check if any dress in the group is sent
+                            const algunoEnviado = vestidosDelGrupoEnFecha.some(v => v.estado === 'enviado' || v.estado === 'pagado');
+                            const opacidad = algunoEnviado ? 'opacity: 0.5;' : '';
+                            
+                            // Get primary supplier color (from first dress in group)
+                            const proveedor = vestidosDelGrupoEnFecha[0].proveedor;
+                            const colorBg = `var(--color-${proveedor})`;
+                            const colorBorde = `var(--color-${proveedor}-borde)`;
+                            
+                            // Create single grouped card - now draggable
+                            const draggable = 'true';
+                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => v.nombreModelo).join(', ');
+                            const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
+                                ? `${grupo.nombre.substring(0, 15)}... (${vestidosDelGrupoEnFecha.length})` 
+                                : vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10) + '...';
+                            
+                            vestidosHtml += `<div 
+                                draggable="${draggable}" 
+                                ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
+                                ondragend="onDragEndCalendario(event)"
+                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
+                                title="GRUPO: ${tituloGrupo} - ${proveedor}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}">🔗 ${nombreDisplay}</div>`;
+                        }
+                    } else if (!grupoId) {
+                        // Individual dress not in a group
+                        const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                        const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                        const draggable = 'true'; // Now draggable
+                        
+                        // Get supplier color
+                        const proveedor = v.proveedor;
+                        const colorBg = `var(--color-${proveedor})`;
+                        const colorBorde = `var(--color-${proveedor}-borde)`;
+                        
+                        vestidosHtml += `<div 
+                            draggable="${draggable}"
+                            ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                            ondragend="onDragEndCalendario(event)"
+                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
+                            title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                    }
                 });
                 
                 // Then, show pending dresses (lower priority) - these ARE draggable
                 vestidosPendientes.forEach(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
-                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    const draggable = 'true';
+                    
+                    // Get supplier color
+                    const proveedor = v.proveedor;
+                    const colorBg = `var(--color-${proveedor})`;
+                    const colorBorde = `var(--color-${proveedor}-borde)`;
                     
                     vestidosHtml += `<div 
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
-                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-alerta-fondo); border-left: 3px solid var(--color-alerta); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
+                        title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
 
                 html += `
