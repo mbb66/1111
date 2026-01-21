@@ -603,6 +603,12 @@
             box-shadow: var(--sombra-media);
         }
 
+        .dia-calendario.drag-over {
+            background: var(--color-info-fondo);
+            border: 2px dashed var(--color-info);
+            box-shadow: var(--sombra-grande);
+        }
+
         .dia-calendario.fin-semana {
             background-color: #F9FAFB;
             cursor: default;
@@ -5924,6 +5930,7 @@
 
         // Drag and drop handlers
         let draggedVestidoId = null;
+        let draggedVestidoFechaOrigen = null;
 
         function onDragStartVestido(event, vestidoId) {
             draggedVestidoId = vestidoId;
@@ -5933,6 +5940,119 @@
         function onDragEndVestido(event) {
             event.currentTarget.classList.remove('dragging');
             draggedVestidoId = null;
+        }
+
+        // Calendar drag and drop handlers
+        function onDragStartCalendario(event, vestidoId, fechaOrigen) {
+            draggedVestidoId = vestidoId;
+            draggedVestidoFechaOrigen = fechaOrigen;
+            event.currentTarget.style.opacity = '0.4';
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function onDragEndCalendario(event) {
+            event.currentTarget.style.opacity = '1';
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
+        }
+
+        function onDragOverCalendario(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (!event.currentTarget.classList.contains('drag-over')) {
+                event.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function onDragLeaveCalendario(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function onDropCalendario(event, fechaDestino) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedVestidoId || !draggedVestidoFechaOrigen) return;
+            
+            const vestido = vestidos.find(v => v.id === draggedVestidoId);
+            if (!vestido) return;
+            
+            // Check if dress is sent - can't move sent dresses to future dates
+            const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+            const hoy = new Date().toISOString().split('T')[0];
+            
+            if (esEnviado && fechaDestino > hoy) {
+                alert('⚠️ No se pueden mover vestidos enviados a fechas futuras');
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Don't allow moving to weekends
+            const fecha = new Date(fechaDestino + 'T00:00:00');
+            const diaSemana = fecha.getDay();
+            if (diaSemana === 0 || diaSemana === 6) {
+                alert('⚠️ No se pueden asignar vestidos a fines de semana');
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Don't move if same date
+            if (draggedVestidoFechaOrigen === fechaDestino) {
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Move dress intervals from origin date to destination date
+            const horas = horasConfeccion[draggedVestidoId];
+            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                // Update all intervals from origin date to destination date
+                horas.intervalos.forEach(intervalo => {
+                    if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
+                        // Change the date part but keep the time
+                        const [_, time] = intervalo.inicio.split('T');
+                        intervalo.inicio = `${fechaDestino}T${time}`;
+                        
+                        if (intervalo.fin) {
+                            const [__, timeEnd] = intervalo.fin.split('T');
+                            intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                        }
+                    }
+                });
+                
+                // Save changes
+                localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+                
+                // If in a group, update all dresses in the group
+                const grupoId = horas.grupoId;
+                if (grupoId) {
+                    const grupo = vestidosGrupos[grupoId];
+                    if (grupo) {
+                        grupo.vestidosIds.forEach(vestidoId => {
+                            if (vestidoId !== draggedVestidoId && horasConfeccion[vestidoId]) {
+                                horasConfeccion[vestidoId] = { ...horas, grupoId: grupoId };
+                            }
+                        });
+                        localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+                    }
+                }
+            } else {
+                // If dress has no intervals, just update its fechaLimite if it's a deadline move
+                // This allows moving pending dresses to different deadline dates
+                if (confirm(`¿Mover la fecha límite de "${vestido.nombreModelo}" a ${new Date(fechaDestino + 'T00:00:00').toLocaleDateString('es-ES')}?`)) {
+                    vestido.fechaLimite = fechaDestino;
+                    guardarVestidos();
+                }
+            }
+            
+            // Regenerate calendar
+            generarCalendarioPlanificacion();
+            
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
         }
 
         function soltarVestidoEnSeccion(event, seccion) {
@@ -5989,12 +6109,15 @@
 
             // Días del mes
             const hoy = new Date();
+            const hoyStr = hoy.toISOString().split('T')[0];
+            
             for (let dia = 1; dia <= diasEnMes; dia++) {
                 const fecha = new Date(anioActualCalendario, mesActualCalendario, dia);
                 const fechaStr = fecha.toISOString().split('T')[0];
                 const esHoy = fecha.toDateString() === hoy.toDateString();
                 const diaSemana = fecha.getDay();
                 const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+                const esPasado = fechaStr < hoyStr;
 
                 // Get dresses for this date
                 const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
@@ -6052,16 +6175,41 @@
                     const grupo = grupoId ? vestidosGrupos[grupoId] : null;
                     const grupoIcon = grupo ? '🔗 ' : '';
                     
-                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${v.nombreModelo} - ${v.proveedor}">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
+                    // Check if dress is sent (should be opaque and not draggable to future)
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    
+                    vestidosHtml += `<div 
+                        draggable="${draggable}" 
+                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                        ondragend="onDragEndCalendario(event)"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
+                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
                 
                 // Then, show pending dresses (lower priority)
                 vestidosPendientes.forEach(v => {
-                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-alerta-fondo); border-left: 3px solid var(--color-alerta); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo} - ${v.proveedor}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    
+                    vestidosHtml += `<div 
+                        draggable="${draggable}"
+                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                        ondragend="onDragEndCalendario(event)"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-alerta-fondo); border-left: 3px solid var(--color-alerta); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
+                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
 
                 html += `
-                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 120px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
+                         style="min-height: 120px; cursor: pointer;" 
+                         onclick="verDetallesDiaCalendario('${fechaStr}')"
+                         ondrop="onDropCalendario(event, '${fechaStr}')"
+                         ondragover="onDragOverCalendario(event)"
+                         ondragleave="onDragLeaveCalendario(event)"
+                         data-fecha="${fechaStr}">
                         <div class="numero-dia">
                             <span>${dia}</span>
                             ${horasBadge}
