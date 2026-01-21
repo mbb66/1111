@@ -584,6 +584,13 @@
             max-width: 100%;
         }
 
+        .calendario-grid-body {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            width: 100%;
+        }
+
         .dia-calendario {
             background: var(--color-superficie);
             padding: 8px;
@@ -2724,6 +2731,7 @@
                         <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
                         <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
+                        <button class="btn btn-success btn-small" onclick="planificacionAutomatica()">🤖 Planificación Automática</button>
                     </div>
                 </div>
                 <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
@@ -6130,7 +6138,7 @@
             const primerDiaSemana = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1; // Lunes = 0
 
             let html = '<div class="calendario-header"><div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
-            html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
+            html += '<div class="calendario-grid-body">';
 
             // Días vacíos antes del primer día del mes
             for (let i = 0; i < primerDiaSemana; i++) {
@@ -6205,20 +6213,18 @@
                     const grupo = grupoId ? vestidosGrupos[grupoId] : null;
                     const grupoIcon = grupo ? '🔗 ' : '';
                     
-                    // Check if dress is sent (should be opaque and not draggable to future)
+                    // Dresses with intervals are NOT draggable (fixed)
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
-                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    const draggable = 'false'; // Fixed: dresses with intervals cannot be moved
                     
                     vestidosHtml += `<div 
                         draggable="${draggable}" 
-                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
-                        ondragend="onDragEndCalendario(event)"
-                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: default; ${opacidad}" 
+                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''} - 🔒 Fijado (con intervalos)">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
                 
-                // Then, show pending dresses (lower priority)
+                // Then, show pending dresses (lower priority) - these ARE draggable
                 vestidosPendientes.forEach(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
@@ -6257,7 +6263,7 @@
         function obtenerVestidosParaFecha(fechaStr) {
             const resultado = [];
             
-            // Get dresses with hours assigned for this date
+            // Get dresses with hours assigned for this date (can span multiple days)
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
                 if (horas.intervalos) {
@@ -6275,9 +6281,18 @@
                 }
             });
 
-            // Get dresses with deadline on this date
+            // Get dresses with deadline on this date (pending dresses)
             vestidos.forEach(vestido => {
                 if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
+                    if (!resultado.find(v => v.id === vestido.id)) {
+                        resultado.push(vestido);
+                    }
+                }
+            });
+
+            // Get dresses with suggested start date on this date (from automatic planning)
+            vestidos.forEach(vestido => {
+                if (vestido.fechaInicioSugerida === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
                     if (!resultado.find(v => v.id === vestido.id)) {
                         resultado.push(vestido);
                     }
@@ -6363,6 +6378,90 @@
             const hoy = new Date();
             mesActualCalendario = hoy.getMonth();
             anioActualCalendario = hoy.getFullYear();
+            generarCalendarioPlanificacion();
+        }
+
+        function planificacionAutomatica() {
+            // Get dresses without hours assigned (pending dresses)
+            const vestidosPendientes = vestidos.filter(v => 
+                ['en_taller', 'con_tara'].includes(v.estado) && 
+                !horasConfeccion[v.id]
+            );
+
+            if (vestidosPendientes.length === 0) {
+                alert('✅ No hay vestidos pendientes para planificar automáticamente.');
+                return;
+            }
+
+            // Sort by deadline (earliest first)
+            vestidosPendientes.sort((a, b) => {
+                const fechaA = a.fechaLimite ? new Date(a.fechaLimite) : new Date('2099-12-31');
+                const fechaB = b.fechaLimite ? new Date(b.fechaLimite) : new Date('2099-12-31');
+                return fechaA - fechaB;
+            });
+
+            const confirm = window.confirm(
+                `¿Desea planificar automáticamente ${vestidosPendientes.length} vestido(s) pendiente(s)?\n\n` +
+                `La planificación asignará fechas de inicio basándose en:\n` +
+                `- Fecha límite del vestido\n` +
+                `- Horas estimadas del modelo\n` +
+                `- Disponibilidad de trabajadoras\n\n` +
+                `Esta acción NO creará intervalos de tiempo, solo sugerirá fechas.`
+            );
+
+            if (!confirm) return;
+
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            let vestidosPlanificados = 0;
+
+            vestidosPendientes.forEach(vestido => {
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 8; // Default 8 hours
+                
+                // Calculate working days needed (assuming 8 hours per day)
+                const diasNecesarios = Math.ceil(horasEstimadas / 8);
+                
+                // Calculate start date based on deadline
+                let fechaInicio = new Date(hoy);
+                if (vestido.fechaLimite) {
+                    const fechaLimite = new Date(vestido.fechaLimite);
+                    // Start work X days before deadline
+                    fechaInicio = new Date(fechaLimite);
+                    fechaInicio.setDate(fechaInicio.getDate() - diasNecesarios - 2); // 2 days buffer
+                    
+                    // Don't start in the past
+                    if (fechaInicio < hoy) {
+                        fechaInicio = new Date(hoy);
+                    }
+                } else {
+                    // No deadline, start ASAP
+                    fechaInicio = new Date(hoy);
+                }
+
+                // Skip weekends for start date
+                while (fechaInicio.getDay() === 0 || fechaInicio.getDay() === 6) {
+                    fechaInicio.setDate(fechaInicio.getDate() + 1);
+                }
+
+                // Update dress with suggested start date (stored as fechaLimite if not set)
+                // We'll use a new field to avoid overwriting existing fechaLimite
+                if (!vestido.fechaInicioSugerida) {
+                    vestido.fechaInicioSugerida = fechaInicio.toISOString().split('T')[0];
+                    vestidosPlanificados++;
+                }
+            });
+
+            localStorage.setItem('vestidos', JSON.stringify(vestidos));
+            
+            alert(
+                `✅ Planificación automática completada.\n\n` +
+                `${vestidosPlanificados} vestido(s) planificado(s).\n\n` +
+                `💡 Ahora puedes ver los vestidos en el calendario y asignar intervalos de tiempo manualmente.`
+            );
+
+            cargarPlanificacionNueva();
             generarCalendarioPlanificacion();
         }
 
