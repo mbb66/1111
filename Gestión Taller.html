@@ -6499,17 +6499,22 @@
                         </div>
                         <div class="intervalo-trabajadora">
                             <label>👷 Trabajadora Asignada:</label>
-                            <select class="intervalo-worker">
+                            <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}">
                                 <option value="">Seleccionar trabajadora...</option>
                                 ${workerOptions}
                             </select>
-                            <script>
-                                document.currentScript.previousElementSibling.value = "${intervalo.trabajadoraId || ''}";
-                            </script>
                         </div>
                     </div>
                 </div>
             `).join('');
+            
+            // Set selected workers after rendering
+            container.querySelectorAll('.intervalo-worker').forEach(select => {
+                const selectedId = select.dataset.selected;
+                if (selectedId) {
+                    select.value = selectedId;
+                }
+            });
         }
 
         function calcularHorasTotales() {
