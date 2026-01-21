@@ -2604,10 +2604,39 @@
                             <option value="traka">Traka</option>
                         </select>
                     </div>
-                    <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
+                     <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
                          ondrop="soltarVestidoEnSeccion(event, 'en_proceso')" 
                          ondragover="permitirSoltar(event)">
                         <!-- Vestidos con horas asignadas -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Calendar View -->
+            <div style="margin-top: 40px;">
+                <div class="seccion-header">
+                    <h3>📅 Vista de Calendario</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(-1)">◀ Anterior</button>
+                        <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
+                        <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
+                        <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
+                    </div>
+                </div>
+                <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
+                    <!-- Calendar grid will be generated here -->
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong>🔵 En Proceso:</strong> Vestidos con horas asignadas
+                        </div>
+                        <div>
+                            <strong>🟡 Pendientes:</strong> Vestidos sin horas asignadas
+                        </div>
+                        <div>
+                            <strong>🔴 Límite:</strong> Fecha límite del vestido
+                        </div>
                     </div>
                 </div>
             </div>
@@ -5142,6 +5171,9 @@
         function inicializarPlanificacion() {
             // Load the new planning system
             cargarPlanificacionNueva();
+            
+            // Generate calendar view
+            generarCalendarioPlanificacion();
         }
 
         function cargarPlanificacion() {
@@ -5523,10 +5555,16 @@
 
             let horasInfo = '';
             if (seccion === 'en_proceso' && horas) {
+                // Check if any interval is in progress (has no end time)
+                const hasInProgress = horas.intervalos.some(i => i.inicio && !i.fin);
+                const horasDisplay = hasInProgress 
+                    ? `⏳ ${horas.horasTotales.toFixed(2)}h (en curso)` 
+                    : `${horas.horasTotales.toFixed(2)}h`;
+                
                 horasInfo = `
                     <div class="vestido-card-horas">
                         <span class="vestido-card-horas-label">Horas trabajadas:</span>
-                        <span class="vestido-card-horas-valor">${horas.horasTotales.toFixed(2)}h / ${horasEstimadas.toFixed(2)}h</span>
+                        <span class="vestido-card-horas-valor">${horasDisplay} / ${horasEstimadas.toFixed(2)}h</span>
                     </div>
                 `;
             }
@@ -5600,6 +5638,138 @@
             event.currentTarget.classList.add('drag-over');
         }
 
+        // ===============================================
+        // === CALENDARIO DE PLANIFICACIÓN ===============
+        // ===============================================
+        let mesActualCalendario = new Date().getMonth();
+        let anioActualCalendario = new Date().getFullYear();
+
+        function generarCalendarioPlanificacion() {
+            const container = document.getElementById('calendario-planificacion-grid');
+            const mesLabel = document.getElementById('mes-actual-calendario');
+            
+            if (!container || !mesLabel) return; // Not in planning tab
+            
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            mesLabel.textContent = `${meses[mesActualCalendario]} ${anioActualCalendario}`;
+
+            const primerDia = new Date(anioActualCalendario, mesActualCalendario, 1);
+            const ultimoDia = new Date(anioActualCalendario, mesActualCalendario + 1, 0);
+            const diasEnMes = ultimoDia.getDate();
+            const primerDiaSemana = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1; // Lunes = 0
+
+            let html = '<div class="calendario-header"><div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
+            html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
+
+            // Días vacíos antes del primer día del mes
+            for (let i = 0; i < primerDiaSemana; i++) {
+                html += '<div class="dia-calendario otro-mes"></div>';
+            }
+
+            // Días del mes
+            const hoy = new Date();
+            for (let dia = 1; dia <= diasEnMes; dia++) {
+                const fecha = new Date(anioActualCalendario, mesActualCalendario, dia);
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const esHoy = fecha.toDateString() === hoy.toDateString();
+                const diaSemana = fecha.getDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+
+                // Get dresses for this date
+                const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+                
+                let vestidosHtml = '';
+                vestidosEnFecha.forEach(v => {
+                    const color = horasConfeccion[v.id] ? 'var(--color-info)' : 'var(--color-alerta)';
+                    const icon = horasConfeccion[v.id] ? '🔵' : '🟡';
+                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 2px; background: ${color}30; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo}">${icon} ${v.nombreModelo.substring(0, 8)}...</div>`;
+                });
+
+                html += `
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 100px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
+                        <div class="numero-dia">${dia}</div>
+                        ${vestidosHtml}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function obtenerVestidosParaFecha(fechaStr) {
+            const resultado = [];
+            
+            // Get dresses with hours assigned for this date
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio) {
+                            const fechaIntervalo = intervalo.inicio.split('T')[0];
+                            if (fechaIntervalo === fechaStr) {
+                                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                                if (vestido && !resultado.find(v => v.id === vestido.id)) {
+                                    resultado.push(vestido);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Get dresses with deadline on this date
+            vestidos.forEach(vestido => {
+                if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
+                    if (!resultado.find(v => v.id === vestido.id)) {
+                        resultado.push(vestido);
+                    }
+                }
+            });
+
+            return resultado;
+        }
+
+        function verDetallesDiaCalendario(fechaStr) {
+            const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+            
+            if (vestidosEnFecha.length === 0) {
+                alert(`No hay vestidos programados para el ${new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES')}`);
+                return;
+            }
+
+            const fecha = new Date(fechaStr + 'T00:00:00');
+            let mensaje = `📅 Vestidos para ${fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:\n\n`;
+            
+            vestidosEnFecha.forEach(v => {
+                const tieneHoras = horasConfeccion[v.id];
+                const status = tieneHoras ? '🔵 En Proceso' : '🟡 Pendiente';
+                const horas = tieneHoras ? ` (${horasConfeccion[v.id].horasTotales.toFixed(2)}h)` : '';
+                mensaje += `${status} - ${v.nombreModelo}${horas}\n`;
+            });
+
+            alert(mensaje);
+        }
+
+        function cambiarMesCalendarioPlanificacion(offset) {
+            mesActualCalendario += offset;
+            if (mesActualCalendario < 0) {
+                mesActualCalendario = 11;
+                anioActualCalendario--;
+            } else if (mesActualCalendario > 11) {
+                mesActualCalendario = 0;
+                anioActualCalendario++;
+            }
+            generarCalendarioPlanificacion();
+        }
+
+        function irHoyCalendarioPlanificacion() {
+            const hoy = new Date();
+            mesActualCalendario = hoy.getMonth();
+            anioActualCalendario = hoy.getFullYear();
+            generarCalendarioPlanificacion();
+        }
+
         // Modal functions for work hours management
         function abrirModalHorasConfeccion(vestidoId) {
             currentEditingVestidoId = vestidoId;
@@ -5671,7 +5841,7 @@
                             <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
                         </div>
                         <div>
-                            <label>Fecha y Hora Fin:</label>
+                            <label>Fecha y Hora Fin (opcional):</label>
                             <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
                         </div>
                     </div>
@@ -5711,8 +5881,8 @@
                             <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
                         </div>
                         <div>
-                            <label>Fecha y Hora Fin:</label>
-                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin}" onchange="calcularHorasTotales()">
+                            <label>Fecha y Hora Fin (opcional):</label>
+                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
                         </div>
                     </div>
                 </div>
@@ -5736,10 +5906,14 @@
                     if (diffHours > 0) {
                         totalHoras += diffHours;
                     }
+                } else if (inicio) {
+                    // Si solo hay inicio (trabajo en curso), mostrar indicador
+                    // No suma horas pero el intervalo es válido
                 }
             });
 
-            document.getElementById('total-horas-calculadas').textContent = `${totalHoras.toFixed(2)}h`;
+            const displayText = totalHoras > 0 ? `${totalHoras.toFixed(2)}h` : '⏳ En curso';
+            document.getElementById('total-horas-calculadas').textContent = displayText;
         }
 
         function guardarHorasConfeccion() {
@@ -5767,21 +5941,27 @@
                 const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
                 const fin = intervaloEl.querySelector('.intervalo-fin').value;
                 
-                if (inicio && fin) {
-                    const inicioDate = new Date(inicio);
-                    const finDate = new Date(fin);
-                    const diffMs = finDate - inicioDate;
-                    const diffHours = diffMs / (1000 * 60 * 60);
-                    
-                    if (diffHours > 0) {
-                        intervalos.push({ inicio, fin });
-                        totalHoras += diffHours;
+                if (inicio) {
+                    // Permitir intervalos con solo inicio (trabajo en curso)
+                    if (fin) {
+                        const inicioDate = new Date(inicio);
+                        const finDate = new Date(fin);
+                        const diffMs = finDate - inicioDate;
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        
+                        if (diffHours > 0) {
+                            intervalos.push({ inicio, fin });
+                            totalHoras += diffHours;
+                        }
+                    } else {
+                        // Guardar intervalo en curso (sin fin)
+                        intervalos.push({ inicio, fin: null });
                     }
                 }
             });
 
             if (intervalos.length === 0) {
-                alert('⚠️ Debes añadir al menos un intervalo de tiempo válido');
+                alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
                 return;
             }
 
@@ -5801,6 +5981,7 @@
             alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
             cerrarModalHorasConfeccion();
             cargarPlanificacionNueva();
+            generarCalendarioPlanificacion(); // Update calendar
         }
 
         function sincronizarVestidoConBaseModelos(vestidoId) {
