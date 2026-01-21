@@ -4901,6 +4901,10 @@
                 </div>`;
             }
 
+            // Profitability Analysis
+            html += `<h3 style="margin: 25px 0 15px 0;">💹 Análisis de Rentabilidad</h3>
+            ${renderProfitabilityAnalysis(fechaInicio, fechaFin)}`;
+
             // Alertas normales
             if (alertas.alerta.length > 0) {
                 html += `<div class="stats-card" style="border-left: 5px solid var(--color-alerta); margin-bottom: 15px;">
@@ -7348,6 +7352,178 @@
             };
         }
 
+        function renderHoursSummaryCard(fechaInicio, fechaFin) {
+            const fi = new Date(fechaInicio + 'T00:00:00');
+            const ff = new Date(fechaFin + 'T23:59:59');
+            
+            const horasPorProveedor = {
+                pronovias: 0,
+                rosa_clara: 0,
+                traka: 0
+            };
+
+            let totalHoras = 0;
+
+            // Calculate hours worked per provider during the selected period
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                if (!horas.intervalos) return;
+
+                horas.intervalos.forEach(intervalo => {
+                    if (!intervalo.inicio) return;
+                    
+                    const fechaIntervalo = new Date(intervalo.inicio);
+                    if (fechaIntervalo < fi || fechaIntervalo > ff) return;
+
+                    if (intervalo.fin) {
+                        const inicioDate = new Date(intervalo.inicio);
+                        const finDate = new Date(intervalo.fin);
+                        const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                        
+                        if (diffHours > 0) {
+                            horasPorProveedor[vestido.proveedor] = (horasPorProveedor[vestido.proveedor] || 0) + diffHours;
+                            totalHoras += diffHours;
+                        }
+                    }
+                });
+            });
+
+            return `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div style="text-align: center; padding: 20px; background: var(--color-info-fondo); border-radius: 8px;">
+                        <div style="font-size: 2.5em; font-weight: 700; color: var(--color-info);">${totalHoras.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Total Horas Trabajadas</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-pronovias); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.pronovias.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Pronovias</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.pronovias / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-rosa_clara); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.rosa_clara.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Rosa Clará</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.rosa_clara / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-traka); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.traka.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Traka</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.traka / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProfitabilityAnalysis(fechaInicio, fechaFin) {
+            const fi = new Date(fechaInicio + 'T00:00:00');
+            const ff = new Date(fechaFin + 'T23:59:59');
+            const config = obtenerConfiguracionTaller();
+            
+            // Calculate profitability for each paid dress in the period
+            const vestidosConRentabilidad = [];
+            
+            vestidos.forEach(vestido => {
+                // Only include dresses that were paid in this period
+                if (vestido.estado !== 'pagado' || !vestido.fechaFactura) return;
+                
+                const fechaFactura = new Date(vestido.fechaFactura + 'T00:00:00');
+                if (fechaFactura < fi || fechaFactura > ff) return;
+
+                // Calculate profit
+                const precioVenta = vestido.precioFinal || vestido.precioBase || 0;
+                const costoBase = vestido.precioBase || 0;
+                
+                // Get hours worked (if available)
+                const horas = horasConfeccion[vestido.id];
+                const horasTrabajadas = horas ? horas.horasTotales : 0;
+                const costoHoras = horasTrabajadas * config.precioHoraObjetivo;
+                
+                const ganancia = precioVenta - costoBase - costoHoras;
+                const margen = precioVenta > 0 ? (ganancia / precioVenta) * 100 : 0;
+
+                vestidosConRentabilidad.push({
+                    ...vestido,
+                    ganancia,
+                    margen,
+                    horasTrabajadas,
+                    costoHoras,
+                    precioVenta
+                });
+            });
+
+            // Sort by profitability
+            const masRentables = vestidosConRentabilidad
+                .sort((a, b) => b.ganancia - a.ganancia)
+                .slice(0, 5);
+            
+            const menosRentables = vestidosConRentabilidad
+                .sort((a, b) => a.ganancia - b.ganancia)
+                .slice(0, 5);
+
+            let html = '<div class="grid-2">';
+            
+            // Top 5 most profitable
+            html += `
+                <div class="stats-card">
+                    <h4 style="color: var(--color-exito); margin-bottom: 15px;">📈 Top 5 Más Rentables</h4>
+                    ${masRentables.length === 0 ? '<p style="text-align: center; color: var(--color-texto-secundario); padding: 20px;">No hay datos disponibles</p>' : ''}
+                    <table class="tabla-simple">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Ganancia</th>
+                                <th>Margen</th>
+                                <th>Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${masRentables.map(v => `
+                                <tr>
+                                    <td>${v.nombreModelo}<br><small style="color: var(--color-texto-secundario);">${v.proveedor} - ${v.lote || 'N/A'}</small></td>
+                                    <td style="color: var(--color-exito); font-weight: 600;">+${v.ganancia.toFixed(2)}€</td>
+                                    <td>${v.margen.toFixed(1)}%</td>
+                                    <td>${v.horasTrabajadas.toFixed(2)}h</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Top 5 least profitable
+            html += `
+                <div class="stats-card">
+                    <h4 style="color: var(--color-error); margin-bottom: 15px;">📉 Top 5 Menos Rentables</h4>
+                    ${menosRentables.length === 0 ? '<p style="text-align: center; color: var(--color-texto-secundario); padding: 20px;">No hay datos disponibles</p>' : ''}
+                    <table class="tabla-simple">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Ganancia</th>
+                                <th>Margen</th>
+                                <th>Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${menosRentables.map(v => `
+                                <tr>
+                                    <td>${v.nombreModelo}<br><small style="color: var(--color-texto-secundario);">${v.proveedor} - ${v.lote || 'N/A'}</small></td>
+                                    <td style="color: ${v.ganancia >= 0 ? 'var(--color-exito)' : 'var(--color-error)'}; font-weight: 600;">${v.ganancia >= 0 ? '+' : ''}${v.ganancia.toFixed(2)}€</td>
+                                    <td>${v.margen.toFixed(1)}%</td>
+                                    <td>${v.horasTrabajadas.toFixed(2)}h</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            html += '</div>';
+            return html;
+        }
+
         function renderDashboardTab(fechaInicio, fechaFin) {
             const data = calcularDatosFinancieros(fechaInicio, fechaFin);
             const container = document.getElementById('dashboard-content');
@@ -7447,6 +7623,12 @@
                     </div>
                     <p class="kpi-subvalue">${progresoEquilibrio >= 100 ? '✅ Alcanzado' : `Faltan ${(data.horasEquilibrio - data.horasUsadas).toFixed(2)}h`}</p>
                 </div>
+            </div>`;
+
+            // Hours Summary Card by Provider
+            html += `<h3 style="margin: 25px 0 15px 0;">⏱️ Resumen de Horas Trabajadas</h3>
+            <div class="stats-card">
+                ${renderHoursSummaryCard(fechaInicio, fechaFin)}
             </div>`;
 
             // Proyecciones de Fin de Mes
