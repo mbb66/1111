@@ -582,6 +582,8 @@
             box-shadow: var(--sombra-media);
             width: 100%;
             max-width: 100%;
+            min-height: 600px;
+            height: auto;
         }
 
         .calendario-grid-body {
@@ -6071,7 +6073,13 @@
                     if (grupo) {
                         grupo.vestidosIds.forEach(vestidoId => {
                             if (vestidoId !== draggedVestidoId && horasConfeccion[vestidoId]) {
-                                horasConfeccion[vestidoId] = { ...horas, grupoId: grupoId };
+                                // Deep copy to avoid sharing references
+                                horasConfeccion[vestidoId] = {
+                                    trabajadoras: horas.trabajadoras ? [...horas.trabajadoras] : [],
+                                    intervalos: horas.intervalos ? horas.intervalos.map(i => ({ ...i })) : [],
+                                    horasTotales: horas.horasTotales,
+                                    grupoId: grupoId
+                                };
                             }
                         });
                         localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
@@ -6806,8 +6814,11 @@
                 if (grupo) {
                     grupo.vestidosIds.forEach(vestidoId => {
                         if (vestidoId !== currentEditingVestidoId) {
+                            // Deep copy to avoid sharing references
                             horasConfeccion[vestidoId] = {
-                                ...horasData,
+                                trabajadoras: [...trabajadoras],
+                                intervalos: intervalos.map(i => ({ ...i })),
+                                horasTotales: totalHoras,
                                 grupoId: grupoId
                             };
                         }
