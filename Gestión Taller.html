@@ -2630,22 +2630,19 @@
             <h2>Planificación de Producción</h2>
             
             <!-- Action buttons -->
-            <div class="grid-3" style="margin-bottom: 20px;">
+            <div class="grid-2" style="margin-bottom: 20px;">
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
                 </div>
-                <div>
-                    <button class="btn btn-info" onclick="sincronizarConBaseModelos()">🔄 Sincronizar con Base Modelos</button>
-                </div>
             </div>
 
             <!-- Info about the new system -->
             <div class="autocomplete-info" style="margin-bottom: 20px;">
                 <strong>ℹ️ Gestión de Horas de Confección:</strong> Haz clic en cualquier vestido para asignar trabajadoras y registrar horas de trabajo. 
-                Las horas se calculan automáticamente y se sincronizan con la Base de Modelos.
+                Las horas se calculan y sincronizan automáticamente con la Base de Modelos.
                 <br><small>💡 Arrastra vestidos entre secciones o agrúpalos para trabajar en conjunto.</small>
             </div>
 
@@ -5164,12 +5161,16 @@
             const inicio = (paginaActualModelos - 1) * elementosPorPagina;
             const modelosPaginados = lista.slice(inicio, inicio + elementosPorPagina);
 
-            container.innerHTML = total === 0 ? '<div class="vestido-card" style="text-align:center;">No hay modelos guardados.</div>' : modelosPaginados.map(modelo => `
+            container.innerHTML = total === 0 ? '<div class="vestido-card" style="text-align:center;">No hay modelos guardados.</div>' : modelosPaginados.map(modelo => {
+                const promedioHorasReales = calcularPromedioHorasReales(modelo);
+                const horasRealesDisplay = promedioHorasReales ? ` | 📊 ${promedioHorasReales}h reales (promedio)` : '';
+                
+                return `
                 <div class="vestido-card">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <strong>${modelo.codigo}</strong> - ${modelo.nombre}<br>
-                            <small>${modelo.horas.toFixed(2)}h | ${modelo.precio.toFixed(2)}€</small>
+                            <small>⏱️ ${modelo.horas.toFixed(2)}h estimadas${horasRealesDisplay} | 💰 ${modelo.precio.toFixed(2)}€</small>
                         </div>
                         <div>
                             <button class="btn btn-editar" onclick="editarModelo(${modelo.id})">Editar</button>
@@ -5177,7 +5178,8 @@
                         </div>
                     </div>
                     <div id="form-editar-modelo-${modelo.id}" style="display: none; margin-top: 15px; padding: 15px; background: var(--color-neutro-suave); border-radius: 8px;"></div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
 
             paginacionDiv.innerHTML = totalPages > 1 ? `
                 <button class="btn" ${paginaActualModelos === 1 ? 'disabled' : ''} onclick="cambiarPaginaModelos(${paginaActualModelos - 1})">‹</button>
@@ -5203,6 +5205,22 @@
             const modelo = modelos.find(m => m.id === id);
             if (!modelo) return;
             const container = document.getElementById(`form-editar-modelo-${id}`);
+            
+            // Calculate average real hours from manufactured dresses
+            const promedioCalculado = calcularPromedioHorasReales(modelo);
+            const numVestidosConfeccionados = (modelo.horasReales && Array.isArray(modelo.horasReales)) ? modelo.horasReales.length : 0;
+            
+            // If modelo.horasRealesManual exists, use it; otherwise use calculated average
+            const horasRealesActual = modelo.horasRealesManual || promedioCalculado || '';
+            
+            let horasRealesInfo = '';
+            if (promedioCalculado && numVestidosConfeccionados > 0) {
+                horasRealesInfo = `<div style="padding: 10px; background: var(--color-info-fondo); border-radius: 6px; margin-bottom: 10px;">
+                    <strong>📊 Promedio calculado:</strong> ${promedioCalculado}h (basado en ${numVestidosConfeccionados} vestido${numVestidosConfeccionados !== 1 ? 's' : ''} confeccionado${numVestidosConfeccionados !== 1 ? 's' : ''})<br>
+                    <small>Puedes editar manualmente este valor si lo deseas.</small>
+                </div>`;
+            }
+            
             container.innerHTML = `<h4>Editar Modelo</h4>
                 <div class="grid-3">
                     <div><label>Nombre:</label><input type="text" id="edit-modelo-nombre-${id}" value="${modelo.nombre}" required></div>
@@ -5210,9 +5228,10 @@
                     <div><label>Precio:</label><input type="number" id="edit-modelo-precio-${id}" step="0.01" value="${modelo.precio}" required></div>
                 </div>
                 <div style="margin-top: 10px;">
-                    <label>Horas Reales (formato hh:mm):</label>
-                    <input type="text" id="edit-modelo-horasReales-${id}" placeholder="Ej: 08:30" pattern="[0-9]{1,3}:[0-5][0-9]" value="${modelo.horasReales || ''}" title="Formato: hh:mm (ej: 08:30)">
-                    <small style="color: var(--color-texto-secundario); display: block; margin-top: 5px;">💡 Ingresa las horas reales de confección en formato hh:mm (ej: 08:30 para 8 horas y 30 minutos)</small>
+                    ${horasRealesInfo}
+                    <label>Horas Reales (formato hh:mm - editable):</label>
+                    <input type="text" id="edit-modelo-horasReales-${id}" placeholder="Ej: 08:30" pattern="[0-9]{1,3}:[0-5][0-9]" value="${horasRealesActual}" title="Formato: hh:mm (ej: 08:30)">
+                    <small style="color: var(--color-texto-secundario); display: block; margin-top: 5px;">💡 Este campo se calcula automáticamente del promedio de vestidos confeccionados, pero puedes editarlo manualmente.</small>
                 </div>
                 <div style="margin-top: 10px;">
                     <button class="btn btn-success" onclick="guardarEdicionModelo(${id})">Guardar</button>
@@ -5241,7 +5260,18 @@
                 modelo.nombre = nuevoNombre;
                 modelo.horas = nuevasHoras;
                 modelo.precio = nuevoPrecio;
-                modelo.horasReales = horasRealesInput;
+                
+                // Store manual hours override if different from calculated average
+                const promedioCalculado = calcularPromedioHorasReales(modelo);
+                if (horasRealesInput && horasRealesInput !== promedioCalculado) {
+                    modelo.horasRealesManual = horasRealesInput;
+                } else if (!horasRealesInput) {
+                    // Clear manual override if empty
+                    delete modelo.horasRealesManual;
+                } else {
+                    // Same as calculated, no need to store manual override
+                    delete modelo.horasRealesManual;
+                }
 
                 let vestidosActualizados = 0;
                 let vestidosNoActualizados = 0;
@@ -6378,16 +6408,8 @@
                 </div>
             `;
 
-            // Populate workers selection
-            const trabajadorasContainer = document.getElementById('trabajadoras-selection');
+            // Load current hours data
             const currentHoras = horasConfeccion[vestidoId] || { trabajadoras: [], intervalos: [], horasTotales: 0 };
-            
-            trabajadorasContainer.innerHTML = workers.map(w => `
-                <label class="toggle-btn">
-                    <input type="checkbox" value="${w.id}" ${currentHoras.trabajadoras.includes(w.id) ? 'checked' : ''}>
-                    <span class="toggle-label">${w.nombre} (${w.rol})</span>
-                </label>
-            `).join('');
 
             // Populate intervals
             cargarIntervalos();
@@ -6414,6 +6436,57 @@
             modal.classList.remove('active');
             modal.style.display = 'none';
             currentEditingVestidoId = null;
+        }
+
+        function marcarComoFinalizado() {
+            if (!currentEditingVestidoId) return;
+
+            const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
+            if (!vestido) return;
+
+            // Calculate total hours from intervals
+            const container = document.getElementById('intervalos-container');
+            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
+            let totalHoras = 0;
+
+            intervalosElements.forEach(intervaloEl => {
+                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
+                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                
+                if (inicio && fin) {
+                    const inicioDate = new Date(inicio);
+                    const finDate = new Date(fin);
+                    const diffMs = finDate - inicioDate;
+                    const diffHours = diffMs / (1000 * 60 * 60);
+                    if (diffHours > 0) {
+                        totalHoras += diffHours;
+                    }
+                }
+            });
+
+            if (totalHoras === 0) {
+                alert('⚠️ No hay horas completadas para finalizar. Asegúrate de que los intervalos tengan hora de inicio y fin.');
+                return;
+            }
+
+            // Confirm action
+            const confirm = window.confirm(`¿Marcar este vestido como finalizado?\n\nSe registrarán ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+            if (!confirm) return;
+
+            // Save hours first
+            guardarHorasConfeccion();
+            
+            // Update dress with real hours
+            vestido.horasReales = totalHoras;
+            
+            // Save to localStorage
+            localStorage.setItem('vestidos', JSON.stringify(vestidos));
+
+            alert(`✅ Vestido finalizado con ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+            
+            // Refresh views
+            cargarPlanificacionNueva();
+            generarCalendarioPlanificacion();
         }
 
         function agregarIntervalo() {
@@ -6565,20 +6638,12 @@
             const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
             if (!vestido) return;
 
-            // Get selected workers (global)
-            const trabajadorasCheckboxes = document.querySelectorAll('#trabajadoras-selection input:checked');
-            const trabajadoras = Array.from(trabajadorasCheckboxes).map(cb => parseInt(cb.value));
-
-            if (trabajadoras.length === 0) {
-                alert('⚠️ Debes seleccionar al menos una trabajadora');
-                return;
-            }
-
             // Get intervals
             const container = document.getElementById('intervalos-container');
             const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
             const intervalos = [];
             let totalHoras = 0;
+            const trabajadorasSet = new Set(); // Collect unique workers from intervals
 
             intervalosElements.forEach(intervaloEl => {
                 const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
@@ -6600,6 +6665,7 @@
                                 trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
                             });
                             totalHoras += diffHours;
+                            if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                         }
                     } else {
                         // Guardar intervalo en curso (sin fin)
@@ -6608,6 +6674,7 @@
                             fin: null, 
                             trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
                         });
+                        if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                     }
                 }
             });
@@ -6616,6 +6683,9 @@
                 alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
                 return;
             }
+
+            // Convert workers set to array
+            const trabajadoras = Array.from(trabajadorasSet);
 
             // Check if dress is in a group
             const currentHoras = horasConfeccion[currentEditingVestidoId] || {};
@@ -6698,6 +6768,21 @@
             });
 
             alert(`✅ Se han sincronizado ${sincronizados} vestidos con la Base de Modelos`);
+        }
+
+        function calcularPromedioHorasReales(modelo) {
+            // Calculate average of real hours from manufactured dresses
+            if (!modelo.horasReales || !Array.isArray(modelo.horasReales) || modelo.horasReales.length === 0) {
+                return null;
+            }
+            
+            const totalHoras = modelo.horasReales.reduce((sum, h) => sum + h.horas, 0);
+            const promedio = totalHoras / modelo.horasReales.length;
+            
+            // Convert to hh:mm format
+            const horas = Math.floor(promedio);
+            const minutos = Math.round((promedio - horas) * 60);
+            return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
         }
 
         function exportarReporteHoras(formato) {
@@ -11010,14 +11095,6 @@
                     <!-- Vestido info will be populated here -->
                 </div>
 
-                <!-- Workers selection -->
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">👷 Trabajadora(s) Asignadas:</label>
-                    <div id="trabajadoras-selection" class="toggle-group">
-                        <!-- Workers checkboxes will be populated here -->
-                    </div>
-                </div>
-
                 <!-- Time intervals section -->
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label style="font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -11044,6 +11121,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn" onclick="cerrarModalHorasConfeccion()">Cancelar</button>
+                <button class="btn btn-info" onclick="marcarComoFinalizado()">✅ Finalizado</button>
                 <button class="btn btn-success" onclick="guardarHorasConfeccion()">💾 Guardar Horas</button>
             </div>
         </div>
