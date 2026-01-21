@@ -580,17 +580,20 @@
             border-radius: 0 0 12px 12px;
             overflow: hidden;
             box-shadow: var(--sombra-media);
+            width: 100%;
+            max-width: 100%;
         }
 
         .dia-calendario {
             background: var(--color-superficie);
             padding: 8px;
-            min-height: 140px;
+            min-height: 120px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .dia-calendario:hover {
@@ -2724,15 +2727,18 @@
                     <!-- Calendar grid will be generated here -->
                 </div>
                 <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                         <div>
-                            <strong>🔵 En Proceso:</strong> Vestidos con horas asignadas
+                            <strong>✅ En Proceso:</strong> Vestidos con horas asignadas (prioridad alta)
                         </div>
                         <div>
-                            <strong>🟡 Pendientes:</strong> Vestidos sin horas asignadas
+                            <strong>⏳ Pendientes:</strong> Vestidos sin horas asignadas (fecha límite)
                         </div>
                         <div>
-                            <strong>🔴 Límite:</strong> Fecha límite del vestido
+                            <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
+                        </div>
+                        <div>
+                            <strong>👷 Trabajadoras:</strong> Asignadas en intervalos del día
                         </div>
                     </div>
                 </div>
@@ -5993,17 +5999,75 @@
                 // Get dresses for this date
                 const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
                 
+                // Separate dresses by status: with hours (en proceso) vs without (pendientes)
+                const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
+                const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+                
+                // Calculate total hours for the day
+                let horasTotales = 0;
+                const trabajadorasDelDia = new Set();
+                
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                                if (intervalo.fin) {
+                                    const inicioDate = new Date(intervalo.inicio);
+                                    const finDate = new Date(intervalo.fin);
+                                    const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                    horasTotales += diffHours;
+                                }
+                                if (intervalo.trabajadoraId) {
+                                    trabajadorasDelDia.add(intervalo.trabajadoraId);
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // Generate workers summary
+                let trabajadorasHtml = '';
+                if (trabajadorasDelDia.size > 0) {
+                    const nombresWorkers = Array.from(trabajadorasDelDia).map(wId => {
+                        const worker = workers.find(w => w.id === wId);
+                        return worker ? worker.nombre : '?';
+                    }).join(', ');
+                    trabajadorasHtml = `<div style="font-size: 0.65em; color: var(--color-texto-secundario); margin-top: 4px;">👷 ${nombresWorkers}</div>`;
+                }
+                
+                // Generate hours badge
+                let horasBadge = '';
+                if (horasTotales > 0) {
+                    horasBadge = `<span style="font-size: 0.7em; background: var(--color-exito); color: white; padding: 2px 5px; border-radius: 10px;">${horasTotales.toFixed(1)}h</span>`;
+                }
+                
+                // Generate dresses HTML - prioritize dresses with assigned intervals
                 let vestidosHtml = '';
-                vestidosEnFecha.forEach(v => {
-                    const color = horasConfeccion[v.id] ? 'var(--color-info)' : 'var(--color-alerta)';
-                    const icon = horasConfeccion[v.id] ? '🔵' : '🟡';
-                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 2px; background: ${color}30; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo}">${icon} ${v.nombreModelo.substring(0, 8)}...</div>`;
+                
+                // First, show dresses with hours (higher priority)
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    const grupoId = horas ? horas.grupoId : null;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    const grupoIcon = grupo ? '🔗 ' : '';
+                    
+                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600;" title="${v.nombreModelo} - ${v.proveedor}">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
+                });
+                
+                // Then, show pending dresses (lower priority)
+                vestidosPendientes.forEach(v => {
+                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-alerta-fondo); border-left: 3px solid var(--color-alerta); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo} - ${v.proveedor}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
 
                 html += `
-                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 100px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
-                        <div class="numero-dia">${dia}</div>
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 120px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
+                        <div class="numero-dia">
+                            <span>${dia}</span>
+                            ${horasBadge}
+                        </div>
                         ${vestidosHtml}
+                        ${trabajadorasHtml}
                     </div>
                 `;
             }
@@ -6056,12 +6120,51 @@
             const fecha = new Date(fechaStr + 'T00:00:00');
             let mensaje = `📅 Vestidos para ${fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:\n\n`;
             
-            vestidosEnFecha.forEach(v => {
-                const tieneHoras = horasConfeccion[v.id];
-                const status = tieneHoras ? '🔵 En Proceso' : '🟡 Pendiente';
-                const horas = tieneHoras ? ` (${horasConfeccion[v.id].horasTotales.toFixed(2)}h)` : '';
-                mensaje += `${status} - ${v.nombreModelo}${horas}\n`;
-            });
+            // Separate by status
+            const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
+            const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+            
+            if (vestidosEnProceso.length > 0) {
+                mensaje += '✅ EN PROCESO:\n';
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    const grupoId = horas ? horas.grupoId : null;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    const grupoInfo = grupo ? ` 🔗 ${grupo.nombre}` : '';
+                    
+                    // Get workers for this date
+                    const trabajadoras = new Set();
+                    let horasDia = 0;
+                    
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                                if (intervalo.trabajadoraId) {
+                                    const worker = workers.find(w => w.id === intervalo.trabajadoraId);
+                                    if (worker) trabajadoras.add(worker.nombre);
+                                }
+                                if (intervalo.fin) {
+                                    const inicioDate = new Date(intervalo.inicio);
+                                    const finDate = new Date(intervalo.fin);
+                                    const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                    horasDia += diffHours;
+                                }
+                            }
+                        });
+                    }
+                    
+                    const trabajadorasInfo = trabajadoras.size > 0 ? ` | 👷 ${Array.from(trabajadoras).join(', ')}` : '';
+                    mensaje += `  • ${v.nombreModelo} (${horasDia.toFixed(2)}h${trabajadorasInfo})${grupoInfo}\n`;
+                });
+                mensaje += '\n';
+            }
+            
+            if (vestidosPendientes.length > 0) {
+                mensaje += '⏳ PENDIENTES (fecha límite):\n';
+                vestidosPendientes.forEach(v => {
+                    mensaje += `  • ${v.nombreModelo} - ${v.proveedor}\n`;
+                });
+            }
 
             alert(mensaje);
         }
