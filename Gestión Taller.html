@@ -1413,99 +1413,6 @@
         }
 
         /* ============================================= */
-        /* === CONTROLES DE CONFECCIÓN ================ */
-        /* ============================================= */
-        .production-controls {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--color-borde);
-        }
-
-        .control-btn {
-            background: none;
-            border: 1px solid var(--color-borde);
-            border-radius: 6px;
-            padding: 6px 10px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: all 0.2s;
-            color: var(--color-texto-secundario);
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-weight: 500;
-        }
-
-        .control-btn:hover {
-            background: var(--color-neutro-suave);
-            border-color: var(--color-primario-suave);
-            transform: translateY(-1px);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .control-play {
-            color: var(--color-exito);
-            border-color: var(--color-exito);
-        }
-
-        .control-play:hover:not(:disabled) {
-            background: var(--color-exito-fondo);
-            border-color: var(--color-exito);
-        }
-
-        .control-stop {
-            color: var(--color-error);
-            border-color: var(--color-error);
-        }
-
-        .control-stop:hover:not(:disabled) {
-            background: var(--color-error-fondo);
-            border-color: var(--color-error);
-        }
-
-        .control-edit {
-            color: var(--color-info);
-            border-color: var(--color-info);
-        }
-
-        .control-edit:hover:not(:disabled) {
-            background: var(--color-info-fondo);
-            border-color: var(--color-info);
-        }
-
-        .production-status {
-            font-size: 12px;
-            color: var(--color-texto-secundario);
-            font-style: italic;
-            margin-left: auto;
-        }
-
-        .production-status.in-progress {
-            color: var(--color-exito);
-            font-weight: 600;
-        }
-
-        .production-status.completed {
-            color: var(--color-info);
-            font-weight: 600;
-        }
-
-        .production-status.manual-edited {
-            color: var(--color-alerta);
-        }
-
-        .production-status.manual-edited::after {
-            content: " ✏️";
-        }
-
         /* Modal styles */
         .modal-overlay {
             display: none !important;
@@ -2451,7 +2358,6 @@
                         <option value="enviado">Enviado</option>
                         <option value="pagado">Pagado</option>
                         <option value="con_tara">Con tara</option>
-                        <option value="reparado">Reparado</option>
                     </select>
                 </div>
                 <div class="form-group" id="taraSection" style="display: none;"></div>
@@ -2513,10 +2419,6 @@
                     <label class="toggle-btn estado-filter-toggle">
                         <input type="checkbox" value="con_tara" onchange="filtrarVestidos()" checked>
                         <span class="toggle-label">⚠️ Con tara</span>
-                    </label>
-                    <label class="toggle-btn estado-filter-toggle">
-                        <input type="checkbox" value="reparado" onchange="filtrarVestidos()" checked>
-                        <span class="toggle-label">🔧 Reparado</span>
                     </label>
                     <label class="toggle-btn estado-filter-toggle">
                         <input type="checkbox" value="enviado" onchange="filtrarVestidos()" checked>
@@ -2702,10 +2604,39 @@
                             <option value="traka">Traka</option>
                         </select>
                     </div>
-                    <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
+                     <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
                          ondrop="soltarVestidoEnSeccion(event, 'en_proceso')" 
                          ondragover="permitirSoltar(event)">
                         <!-- Vestidos con horas asignadas -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Calendar View -->
+            <div style="margin-top: 40px;">
+                <div class="seccion-header">
+                    <h3>📅 Vista de Calendario</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(-1)">◀ Anterior</button>
+                        <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
+                        <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
+                        <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
+                    </div>
+                </div>
+                <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
+                    <!-- Calendar grid will be generated here -->
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong>🔵 En Proceso:</strong> Vestidos con horas asignadas
+                        </div>
+                        <div>
+                            <strong>🟡 Pendientes:</strong> Vestidos sin horas asignadas
+                        </div>
+                        <div>
+                            <strong>🔴 Límite:</strong> Fecha límite del vestido
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3899,7 +3830,6 @@
             const estadoLabels = {
                 'en_taller': 'En taller',
                 'con_tara': 'Con tara',
-                'reparado': 'Reparado',
                 'enviado': 'Enviado',
                 'pagado': 'Pagado'
             };
@@ -3907,7 +3837,7 @@
             let text = '';
             if (estadosSeleccionados.length === 0 && !filtroTuvoTara) {
                 text = 'Sin filtros de estado';
-            } else if (estadosSeleccionados.length === 5 && !filtroTuvoTara) {
+            } else if (estadosSeleccionados.length === 4 && !filtroTuvoTara) {
                 text = 'Todos los estados';
             } else {
                 const parts = [];
@@ -3943,9 +3873,9 @@
         }
         
         function selectPendingEstados() {
-            // Select only "pending" states: en_taller, con_tara, reparado
+            // Select only "pending" states: en_taller, con_tara
             document.querySelectorAll('.estado-filter-toggle input[type="checkbox"]').forEach(cb => {
-                if (cb.value === 'en_taller' || cb.value === 'con_tara' || cb.value === 'reparado') {
+                if (cb.value === 'en_taller' || cb.value === 'con_tara') {
                     cb.checked = true;
                 } else {
                     cb.checked = false;
@@ -3982,7 +3912,7 @@
                     <button class="btn btn-small btn-editar" onclick="editarVestido(${vestido.id})">Editar</button>
                     <button class="btn btn-small btn-success" onclick="cambiarEstado(${vestido.id}, 'pagado')" ${vestido.estado === 'pagado' ? 'disabled' : ''}>Pagado</button>
                     ${vestido.estado === 'enviado' ? `<button class="btn btn-small btn-devolver" onclick="devolverPorTara(${vestido.id})">↩️ Devolver por Tara</button>` : ''}
-                    ${(vestido.estado === 'en_taller' || vestido.estado === 'reparado' || vestido.estado === 'con_tara') ? `<button class="btn btn-small" onclick="cambiarEstado(${vestido.id}, 'enviado')">Enviar</button>` : ''}
+                    ${(vestido.estado === 'en_taller' || vestido.estado === 'con_tara') ? `<button class="btn btn-small" onclick="cambiarEstado(${vestido.id}, 'enviado')">Enviar</button>` : ''}
                     <button class="btn btn-small btn-eliminar" onclick="eliminarVestido(${vestido.id})">Eliminar</button>`;
 
                 // Get albaran numbers for display
@@ -4011,7 +3941,7 @@
                             ${vestido.numeroFactura ? `<span class="chip">🧾 ${vestido.numeroFactura}</span>` : ''}
                             ${(vestido.tuvoTara || (vestido.historialTaras && vestido.historialTaras.length > 0)) ? (() => {
                                 // Determine tara badge color based on estado
-                                const estadosEnTaller = ['en_taller', 'con_tara', 'reparado'];
+                                const estadosEnTaller = ['en_taller', 'con_tara'];
                                 const estadosEnviadosPagados = ['enviado', 'pagado'];
                                 let taraColor = 'var(--color-alerta)'; // Default yellow
                                 if (estadosEnviadosPagados.includes(vestido.estado)) {
@@ -4316,7 +4246,7 @@
                 const [d, m, a] = fechaEnvio.split('/');
                 const fechaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
-                const esReenvio = vestido.estado === 'con_tara' || vestido.estado === 'reparado';
+                const esReenvio = vestido.estado === 'con_tara';
                 const albaranDefault = vestido.proveedor === 'pronovias' ? numeroAlbaranPronovias : numeroAlbaranOtros;
                 const numeroAlbaran = prompt(`Introduce NÚMERO DE ALBARÁN para ${esReenvio ? 'el REENVÍO' : 'el envío'} (${vestido.proveedor}):`, albaranDefault);
                 if (!numeroAlbaran) return alert('Debe introducir un número de albarán');
@@ -4339,7 +4269,7 @@
                     numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran) + 1);
                 }
 
-                vestido.estado = esReenvio ? 'reparado' : 'enviado'; // Lo marcamos como reparado si es reenvío
+                vestido.estado = 'enviado'; // Lo marcamos como enviado
                 // Para simplificar, lo pasamos a enviado directamente para el siguiente paso lógico
                 setTimeout(() => {
                     vestido.estado = 'enviado';
@@ -4414,7 +4344,7 @@
             } else {
                 // Multiple results (N > 1): Sort with en_taller first, then show modal for selection
                 const ordenados = [...vestidosEncontrados].sort((a, b) => {
-                    const ordenEstado = ['en_taller', 'con_tara', 'reparado', 'enviado', 'pagado'];
+                    const ordenEstado = ['en_taller', 'con_tara', 'enviado', 'pagado'];
                     return ordenEstado.indexOf(a.estado) - ordenEstado.indexOf(b.estado);
                 });
                 container.innerHTML = ordenados.map(v => `
@@ -4431,7 +4361,6 @@
             const estados = {
                 'en_taller': '🏭 En taller',
                 'con_tara': '⚠️ Con tara',
-                'reparado': '✅ Reparado',
                 'enviado': '📦 Enviado',
                 'pagado': '💰 Pagado'
             };
@@ -4463,7 +4392,7 @@
             const fechaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
             vestidosSeleccionados.forEach(vestido => {
-                const esReenvio = ['con_tara', 'reparado'].includes(vestido.estado);
+                const esReenvio = ['con_tara'].includes(vestido.estado);
 
                 if (esReenvio) {
                     if (!vestido.historialAlbaranes) vestido.historialAlbaranes = [];
@@ -4886,7 +4815,7 @@
             const alertas = [];
 
             vestidos.forEach(vestido => {
-                if (['en_taller', 'con_tara', 'reparado'].includes(vestido.estado) && vestido.fechaLimite) {
+                if (['en_taller', 'con_tara'].includes(vestido.estado) && vestido.fechaLimite) {
                     const fechaLimite = new Date(vestido.fechaLimite + 'T00:00:00');
                     const diasRestantes = Math.ceil((fechaLimite - hoy) / (1000 * 60 * 60 * 24));
                     if (diasRestantes <= 2) {
@@ -4972,6 +4901,10 @@
                 </div>`;
             }
 
+            // Profitability Analysis
+            html += `<h3 style="margin: 25px 0 15px 0;">💹 Análisis de Rentabilidad</h3>
+            ${renderProfitabilityAnalysis(fechaInicio, fechaFin)}`;
+
             // Alertas normales
             if (alertas.alerta.length > 0) {
                 html += `<div class="stats-card" style="border-left: 5px solid var(--color-alerta); margin-bottom: 15px;">
@@ -5009,11 +4942,10 @@
             modal.id = 'modal-vestido';
             modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;';
 
-            const estados = ['en_taller', 'con_tara', 'reparado', 'enviado', 'pagado'];
+            const estados = ['en_taller', 'con_tara', 'enviado', 'pagado'];
             const estadoTexto = {
                 'en_taller': 'En Taller',
                 'con_tara': 'Con Tara',
-                'reparado': 'Reparado',
                 'enviado': 'Enviado',
                 'pagado': 'Pagado'
             };
@@ -5200,7 +5132,7 @@
                 vestidos.forEach(vestido => {
                     if (vestido.codigoModelo === modelo.codigo) {
                         // Solo actualizar vestidos que NO están pagados y NO tienen factura
-                        // Es decir: en_taller, enviado, con_tara, reparado y sin factura
+                        // Es decir: en_taller, enviado, con_tara y sin factura
                         const estaPagado = vestido.estado === 'pagado';
                         const tieneFactura = vestido.numeroFactura && vestido.fechaFactura;
 
@@ -5243,6 +5175,9 @@
         function inicializarPlanificacion() {
             // Load the new planning system
             cargarPlanificacionNueva();
+            
+            // Generate calendar view
+            generarCalendarioPlanificacion();
         }
 
         function cargarPlanificacion() {
@@ -5328,7 +5263,7 @@
             if (!container) return;
             const planificadosEnCalendario = new Set(Object.values(planificacion).flat().map(v => v.vestidoId));
             const disponibles = vestidos
-                .filter(v => ['en_taller', 'con_tara', 'reparado'].includes(v.estado) && !planificadosEnCalendario.has(v.id))
+                .filter(v => ['en_taller', 'con_tara'].includes(v.estado) && !planificadosEnCalendario.has(v.id))
                 .sort((a, b) => (a.fechaLimite && b.fechaLimite) ? new Date(a.fechaLimite) - new Date(b.fechaLimite) : (a.fechaLimite ? -1 : 1));
 
             container.innerHTML = disponibles.length === 0 ? '<p style="text-align:center; padding: 10px;">No hay vestidos para planificar.</p>' : disponibles.map(v => `
@@ -5402,7 +5337,7 @@
             const planificadosEnCalendario = new Set(Object.values(planificacion).flat().map(v => v.vestidoId));
 
             const vestidosAPlanificar = vestidos.filter(v => {
-                const estaEnTaller = ['en_taller', 'con_tara', 'reparado'].includes(v.estado);
+                const estaEnTaller = ['en_taller', 'con_tara'].includes(v.estado);
                 // Exclude dresses already in calendar or marked as auto-planned
                 return estaEnTaller && !vestidosPlanificadosAuto.has(v.id) && !planificadosEnCalendario.has(v.id);
             });
@@ -5554,7 +5489,7 @@
             
             // Get dresses without assigned hours
             const vestidosSinHoras = vestidos.filter(v => {
-                if (!['en_taller', 'con_tara', 'reparado'].includes(v.estado)) return false;
+                if (!['en_taller', 'con_tara'].includes(v.estado)) return false;
                 if (horasConfeccion[v.id]) return false; // Has hours assigned
                 
                 // Apply filters
@@ -5585,7 +5520,7 @@
             
             // Get dresses with assigned hours
             const vestidosConHoras = vestidos.filter(v => {
-                if (!['en_taller', 'con_tara', 'reparado'].includes(v.estado)) return false;
+                if (!['en_taller', 'con_tara'].includes(v.estado)) return false;
                 if (!horasConfeccion[v.id]) return false; // No hours assigned
                 
                 // Apply filters
@@ -5624,10 +5559,16 @@
 
             let horasInfo = '';
             if (seccion === 'en_proceso' && horas) {
+                // Check if any interval is in progress (has no end time)
+                const hasInProgress = horas.intervalos.some(i => i.inicio && !i.fin);
+                const horasDisplay = hasInProgress 
+                    ? `⏳ ${horas.horasTotales.toFixed(2)}h (en curso)` 
+                    : `${horas.horasTotales.toFixed(2)}h`;
+                
                 horasInfo = `
                     <div class="vestido-card-horas">
                         <span class="vestido-card-horas-label">Horas trabajadas:</span>
-                        <span class="vestido-card-horas-valor">${horas.horasTotales.toFixed(2)}h / ${horasEstimadas.toFixed(2)}h</span>
+                        <span class="vestido-card-horas-valor">${horasDisplay} / ${horasEstimadas.toFixed(2)}h</span>
                     </div>
                 `;
             }
@@ -5701,6 +5642,138 @@
             event.currentTarget.classList.add('drag-over');
         }
 
+        // ===============================================
+        // === CALENDARIO DE PLANIFICACIÓN ===============
+        // ===============================================
+        let mesActualCalendario = new Date().getMonth();
+        let anioActualCalendario = new Date().getFullYear();
+
+        function generarCalendarioPlanificacion() {
+            const container = document.getElementById('calendario-planificacion-grid');
+            const mesLabel = document.getElementById('mes-actual-calendario');
+            
+            if (!container || !mesLabel) return; // Not in planning tab
+            
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            mesLabel.textContent = `${meses[mesActualCalendario]} ${anioActualCalendario}`;
+
+            const primerDia = new Date(anioActualCalendario, mesActualCalendario, 1);
+            const ultimoDia = new Date(anioActualCalendario, mesActualCalendario + 1, 0);
+            const diasEnMes = ultimoDia.getDate();
+            const primerDiaSemana = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1; // Lunes = 0
+
+            let html = '<div class="calendario-header"><div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
+            html += '<div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;">';
+
+            // Días vacíos antes del primer día del mes
+            for (let i = 0; i < primerDiaSemana; i++) {
+                html += '<div class="dia-calendario otro-mes"></div>';
+            }
+
+            // Días del mes
+            const hoy = new Date();
+            for (let dia = 1; dia <= diasEnMes; dia++) {
+                const fecha = new Date(anioActualCalendario, mesActualCalendario, dia);
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const esHoy = fecha.toDateString() === hoy.toDateString();
+                const diaSemana = fecha.getDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+
+                // Get dresses for this date
+                const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+                
+                let vestidosHtml = '';
+                vestidosEnFecha.forEach(v => {
+                    const color = horasConfeccion[v.id] ? 'var(--color-info)' : 'var(--color-alerta)';
+                    const icon = horasConfeccion[v.id] ? '🔵' : '🟡';
+                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 2px; background: ${color}30; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo}">${icon} ${v.nombreModelo.substring(0, 8)}...</div>`;
+                });
+
+                html += `
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 100px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
+                        <div class="numero-dia">${dia}</div>
+                        ${vestidosHtml}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function obtenerVestidosParaFecha(fechaStr) {
+            const resultado = [];
+            
+            // Get dresses with hours assigned for this date
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio) {
+                            const fechaIntervalo = intervalo.inicio.split('T')[0];
+                            if (fechaIntervalo === fechaStr) {
+                                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                                if (vestido && !resultado.find(v => v.id === vestido.id)) {
+                                    resultado.push(vestido);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Get dresses with deadline on this date
+            vestidos.forEach(vestido => {
+                if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
+                    if (!resultado.find(v => v.id === vestido.id)) {
+                        resultado.push(vestido);
+                    }
+                }
+            });
+
+            return resultado;
+        }
+
+        function verDetallesDiaCalendario(fechaStr) {
+            const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+            
+            if (vestidosEnFecha.length === 0) {
+                alert(`No hay vestidos programados para el ${new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES')}`);
+                return;
+            }
+
+            const fecha = new Date(fechaStr + 'T00:00:00');
+            let mensaje = `📅 Vestidos para ${fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:\n\n`;
+            
+            vestidosEnFecha.forEach(v => {
+                const tieneHoras = horasConfeccion[v.id];
+                const status = tieneHoras ? '🔵 En Proceso' : '🟡 Pendiente';
+                const horas = tieneHoras ? ` (${horasConfeccion[v.id].horasTotales.toFixed(2)}h)` : '';
+                mensaje += `${status} - ${v.nombreModelo}${horas}\n`;
+            });
+
+            alert(mensaje);
+        }
+
+        function cambiarMesCalendarioPlanificacion(offset) {
+            mesActualCalendario += offset;
+            if (mesActualCalendario < 0) {
+                mesActualCalendario = 11;
+                anioActualCalendario--;
+            } else if (mesActualCalendario > 11) {
+                mesActualCalendario = 0;
+                anioActualCalendario++;
+            }
+            generarCalendarioPlanificacion();
+        }
+
+        function irHoyCalendarioPlanificacion() {
+            const hoy = new Date();
+            mesActualCalendario = hoy.getMonth();
+            anioActualCalendario = hoy.getFullYear();
+            generarCalendarioPlanificacion();
+        }
+
         // Modal functions for work hours management
         function abrirModalHorasConfeccion(vestidoId) {
             currentEditingVestidoId = vestidoId;
@@ -5772,7 +5845,7 @@
                             <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
                         </div>
                         <div>
-                            <label>Fecha y Hora Fin:</label>
+                            <label>Fecha y Hora Fin (opcional):</label>
                             <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
                         </div>
                     </div>
@@ -5812,8 +5885,8 @@
                             <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
                         </div>
                         <div>
-                            <label>Fecha y Hora Fin:</label>
-                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin}" onchange="calcularHorasTotales()">
+                            <label>Fecha y Hora Fin (opcional):</label>
+                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
                         </div>
                     </div>
                 </div>
@@ -5837,10 +5910,14 @@
                     if (diffHours > 0) {
                         totalHoras += diffHours;
                     }
+                } else if (inicio) {
+                    // Si solo hay inicio (trabajo en curso), mostrar indicador
+                    // No suma horas pero el intervalo es válido
                 }
             });
 
-            document.getElementById('total-horas-calculadas').textContent = `${totalHoras.toFixed(2)}h`;
+            const displayText = totalHoras > 0 ? `${totalHoras.toFixed(2)}h` : '⏳ En curso';
+            document.getElementById('total-horas-calculadas').textContent = displayText;
         }
 
         function guardarHorasConfeccion() {
@@ -5868,21 +5945,27 @@
                 const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
                 const fin = intervaloEl.querySelector('.intervalo-fin').value;
                 
-                if (inicio && fin) {
-                    const inicioDate = new Date(inicio);
-                    const finDate = new Date(fin);
-                    const diffMs = finDate - inicioDate;
-                    const diffHours = diffMs / (1000 * 60 * 60);
-                    
-                    if (diffHours > 0) {
-                        intervalos.push({ inicio, fin });
-                        totalHoras += diffHours;
+                if (inicio) {
+                    // Permitir intervalos con solo inicio (trabajo en curso)
+                    if (fin) {
+                        const inicioDate = new Date(inicio);
+                        const finDate = new Date(fin);
+                        const diffMs = finDate - inicioDate;
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        
+                        if (diffHours > 0) {
+                            intervalos.push({ inicio, fin });
+                            totalHoras += diffHours;
+                        }
+                    } else {
+                        // Guardar intervalo en curso (sin fin)
+                        intervalos.push({ inicio, fin: null });
                     }
                 }
             });
 
             if (intervalos.length === 0) {
-                alert('⚠️ Debes añadir al menos un intervalo de tiempo válido');
+                alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
                 return;
             }
 
@@ -5902,6 +5985,7 @@
             alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
             cerrarModalHorasConfeccion();
             cargarPlanificacionNueva();
+            generarCalendarioPlanificacion(); // Update calendar
         }
 
         function sincronizarVestidoConBaseModelos(vestidoId) {
@@ -7268,6 +7352,178 @@
             };
         }
 
+        function renderHoursSummaryCard(fechaInicio, fechaFin) {
+            const fi = new Date(fechaInicio + 'T00:00:00');
+            const ff = new Date(fechaFin + 'T23:59:59');
+            
+            const horasPorProveedor = {
+                pronovias: 0,
+                rosa_clara: 0,
+                traka: 0
+            };
+
+            let totalHoras = 0;
+
+            // Calculate hours worked per provider during the selected period
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                if (!horas.intervalos) return;
+
+                horas.intervalos.forEach(intervalo => {
+                    if (!intervalo.inicio) return;
+                    
+                    const fechaIntervalo = new Date(intervalo.inicio);
+                    if (fechaIntervalo < fi || fechaIntervalo > ff) return;
+
+                    if (intervalo.fin) {
+                        const inicioDate = new Date(intervalo.inicio);
+                        const finDate = new Date(intervalo.fin);
+                        const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                        
+                        if (diffHours > 0) {
+                            horasPorProveedor[vestido.proveedor] = (horasPorProveedor[vestido.proveedor] || 0) + diffHours;
+                            totalHoras += diffHours;
+                        }
+                    }
+                });
+            });
+
+            return `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div style="text-align: center; padding: 20px; background: var(--color-info-fondo); border-radius: 8px;">
+                        <div style="font-size: 2.5em; font-weight: 700; color: var(--color-info);">${totalHoras.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Total Horas Trabajadas</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-pronovias); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.pronovias.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Pronovias</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.pronovias / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-rosa_clara); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.rosa_clara.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Rosa Clará</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.rosa_clara / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                    <div style="padding: 20px; background: var(--color-traka); border-radius: 8px;">
+                        <div style="font-size: 1.8em; font-weight: 600; color: var(--color-primario);">${horasPorProveedor.traka.toFixed(2)}h</div>
+                        <div style="font-weight: 600; margin-top: 5px;">Traka</div>
+                        <div style="font-size: 0.9em; color: var(--color-texto-secundario);">${totalHoras > 0 ? ((horasPorProveedor.traka / totalHoras) * 100).toFixed(1) : 0}% del total</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProfitabilityAnalysis(fechaInicio, fechaFin) {
+            const fi = new Date(fechaInicio + 'T00:00:00');
+            const ff = new Date(fechaFin + 'T23:59:59');
+            const config = obtenerConfiguracionTaller();
+            
+            // Calculate profitability for each paid dress in the period
+            const vestidosConRentabilidad = [];
+            
+            vestidos.forEach(vestido => {
+                // Only include dresses that were paid in this period
+                if (vestido.estado !== 'pagado' || !vestido.fechaFactura) return;
+                
+                const fechaFactura = new Date(vestido.fechaFactura + 'T00:00:00');
+                if (fechaFactura < fi || fechaFactura > ff) return;
+
+                // Calculate profit
+                const precioVenta = vestido.precioFinal || vestido.precioBase || 0;
+                const costoBase = vestido.precioBase || 0;
+                
+                // Get hours worked (if available)
+                const horas = horasConfeccion[vestido.id];
+                const horasTrabajadas = horas ? horas.horasTotales : 0;
+                const costoHoras = horasTrabajadas * config.precioHoraObjetivo;
+                
+                const ganancia = precioVenta - costoBase - costoHoras;
+                const margen = precioVenta > 0 ? (ganancia / precioVenta) * 100 : 0;
+
+                vestidosConRentabilidad.push({
+                    ...vestido,
+                    ganancia,
+                    margen,
+                    horasTrabajadas,
+                    costoHoras,
+                    precioVenta
+                });
+            });
+
+            // Sort by profitability
+            const masRentables = vestidosConRentabilidad
+                .sort((a, b) => b.ganancia - a.ganancia)
+                .slice(0, 5);
+            
+            const menosRentables = vestidosConRentabilidad
+                .sort((a, b) => a.ganancia - b.ganancia)
+                .slice(0, 5);
+
+            let html = '<div class="grid-2">';
+            
+            // Top 5 most profitable
+            html += `
+                <div class="stats-card">
+                    <h4 style="color: var(--color-exito); margin-bottom: 15px;">📈 Top 5 Más Rentables</h4>
+                    ${masRentables.length === 0 ? '<p style="text-align: center; color: var(--color-texto-secundario); padding: 20px;">No hay datos disponibles</p>' : ''}
+                    <table class="tabla-simple">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Ganancia</th>
+                                <th>Margen</th>
+                                <th>Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${masRentables.map(v => `
+                                <tr>
+                                    <td>${v.nombreModelo}<br><small style="color: var(--color-texto-secundario);">${v.proveedor} - ${v.lote || 'N/A'}</small></td>
+                                    <td style="color: var(--color-exito); font-weight: 600;">+${v.ganancia.toFixed(2)}€</td>
+                                    <td>${v.margen.toFixed(1)}%</td>
+                                    <td>${v.horasTrabajadas.toFixed(2)}h</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // Top 5 least profitable
+            html += `
+                <div class="stats-card">
+                    <h4 style="color: var(--color-error); margin-bottom: 15px;">📉 Top 5 Menos Rentables</h4>
+                    ${menosRentables.length === 0 ? '<p style="text-align: center; color: var(--color-texto-secundario); padding: 20px;">No hay datos disponibles</p>' : ''}
+                    <table class="tabla-simple">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Ganancia</th>
+                                <th>Margen</th>
+                                <th>Horas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${menosRentables.map(v => `
+                                <tr>
+                                    <td>${v.nombreModelo}<br><small style="color: var(--color-texto-secundario);">${v.proveedor} - ${v.lote || 'N/A'}</small></td>
+                                    <td style="color: ${v.ganancia >= 0 ? 'var(--color-exito)' : 'var(--color-error)'}; font-weight: 600;">${v.ganancia >= 0 ? '+' : ''}${v.ganancia.toFixed(2)}€</td>
+                                    <td>${v.margen.toFixed(1)}%</td>
+                                    <td>${v.horasTrabajadas.toFixed(2)}h</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            html += '</div>';
+            return html;
+        }
+
         function renderDashboardTab(fechaInicio, fechaFin) {
             const data = calcularDatosFinancieros(fechaInicio, fechaFin);
             const container = document.getElementById('dashboard-content');
@@ -7367,6 +7623,12 @@
                     </div>
                     <p class="kpi-subvalue">${progresoEquilibrio >= 100 ? '✅ Alcanzado' : `Faltan ${(data.horasEquilibrio - data.horasUsadas).toFixed(2)}h`}</p>
                 </div>
+            </div>`;
+
+            // Hours Summary Card by Provider
+            html += `<h3 style="margin: 25px 0 15px 0;">⏱️ Resumen de Horas Trabajadas</h3>
+            <div class="stats-card">
+                ${renderHoursSummaryCard(fechaInicio, fechaFin)}
             </div>`;
 
             // Proyecciones de Fin de Mes
@@ -9827,7 +10089,7 @@
         }
 
         function realizarLimpiezaCierreAnual() {
-            // Keep dresses that are not paid (en_taller, enviado, con_tara, reparado)
+            // Keep dresses that are not paid (en_taller, enviado, con_tara)
             vestidos = vestidos.filter(v => v.estado !== 'pagado');
 
             // Clear all expenses and other incomes
@@ -10018,536 +10280,7 @@
             renderizarHistorico();
         }
 
-        // ===============================================
-        // === CONTROLES DE CONFECCIÓN ===================
-        // ===============================================
-
-        // IIFE to avoid global scope pollution
-        (function () {
-            'use strict';
-
-            // Configuration
-            const API_BASE_URL = ''; // Can be set to backend URL if available
-            const STORAGE_PREFIX = 'gest_taller_vestido_';
-
-            // Get or create vestido ID
-            function getVestidoId(card) {
-                // First try to get ID from the card's id attribute (format: vestido-123)
-                if (card.id && card.id.startsWith('vestido-')) {
-                    const id = card.id.replace('vestido-', '');
-                    card.dataset.vestidoId = id;
-                    return id;
-                }
-
-                // Try data attributes
-                let id = card.dataset.id || card.dataset.vestidoId;
-                if (!id) {
-                    // If no ID found, this might not be a real vestido card
-                    return null;
-                }
-                return id;
-            }
-
-            // Storage functions
-            function getProductionData(id) {
-                const key = STORAGE_PREFIX + id;
-                const data = localStorage.getItem(key);
-                return data ? JSON.parse(data) : {
-                    is_in_progress: false,
-                    started_at: null,
-                    completed_at: null,
-                    manual_hours: null,
-                    manual_edited: false,
-                    updated_at: null,
-                    updated_by: null
-                };
-            }
-
-            function setProductionData(id, data) {
-                const key = STORAGE_PREFIX + id;
-                data.updated_at = new Date().toISOString();
-                localStorage.setItem(key, JSON.stringify(data));
-            }
-
-            // API functions with localStorage fallback
-            async function apiCall(endpoint, method, data) {
-                if (!API_BASE_URL) {
-                    throw new Error('API not configured');
-                }
-
-                try {
-                    const response = await fetch(API_BASE_URL + endpoint, {
-                        method: method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: data ? JSON.stringify(data) : undefined
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('API call failed');
-                    }
-
-                    return await response.json();
-                } catch (error) {
-                    console.warn('API call failed, using localStorage fallback:', error);
-                    throw error;
-                }
-            }
-
-            // Start production
-            async function startConfeccion(id) {
-                const data = getProductionData(id);
-                data.is_in_progress = true;
-                data.started_at = new Date().toISOString();
-                data.completed_at = null;
-
-                try {
-                    await apiCall(`/dresses/${id}/start`, 'PATCH', data);
-                } catch (error) {
-                    // Fallback to localStorage
-                    setProductionData(id, data);
-                }
-
-                updateControlsUI(id);
-            }
-
-            // Stop production
-            async function stopConfeccion(id, note = '') {
-                const data = getProductionData(id);
-                data.is_in_progress = false;
-                data.completed_at = new Date().toISOString();
-
-                try {
-                    await apiCall(`/dresses/${id}/stop`, 'PATCH', { ...data, note });
-                } catch (error) {
-                    // Fallback to localStorage
-                    setProductionData(id, data);
-                }
-
-                updateControlsUI(id);
-
-                // Show note input modal if needed
-                if (note === null) {
-                    showStopModal(id);
-                }
-            }
-
-            // Show stop modal for optional note
-            function showStopModal(id) {
-                const modal = document.getElementById('modal-stop-note');
-                const noteInput = document.getElementById('stop-note-input');
-                const saveBtn = document.getElementById('save-stop-note');
-                const cancelBtn = document.getElementById('cancel-stop-note');
-
-                noteInput.value = '';
-                modal.classList.add('active');
-
-                saveBtn.onclick = () => {
-                    const note = noteInput.value.trim();
-                    const data = getProductionData(id);
-                    data.note = note;
-                    setProductionData(id, data);
-                    modal.classList.remove('active');
-                };
-
-                cancelBtn.onclick = () => {
-                    modal.classList.remove('active');
-                };
-            }
-
-            // Open edit modal
-            function openEditModal(id) {
-                const modal = document.getElementById('modal-edit-production');
-                const data = getProductionData(id);
-
-                // Populate form
-                const startedInput = document.getElementById('edit-started-at');
-                const completedInput = document.getElementById('edit-completed-at');
-                const hoursInput = document.getElementById('edit-manual-hours');
-
-                if (data.started_at) {
-                    startedInput.value = data.started_at.substring(0, 16);
-                } else {
-                    startedInput.value = '';
-                }
-
-                if (data.completed_at) {
-                    completedInput.value = data.completed_at.substring(0, 16);
-                } else {
-                    completedInput.value = '';
-                }
-
-                hoursInput.value = data.manual_hours || '';
-
-                modal.classList.add('active');
-                modal.dataset.editingId = id;
-            }
-
-            // Save edit modal
-            async function saveEdit(id) {
-                const startedInput = document.getElementById('edit-started-at');
-                const completedInput = document.getElementById('edit-completed-at');
-                const hoursInput = document.getElementById('edit-manual-hours');
-
-                const data = getProductionData(id);
-
-                if (startedInput.value) {
-                    data.started_at = new Date(startedInput.value).toISOString();
-                }
-
-                if (completedInput.value) {
-                    data.completed_at = new Date(completedInput.value).toISOString();
-                    data.is_in_progress = false;
-                } else {
-                    data.completed_at = null;
-                }
-
-                if (hoursInput.value) {
-                    data.manual_hours = parseFloat(hoursInput.value);
-                    data.manual_edited = true;
-                } else {
-                    data.manual_hours = null;
-                }
-
-                try {
-                    await apiCall(`/dresses/${id}`, 'PUT', data);
-                } catch (error) {
-                    // Fallback to localStorage
-                    setProductionData(id, data);
-                }
-
-                updateControlsUI(id);
-                closeModal('modal-edit-production');
-            }
-
-            // Close modal
-            function closeModal(modalId) {
-                const modal = document.getElementById(modalId);
-                if (modal) {
-                    modal.classList.remove('active');
-                }
-            }
-
-            // Update UI controls
-            function updateControlsUI(id) {
-                const card = document.querySelector(`[data-vestido-id="${id}"]`);
-                if (!card) return;
-
-                const data = getProductionData(id);
-                const playBtn = card.querySelector('.control-play');
-                const stopBtn = card.querySelector('.control-stop');
-                const statusSpan = card.querySelector('.production-status');
-
-                if (data.is_in_progress) {
-                    playBtn.disabled = true;
-                    stopBtn.disabled = false;
-                    statusSpan.textContent = '⏱️ En confección';
-                    statusSpan.className = 'production-status in-progress';
-                } else if (data.completed_at) {
-                    playBtn.disabled = true;
-                    stopBtn.disabled = true;
-                    statusSpan.textContent = '✅ Terminado';
-                    statusSpan.className = 'production-status completed';
-                } else {
-                    playBtn.disabled = false;
-                    stopBtn.disabled = true;
-                    statusSpan.textContent = '';
-                    statusSpan.className = 'production-status';
-                }
-
-                if (data.manual_edited) {
-                    statusSpan.classList.add('manual-edited');
-                }
-            }
-
-            // Initialize controls for a card
-            function initializeCardControls(card) {
-                // Skip if card already has controls
-                if (card.querySelector('.production-controls')) return;
-
-                const id = getVestidoId(card);
-
-                // Skip if no valid ID (e.g., empty state cards)
-                if (!id) return;
-
-                // Create controls HTML
-                const controlsDiv = document.createElement('div');
-                controlsDiv.className = 'production-controls';
-                controlsDiv.innerHTML = `
-                    <button class="control-btn control-play" title="Iniciar confección">
-                        ▶ Play
-                    </button>
-                    <button class="control-btn control-stop" title="Marcar como terminado" disabled>
-                        ■ Stop
-                    </button>
-                    <button class="control-btn control-edit" title="Editar horas/fechas">
-                        ✏️ Editar
-                    </button>
-                    <span class="production-status"></span>
-                `;
-
-                // Find the details section and append controls there
-                const detailsSection = card.querySelector('.vestido-details');
-                if (detailsSection) {
-                    detailsSection.appendChild(controlsDiv);
-                } else {
-                    // Fallback: append to card itself
-                    card.appendChild(controlsDiv);
-                }
-
-                // Add event listeners
-                const playBtn = controlsDiv.querySelector('.control-play');
-                const stopBtn = controlsDiv.querySelector('.control-stop');
-                const editBtn = controlsDiv.querySelector('.control-edit');
-
-                playBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    startConfeccion(id);
-                });
-
-                stopBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    stopConfeccion(id, '');
-                });
-
-                editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openEditModal(id);
-                });
-
-                // Update initial state
-                updateControlsUI(id);
-            }
-
-            // Intercept albaran generation
-            function interceptAlbaranGeneration() {
-                document.addEventListener('click', (e) => {
-                    const target = e.target;
-
-                    // Check if clicking on albaran button
-                    const isAlbaranButton =
-                        target.matches('button[data-action="generate-albaran"], a[data-action="generate-albaran"]') ||
-                        (target.matches('button, a') && /albar/i.test(target.textContent));
-
-                    if (!isAlbaranButton) return;
-
-                    // Find the closest vestido card
-                    const card = target.closest('.vestido-card');
-                    if (!card) return;
-
-                    const id = getVestidoId(card);
-                    const data = getProductionData(id);
-
-                    // Check if in progress
-                    if (data.is_in_progress) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        showAlbaranWarningModal(id, target);
-                    }
-                }, true);
-            }
-
-            // Show albaran warning modal
-            function showAlbaranWarningModal(id, originalButton) {
-                const modal = document.getElementById('modal-albaran-warning');
-                modal.classList.add('active');
-                modal.dataset.vestidoId = id;
-                modal.dataset.originalAction = 'click';
-
-                const continueBtn = document.getElementById('albaran-continue');
-                const stopAndContinueBtn = document.getElementById('albaran-stop-continue');
-                const cancelBtn = document.getElementById('albaran-cancel');
-
-                // Continue without changing state
-                continueBtn.onclick = () => {
-                    modal.classList.remove('active');
-                    // Re-trigger original action
-                    setTimeout(() => {
-                        originalButton.click();
-                    }, 100);
-                };
-
-                // Stop and continue
-                stopAndContinueBtn.onclick = async () => {
-                    await stopConfeccion(id, 'Albarán generado');
-                    modal.classList.remove('active');
-                    // Re-trigger original action
-                    setTimeout(() => {
-                        originalButton.click();
-                    }, 100);
-                };
-
-                // Cancel
-                cancelBtn.onclick = () => {
-                    modal.classList.remove('active');
-                };
-            }
-
-            // Initialize all cards
-            function initializeAllCards() {
-                const cards = document.querySelectorAll('.vestido-card');
-                cards.forEach(card => {
-                    // Skip cards that are just messages (no ID)
-                    if (!card.id || !card.id.startsWith('vestido-')) return;
-                    // Check if already initialized
-                    if (card.querySelector('.production-controls')) return;
-                    initializeCardControls(card);
-                });
-            }
-
-            // Setup modal close handlers
-            function setupModalHandlers() {
-                // Close buttons
-                document.querySelectorAll('.modal-close').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        btn.closest('.modal-overlay').classList.remove('active');
-                    });
-                });
-
-                // Click outside to close
-                document.querySelectorAll('.modal-overlay').forEach(modal => {
-                    modal.addEventListener('click', (e) => {
-                        if (e.target === modal) {
-                            modal.classList.remove('active');
-                        }
-                    });
-                });
-
-                // Edit modal save button
-                const saveEditBtn = document.getElementById('save-edit-production');
-                if (saveEditBtn) {
-                    saveEditBtn.addEventListener('click', () => {
-                        const modal = document.getElementById('modal-edit-production');
-                        const id = modal.dataset.editingId;
-                        if (id) {
-                            saveEdit(id);
-                        }
-                    });
-                }
-
-                // Edit modal cancel button
-                const cancelEditBtn = document.getElementById('cancel-edit-production');
-                if (cancelEditBtn) {
-                    cancelEditBtn.addEventListener('click', () => {
-                        closeModal('modal-edit-production');
-                    });
-                }
-            }
-
-            // Initialize on DOM ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    setupModalHandlers();
-                    initializeAllCards();
-                    interceptAlbaranGeneration();
-                });
-            } else {
-                setupModalHandlers();
-                initializeAllCards();
-                interceptAlbaranGeneration();
-            }
-
-            // Re-initialize when tab changes or content updates
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.addedNodes.length) {
-                        initializeAllCards();
-                    }
-                });
-            });
-
-            if (document.body) {
-                observer.observe(document.body, {
-                    childList: true,
-                    subtree: true
-                });
-            }
-
-            // Expose functions to window for debugging (optional)
-            window.productionControls = {
-                getProductionData,
-                setProductionData,
-                startConfeccion,
-                stopConfeccion,
-                openEditModal
-            };
-
-        })();
-
     </script>
-
-    <!-- Production Control Modals -->
-    <div id="modal-albaran-warning" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>⚠️ Vestido en confección</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-warning">
-                    <p><strong>Este vestido está marcado como "En confección".</strong></p>
-                    <p>¿Qué deseas hacer?</p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="albaran-cancel" class="btn">Cancelar</button>
-                <button id="albaran-continue" class="btn btn-exportar">Generar albarán igual</button>
-                <button id="albaran-stop-continue" class="btn btn-success">Marcar terminado y generar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-stop-note" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Marcar como terminado</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Nota (opcional):</label>
-                    <textarea id="stop-note-input" rows="3"
-                        placeholder="Añade una nota sobre la confección..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="cancel-stop-note" class="btn">Cancelar</button>
-                <button id="save-stop-note" class="btn btn-success">Guardar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-edit-production" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>✏️ Editar horas y fechas</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Fecha y hora de inicio:</label>
-                    <input type="datetime-local" id="edit-started-at">
-                </div>
-                <div class="form-group">
-                    <label>Fecha y hora de finalización:</label>
-                    <input type="datetime-local" id="edit-completed-at">
-                </div>
-                <div class="form-group">
-                    <label>Horas de confección (manual):</label>
-                    <input type="number" id="edit-manual-hours" step="0.5" min="0" placeholder="Ej: 8.5">
-                    <small
-                        style="color: var(--color-texto-secundario); font-size: 0.85em; display: block; margin-top: 5px;">
-                        Si introduces un valor, se marcará como editado manualmente
-                    </small>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="cancel-edit-production" class="btn">Cancelar</button>
-                <button id="save-edit-production" class="btn btn-success">Guardar cambios</button>
-            </div>
-        </div>
-    </div>
 
     <!-- Modal for Tara Selection -->
     <div id="modal-tara-selection" class="modal-overlay">
