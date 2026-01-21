@@ -2063,6 +2063,224 @@
             border-style: dashed;
         }
 
+        /* New Planificación Layout Styles */
+        .planificacion-nueva-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        .planificacion-seccion {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--sombra-media);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .seccion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--color-borde);
+        }
+
+        .seccion-header h3 {
+            margin: 0;
+            font-size: 1.3em;
+            color: var(--color-primario);
+        }
+
+        .seccion-count {
+            background: var(--color-primario-fondo);
+            color: var(--color-primario);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .seccion-filtros {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .seccion-filtros input,
+        .seccion-filtros select {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        .lista-vestidos-planificacion {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 400px;
+            padding: 10px;
+            background: var(--color-neutro-suave);
+            border-radius: 8px;
+            border: 2px dashed var(--color-borde);
+        }
+
+        .lista-vestidos-planificacion.drag-over {
+            background: var(--color-info-fondo);
+            border-color: var(--color-info);
+        }
+
+        .vestido-card-planificacion {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: var(--sombra-suave);
+        }
+
+        .vestido-card-planificacion:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-media);
+        }
+
+        .vestido-card-planificacion.dragging {
+            opacity: 0.5;
+        }
+
+        .vestido-card-planificacion.pronovias {
+            border-left: 4px solid var(--color-pronovias-borde);
+            background: var(--color-pronovias);
+        }
+
+        .vestido-card-planificacion.traka {
+            border-left: 4px solid var(--color-traka-borde);
+            background: var(--color-traka);
+        }
+
+        .vestido-card-planificacion.rosa_clara {
+            border-left: 4px solid var(--color-rosa_clara-borde);
+            background: var(--color-rosa_clara);
+        }
+
+        .vestido-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 8px;
+        }
+
+        .vestido-card-title {
+            font-weight: 600;
+            font-size: 1.05em;
+            color: var(--color-texto-principal);
+        }
+
+        .vestido-card-badge {
+            background: var(--color-primario);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+        }
+
+        .vestido-card-details {
+            font-size: 0.9em;
+            color: var(--color-texto-secundario);
+            margin-bottom: 8px;
+        }
+
+        .vestido-card-details div {
+            margin-bottom: 4px;
+        }
+
+        .vestido-card-horas {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: var(--color-exito-fondo);
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+
+        .vestido-card-horas-label {
+            font-size: 0.85em;
+            color: var(--color-texto-secundario);
+        }
+
+        .vestido-card-horas-valor {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--color-exito);
+        }
+
+        .vestido-card-trabajadoras {
+            margin-top: 8px;
+            padding: 8px;
+            background: var(--color-info-fondo);
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+
+        .intervalo-tiempo {
+            background: var(--color-superficie);
+            border: 1px solid var(--color-borde);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .intervalo-tiempo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .intervalo-numero {
+            background: var(--color-primario);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .intervalo-eliminar {
+            background: var(--color-error);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .intervalo-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-sm {
+            font-size: 0.85em;
+            padding: 6px 12px;
+        }
+
         /* Worker delete button */
         .worker-config-card .btn-delete-worker {
             background: var(--color-error);
@@ -2119,6 +2337,10 @@
 
             .planificacion-layout {
                 flex-direction: column;
+            }
+            
+            .planificacion-nueva-layout {
+                grid-template-columns: 1fr;
             }
 
             #planificacion-panel-lateral {
@@ -2418,37 +2640,73 @@
 
         <div id="planificacion" class="tab-content">
             <h2>Planificación de Producción</h2>
+            
+            <!-- Action buttons -->
             <div class="grid-3" style="margin-bottom: 20px;">
                 <div>
-                    <label for="mesPlanificacion">Mes de planificación:</label>
-                    <input type="month" id="mesPlanificacion" onchange="cargarPlanificacion()">
+                    <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
                 </div>
                 <div>
-                    <button id="btnPlanificacionManual" class="btn btn-info" onclick="toggleModoManual()">Planificación
-                        Manual</button>
-                    <button class="btn" onclick="planificarAutomaticamente()">Planificación Automática</button>
+                    <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
                 </div>
                 <div>
-                    <button class="btn btn-eliminar" onclick="limpiarPlanificacion()">🗑️ Limpiar Planificación</button>
+                    <button class="btn btn-info" onclick="sincronizarConBaseModelos()">🔄 Sincronizar con Base Modelos</button>
                 </div>
             </div>
 
-            <!-- Info about calendar integration -->
+            <!-- Info about the new system -->
             <div class="autocomplete-info" style="margin-bottom: 20px;">
-                <strong>ℹ️ Capacidad desde Calendario Laboral:</strong> La capacidad diaria se calcula automáticamente
-                desde el <a href="#" onclick="openTab('calendario_laboral', event); return false;">Calendario
-                    Laboral</a>.
-                Los días con ausencias, vacaciones o bajas reducirán automáticamente la capacidad disponible.
-                <br><small>💡 Haz clic sobre un vestido planificado para dividir su carga de trabajo.</small>
+                <strong>ℹ️ Gestión de Horas de Confección:</strong> Haz clic en cualquier vestido para asignar trabajadoras y registrar horas de trabajo. 
+                Las horas se calculan automáticamente y se sincronizan con la Base de Modelos.
+                <br><small>💡 Arrastra vestidos entre secciones o agrúpalos para trabajar en conjunto.</small>
             </div>
 
-            <div class="planificacion-layout" id="planificacion-layout">
-                <div id="planificacion-calendario-container">
-                    <div id="calendario-container"></div>
+            <!-- Two section layout -->
+            <div class="planificacion-nueva-layout">
+                <!-- Section 1: En Taller (Pending dresses without hours) -->
+                <div class="planificacion-seccion">
+                    <div class="seccion-header">
+                        <h3>👗 En Taller</h3>
+                        <span class="seccion-count" id="count-en-taller">0 vestidos</span>
+                    </div>
+                    <div class="seccion-filtros">
+                        <input type="text" id="filtro-en-taller" placeholder="🔍 Buscar por modelo, lote, OF..." 
+                               oninput="filtrarVestidosEnTaller()">
+                        <select id="filtro-proveedor-taller" onchange="filtrarVestidosEnTaller()">
+                            <option value="todos">Todos los proveedores</option>
+                            <option value="pronovias">Pronovias</option>
+                            <option value="rosa_clara">Rosa Clará</option>
+                            <option value="traka">Traka</option>
+                        </select>
+                    </div>
+                    <div id="lista-en-taller" class="lista-vestidos-planificacion" 
+                         ondrop="soltarVestidoEnSeccion(event, 'en_taller')" 
+                         ondragover="permitirSoltar(event)">
+                        <!-- Vestidos sin horas asignadas -->
+                    </div>
                 </div>
-                <div id="planificacion-panel-lateral">
-                    <h3>Vestidos a Planificar</h3>
-                    <div id="lista-vestidos-planificar"></div>
+
+                <!-- Section 2: En Proceso (Dresses with assigned hours) -->
+                <div class="planificacion-seccion">
+                    <div class="seccion-header">
+                        <h3>⚙️ En Proceso</h3>
+                        <span class="seccion-count" id="count-en-proceso">0 vestidos</span>
+                    </div>
+                    <div class="seccion-filtros">
+                        <input type="text" id="filtro-en-proceso" placeholder="🔍 Buscar por modelo, lote, OF..." 
+                               oninput="filtrarVestidosEnProceso()">
+                        <select id="filtro-proveedor-proceso" onchange="filtrarVestidosEnProceso()">
+                            <option value="todos">Todos los proveedores</option>
+                            <option value="pronovias">Pronovias</option>
+                            <option value="rosa_clara">Rosa Clará</option>
+                            <option value="traka">Traka</option>
+                        </select>
+                    </div>
+                    <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
+                         ondrop="soltarVestidoEnSeccion(event, 'en_proceso')" 
+                         ondragover="permitirSoltar(event)">
+                        <!-- Vestidos con horas asignadas -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -2938,6 +3196,10 @@
         let paginaActualVestidos = 1;
         let paginaActualModelos = 1;
         const elementosPorPagina = 10;
+        
+        // New data structure for work hours tracking
+        let horasConfeccion = JSON.parse(localStorage.getItem('horasConfeccion')) || {};
+        // Structure: { vestidoId: { trabajadoras: [workerId], intervalos: [{inicio, fin, trabajadoras: []}], horasTotales: 0, grupos: [] } }
 
         const SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyCJR1Is1LGn8FN8jNY28mDHG5wtUhCI0Nb8Xi6HJ0owty2_hhYYCcfStKFnHKe0fXV/exec';
         const SHEETS_WEBHOOK_SECRET = 'TALLER_ANA_1967';
@@ -4381,12 +4643,43 @@
                 return;
             };
 
-            const textoACopiar = vestidosDelAlbaran.map(v =>
-                `${v.nombreModelo} | Talla: ${v.talla || 'N/A'} | Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? ` | OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? ` | Serie: ${v.numeroSerie}` : ''}`
-            ).join('\n');
+            // Create standardized tabular format
+            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie', 'Precio'];
+            const separator = '-'.repeat(80);
+            
+            // Build header row
+            let textoTabular = `ALBARÁN ${numeroAlbaran} - ${proveedor.toUpperCase()}\n`;
+            textoTabular += separator + '\n';
+            textoTabular += headers.join('\t') + '\n';
+            textoTabular += separator + '\n';
+            
+            // Build data rows
+            vestidosDelAlbaran.forEach(v => {
+                const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
+                               v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : 'N/A';
+                
+                const row = [
+                    v.nombreModelo,
+                    v.codigoModelo,
+                    v.talla || 'N/A',
+                    v.lote || 'N/A',
+                    ofSerie,
+                    v.precioBase.toFixed(2) + '€'
+                ];
+                textoTabular += row.join('\t') + '\n';
+            });
+            
+            // Add totals
+            const totalBase = vestidosDelAlbaran.reduce((sum, v) => sum + (v.precioBase || 0), 0);
+            const totalConIva = totalBase * 1.21;
+            
+            textoTabular += separator + '\n';
+            textoTabular += `TOTAL BASE:\t\t\t\t\t${totalBase.toFixed(2)}€\n`;
+            textoTabular += `TOTAL (IVA 21%):\t\t\t\t\t${totalConIva.toFixed(2)}€\n`;
+            textoTabular += separator + '\n';
 
-            navigator.clipboard.writeText(textoACopiar).then(() => {
-                alert(`✅ Detalles del albarán ${numeroAlbaran} (${proveedor}) copiados al portapapeles.`);
+            navigator.clipboard.writeText(textoTabular).then(() => {
+                alert(`✅ Detalles del albarán ${numeroAlbaran} (${proveedor}) copiados al portapapeles en formato tabular.`);
             }, (err) => {
                 alert('❌ Error al copiar los detalles.');
                 console.error('Error al copiar: ', err);
@@ -4948,12 +5241,8 @@
         // === PLANIFICACIÓN =============================
         // ===============================================
         function inicializarPlanificacion() {
-            const mesInput = document.getElementById('mesPlanificacion');
-            if (!mesInput.value) {
-                const ahora = new Date();
-                mesInput.value = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-            }
-            cargarPlanificacion();
+            // Load the new planning system
+            cargarPlanificacionNueva();
         }
 
         function cargarPlanificacion() {
@@ -5241,6 +5530,532 @@
             guardarTodo();
             cargarPlanificacion();
             if (modoPlanificacionManual) cargarVestidosParaPlanificar();
+        }
+
+        // ===============================================
+        // === NEW PLANNING SYSTEM FUNCTIONS =============
+        // ===============================================
+
+        // Global variable for modal
+        let currentEditingVestidoId = null;
+
+        // Load planning sections when tab is opened
+        function cargarPlanificacionNueva() {
+            cargarSeccionEnTaller();
+            cargarSeccionEnProceso();
+        }
+
+        // Filter and load "En Taller" section
+        function cargarSeccionEnTaller() {
+            const container = document.getElementById('lista-en-taller');
+            const countEl = document.getElementById('count-en-taller');
+            const filtroTexto = document.getElementById('filtro-en-taller')?.value.toLowerCase() || '';
+            const filtroProveedor = document.getElementById('filtro-proveedor-taller')?.value || 'todos';
+            
+            // Get dresses without assigned hours
+            const vestidosSinHoras = vestidos.filter(v => {
+                if (!['en_taller', 'con_tara', 'reparado'].includes(v.estado)) return false;
+                if (horasConfeccion[v.id]) return false; // Has hours assigned
+                
+                // Apply filters
+                if (filtroProveedor !== 'todos' && v.proveedor !== filtroProveedor) return false;
+                if (filtroTexto) {
+                    const searchText = `${v.nombreModelo} ${v.codigoModelo} ${v.lote || ''} ${v.numeroOF || ''}`.toLowerCase();
+                    if (!searchText.includes(filtroTexto)) return false;
+                }
+                return true;
+            });
+
+            countEl.textContent = `${vestidosSinHoras.length} vestido${vestidosSinHoras.length !== 1 ? 's' : ''}`;
+            
+            if (vestidosSinHoras.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--color-texto-secundario);">No hay vestidos en taller sin horas asignadas</p>';
+                return;
+            }
+
+            container.innerHTML = vestidosSinHoras.map(v => renderVestidoCard(v, 'en_taller')).join('');
+        }
+
+        // Filter and load "En Proceso" section
+        function cargarSeccionEnProceso() {
+            const container = document.getElementById('lista-en-proceso');
+            const countEl = document.getElementById('count-en-proceso');
+            const filtroTexto = document.getElementById('filtro-en-proceso')?.value.toLowerCase() || '';
+            const filtroProveedor = document.getElementById('filtro-proveedor-proceso')?.value || 'todos';
+            
+            // Get dresses with assigned hours
+            const vestidosConHoras = vestidos.filter(v => {
+                if (!['en_taller', 'con_tara', 'reparado'].includes(v.estado)) return false;
+                if (!horasConfeccion[v.id]) return false; // No hours assigned
+                
+                // Apply filters
+                if (filtroProveedor !== 'todos' && v.proveedor !== filtroProveedor) return false;
+                if (filtroTexto) {
+                    const searchText = `${v.nombreModelo} ${v.codigoModelo} ${v.lote || ''} ${v.numeroOF || ''}`.toLowerCase();
+                    if (!searchText.includes(filtroTexto)) return false;
+                }
+                return true;
+            });
+
+            countEl.textContent = `${vestidosConHoras.length} vestido${vestidosConHoras.length !== 1 ? 's' : ''}`;
+            
+            if (vestidosConHoras.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--color-texto-secundario);">No hay vestidos en proceso</p>';
+                return;
+            }
+
+            container.innerHTML = vestidosConHoras.map(v => renderVestidoCard(v, 'en_proceso')).join('');
+        }
+
+        // Render a dress card
+        function renderVestidoCard(vestido, seccion) {
+            const horas = horasConfeccion[vestido.id];
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            const horasEstimadas = modelo ? modelo.horas : 0;
+            
+            let trabajadorasInfo = '';
+            if (horas && horas.trabajadoras && horas.trabajadoras.length > 0) {
+                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    return worker ? worker.nombre : 'Desconocida';
+                }).join(', ');
+                trabajadorasInfo = `<div class="vestido-card-trabajadoras">👷 ${nombresTrabajadoras}</div>`;
+            }
+
+            let horasInfo = '';
+            if (seccion === 'en_proceso' && horas) {
+                horasInfo = `
+                    <div class="vestido-card-horas">
+                        <span class="vestido-card-horas-label">Horas trabajadas:</span>
+                        <span class="vestido-card-horas-valor">${horas.horasTotales.toFixed(2)}h / ${horasEstimadas.toFixed(2)}h</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="vestido-card-planificacion ${vestido.proveedor}" 
+                     draggable="true" 
+                     data-vestido-id="${vestido.id}"
+                     ondragstart="onDragStartVestido(event, ${vestido.id})"
+                     ondragend="onDragEndVestido(event)"
+                     onclick="abrirModalHorasConfeccion(${vestido.id})">
+                    <div class="vestido-card-header">
+                        <div class="vestido-card-title">${vestido.nombreModelo}</div>
+                        <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
+                    </div>
+                    <div class="vestido-card-details">
+                        <div><strong>Código:</strong> ${vestido.codigoModelo}</div>
+                        <div><strong>Lote:</strong> ${vestido.lote || 'N/A'} ${vestido.numeroOF ? `| OF: ${vestido.numeroOF}` : ''}</div>
+                        <div><strong>Talla:</strong> ${vestido.talla || 'N/A'}</div>
+                        ${vestido.fechaLimite ? `<div><strong>Fecha límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
+                    </div>
+                    ${horasInfo}
+                    ${trabajadorasInfo}
+                </div>
+            `;
+        }
+
+        // Filter functions
+        function filtrarVestidosEnTaller() {
+            cargarSeccionEnTaller();
+        }
+
+        function filtrarVestidosEnProceso() {
+            cargarSeccionEnProceso();
+        }
+
+        // Drag and drop handlers
+        let draggedVestidoId = null;
+
+        function onDragStartVestido(event, vestidoId) {
+            draggedVestidoId = vestidoId;
+            event.currentTarget.classList.add('dragging');
+        }
+
+        function onDragEndVestido(event) {
+            event.currentTarget.classList.remove('dragging');
+            draggedVestidoId = null;
+        }
+
+        function soltarVestidoEnSeccion(event, seccion) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedVestidoId) return;
+
+            // If dropping in "en_proceso" but no hours assigned, open modal
+            if (seccion === 'en_proceso' && !horasConfeccion[draggedVestidoId]) {
+                abrirModalHorasConfeccion(draggedVestidoId);
+            } else if (seccion === 'en_taller' && horasConfeccion[draggedVestidoId]) {
+                // Remove hours if moving back to "en_taller"
+                if (confirm('¿Deseas eliminar las horas asignadas a este vestido?')) {
+                    delete horasConfeccion[draggedVestidoId];
+                    localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+                    cargarPlanificacionNueva();
+                }
+            }
+        }
+
+        function permitirSoltar(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        // Modal functions for work hours management
+        function abrirModalHorasConfeccion(vestidoId) {
+            currentEditingVestidoId = vestidoId;
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) return;
+
+            const modal = document.getElementById('modal-horas-confeccion');
+            const infoContainer = document.getElementById('modal-horas-info');
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            
+            // Populate vestido info
+            infoContainer.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>Modelo:</strong> ${vestido.nombreModelo}<br>
+                        <strong>Código:</strong> ${vestido.codigoModelo}<br>
+                        <strong>Lote:</strong> ${vestido.lote || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>Proveedor:</strong> ${vestido.proveedor}<br>
+                        <strong>Talla:</strong> ${vestido.talla || 'N/A'}<br>
+                        <strong>Horas estimadas:</strong> ${modelo ? modelo.horas.toFixed(2) : '0.00'}h
+                    </div>
+                </div>
+            `;
+
+            // Populate workers selection
+            const trabajadorasContainer = document.getElementById('trabajadoras-selection');
+            const currentHoras = horasConfeccion[vestidoId] || { trabajadoras: [], intervalos: [], horasTotales: 0 };
+            
+            trabajadorasContainer.innerHTML = workers.map(w => `
+                <label class="toggle-btn">
+                    <input type="checkbox" value="${w.id}" ${currentHoras.trabajadoras.includes(w.id) ? 'checked' : ''}>
+                    <span class="toggle-label">${w.nombre} (${w.rol})</span>
+                </label>
+            `).join('');
+
+            // Populate intervals
+            cargarIntervalos();
+            
+            // Calculate and display total hours
+            calcularHorasTotales();
+
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        function cerrarModalHorasConfeccion() {
+            const modal = document.getElementById('modal-horas-confeccion');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            currentEditingVestidoId = null;
+        }
+
+        function agregarIntervalo() {
+            const container = document.getElementById('intervalos-container');
+            const currentHoras = horasConfeccion[currentEditingVestidoId] || { intervalos: [] };
+            const numeroIntervalo = currentHoras.intervalos.length + 1;
+            
+            const intervaloHtml = `
+                <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
+                    <div class="intervalo-tiempo-header">
+                        <span class="intervalo-numero">Intervalo ${numeroIntervalo}</span>
+                        <button class="intervalo-eliminar" onclick="eliminarIntervalo(${numeroIntervalo - 1})">×</button>
+                    </div>
+                    <div class="intervalo-inputs">
+                        <div>
+                            <label>Fecha y Hora Inicio:</label>
+                            <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                        </div>
+                        <div>
+                            <label>Fecha y Hora Fin:</label>
+                            <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', intervaloHtml);
+        }
+
+        function eliminarIntervalo(index) {
+            const container = document.getElementById('intervalos-container');
+            const intervalos = container.querySelectorAll('.intervalo-tiempo');
+            if (intervalos[index]) {
+                intervalos[index].remove();
+                calcularHorasTotales();
+            }
+        }
+
+        function cargarIntervalos() {
+            const container = document.getElementById('intervalos-container');
+            const currentHoras = horasConfeccion[currentEditingVestidoId] || { intervalos: [] };
+            
+            if (currentHoras.intervalos.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color: var(--color-texto-secundario); padding: 20px;">No hay intervalos registrados. Haz clic en "Añadir Intervalo" para comenzar.</p>';
+                return;
+            }
+
+            container.innerHTML = currentHoras.intervalos.map((intervalo, index) => `
+                <div class="intervalo-tiempo" data-intervalo-index="${index}">
+                    <div class="intervalo-tiempo-header">
+                        <span class="intervalo-numero">Intervalo ${index + 1}</span>
+                        <button class="intervalo-eliminar" onclick="eliminarIntervalo(${index})">×</button>
+                    </div>
+                    <div class="intervalo-inputs">
+                        <div>
+                            <label>Fecha y Hora Inicio:</label>
+                            <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                        </div>
+                        <div>
+                            <label>Fecha y Hora Fin:</label>
+                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin}" onchange="calcularHorasTotales()">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function calcularHorasTotales() {
+            const container = document.getElementById('intervalos-container');
+            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
+            let totalHoras = 0;
+
+            intervalosElements.forEach(intervaloEl => {
+                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
+                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                
+                if (inicio && fin) {
+                    const inicioDate = new Date(inicio);
+                    const finDate = new Date(fin);
+                    const diffMs = finDate - inicioDate;
+                    const diffHours = diffMs / (1000 * 60 * 60);
+                    if (diffHours > 0) {
+                        totalHoras += diffHours;
+                    }
+                }
+            });
+
+            document.getElementById('total-horas-calculadas').textContent = `${totalHoras.toFixed(2)}h`;
+        }
+
+        function guardarHorasConfeccion() {
+            if (!currentEditingVestidoId) return;
+
+            const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
+            if (!vestido) return;
+
+            // Get selected workers
+            const trabajadorasCheckboxes = document.querySelectorAll('#trabajadoras-selection input:checked');
+            const trabajadoras = Array.from(trabajadorasCheckboxes).map(cb => parseInt(cb.value));
+
+            if (trabajadoras.length === 0) {
+                alert('⚠️ Debes seleccionar al menos una trabajadora');
+                return;
+            }
+
+            // Get intervals
+            const container = document.getElementById('intervalos-container');
+            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
+            const intervalos = [];
+            let totalHoras = 0;
+
+            intervalosElements.forEach(intervaloEl => {
+                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
+                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                
+                if (inicio && fin) {
+                    const inicioDate = new Date(inicio);
+                    const finDate = new Date(fin);
+                    const diffMs = finDate - inicioDate;
+                    const diffHours = diffMs / (1000 * 60 * 60);
+                    
+                    if (diffHours > 0) {
+                        intervalos.push({ inicio, fin });
+                        totalHoras += diffHours;
+                    }
+                }
+            });
+
+            if (intervalos.length === 0) {
+                alert('⚠️ Debes añadir al menos un intervalo de tiempo válido');
+                return;
+            }
+
+            // Save to horasConfeccion
+            horasConfeccion[currentEditingVestidoId] = {
+                trabajadoras,
+                intervalos,
+                horasTotales: totalHoras,
+                grupos: [] // For future group functionality
+            };
+
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+
+            // Sync with Base Modelos
+            sincronizarVestidoConBaseModelos(currentEditingVestidoId);
+
+            alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+            cerrarModalHorasConfeccion();
+            cargarPlanificacionNueva();
+        }
+
+        function sincronizarVestidoConBaseModelos(vestidoId) {
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) return;
+
+            const horas = horasConfeccion[vestidoId];
+            if (!horas) return;
+
+            // Update model with actual hours worked
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            if (modelo) {
+                // Store actual hours in a new field or update existing
+                // This is simplified - could be more sophisticated
+                if (!modelo.horasReales) {
+                    modelo.horasReales = [];
+                }
+                
+                // Add this vestido's hours to the model's real hours tracking
+                const existingIndex = modelo.horasReales.findIndex(h => h.vestidoId === vestidoId);
+                if (existingIndex >= 0) {
+                    modelo.horasReales[existingIndex] = { vestidoId, horas: horas.horasTotales };
+                } else {
+                    modelo.horasReales.push({ vestidoId, horas: horas.horasTotales });
+                }
+
+                localStorage.setItem('modelos', JSON.stringify(modelos));
+            }
+        }
+
+        function sincronizarConBaseModelos() {
+            let sincronizados = 0;
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                sincronizarVestidoConBaseModelos(parseInt(vestidoId));
+                sincronizados++;
+            });
+
+            alert(`✅ Se han sincronizado ${sincronizados} vestidos con la Base de Modelos`);
+        }
+
+        function exportarReporteHoras(formato) {
+            if (formato === 'pdf') {
+                exportarReportePDF();
+            } else if (formato === 'excel') {
+                exportarReporteExcel();
+            }
+        }
+
+        function exportarReportePDF() {
+            // Generate a simple text report for PDF (browser will handle print to PDF)
+            let reporteHtml = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Reporte de Horas - ${new Date().toLocaleDateString('es-ES')}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        h1 { color: #374151; border-bottom: 2px solid #374151; padding-bottom: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                        th { background-color: #374151; color: white; }
+                        tr:nth-child(even) { background-color: #f9fafb; }
+                        .total { font-weight: bold; background-color: #e6f8f2; }
+                    </style>
+                </head>
+                <body>
+                    <h1>📊 Reporte de Horas de Confección</h1>
+                    <p><strong>Fecha de generación:</strong> ${new Date().toLocaleString('es-ES')}</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Código</th>
+                                <th>Lote</th>
+                                <th>Proveedor</th>
+                                <th>Trabajadoras</th>
+                                <th>Horas Totales</th>
+                                <th>Intervalos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            let totalHoras = 0;
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    return worker ? worker.nombre : 'Desconocida';
+                }).join(', ');
+
+                totalHoras += horas.horasTotales;
+
+                reporteHtml += `
+                    <tr>
+                        <td>${vestido.nombreModelo}</td>
+                        <td>${vestido.codigoModelo}</td>
+                        <td>${vestido.lote || 'N/A'}</td>
+                        <td>${vestido.proveedor}</td>
+                        <td>${nombresTrabajadoras}</td>
+                        <td>${horas.horasTotales.toFixed(2)}h</td>
+                        <td>${horas.intervalos.length}</td>
+                    </tr>
+                `;
+            });
+
+            reporteHtml += `
+                            <tr class="total">
+                                <td colspan="5"><strong>TOTAL</strong></td>
+                                <td colspan="2"><strong>${totalHoras.toFixed(2)}h</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `;
+
+            const ventana = window.open('', '_blank');
+            ventana.document.write(reporteHtml);
+            ventana.document.close();
+            ventana.print();
+        }
+
+        function exportarReporteExcel() {
+            // Generate CSV format (Excel compatible)
+            let csv = 'Modelo,Código,Lote,Proveedor,Trabajadoras,Horas Totales,Intervalos\n';
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    return worker ? worker.nombre : 'Desconocida';
+                }).join('; ');
+
+                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}","${nombresTrabajadoras}",${horas.horasTotales.toFixed(2)},${horas.intervalos.length}\n`;
+            });
+
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `reporte_horas_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // ===============================================
@@ -9773,6 +10588,57 @@
             <div class="modal-footer">
                 <button class="btn" onclick="cerrarModalEditarVestidos()">Cancelar</button>
                 <button class="btn btn-eliminar" onclick="confirmarEliminarVestidos()">Eliminar Seleccionados</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for work hours management -->
+    <div id="modal-horas-confeccion" class="modal-overlay">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="modal-horas-titulo">⏱️ Gestión de Horas de Confección</h3>
+                <button class="modal-close" onclick="cerrarModalHorasConfeccion()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-horas-info" style="margin-bottom: 20px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <!-- Vestido info will be populated here -->
+                </div>
+
+                <!-- Workers selection -->
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: block;">👷 Trabajadora(s) Asignadas:</label>
+                    <div id="trabajadoras-selection" class="toggle-group">
+                        <!-- Workers checkboxes will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Time intervals section -->
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>⏰ Intervalos de Tiempo Trabajados:</span>
+                        <button class="btn btn-success btn-sm" onclick="agregarIntervalo()" style="padding: 5px 10px; font-size: 0.9em;">
+                            ➕ Añadir Intervalo
+                        </button>
+                    </label>
+                    <div id="intervalos-container">
+                        <!-- Time intervals will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Hours summary -->
+                <div style="padding: 15px; background: var(--color-exito-fondo); border-radius: 8px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;">Total Horas Trabajadas:</span>
+                        <span id="total-horas-calculadas" style="font-size: 1.5em; font-weight: 700; color: var(--color-exito);">0.00h</span>
+                    </div>
+                    <div id="info-division-horas" style="margin-top: 10px; font-size: 0.9em; color: var(--color-texto-secundario);">
+                        <!-- Info about hour division for grouped dresses -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="cerrarModalHorasConfeccion()">Cancelar</button>
+                <button class="btn btn-success" onclick="guardarHorasConfeccion()">💾 Guardar Horas</button>
             </div>
         </div>
     </div>
