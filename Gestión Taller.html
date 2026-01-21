@@ -2179,8 +2179,30 @@
 
         .intervalo-inputs {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 10px;
+        }
+
+        .intervalo-trabajadora {
+            margin-top: 10px;
+            padding: 8px;
+            background: var(--color-info-fondo);
+            border-radius: 6px;
+        }
+
+        .intervalo-trabajadora label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .intervalo-trabajadora select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--color-borde);
+            border-radius: 6px;
+            font-size: 0.9em;
         }
 
         .btn-sm {
@@ -5549,12 +5571,16 @@
             const horasEstimadas = modelo ? modelo.horas : 0;
             
             let trabajadorasInfo = '';
-            if (horas && horas.trabajadoras && horas.trabajadoras.length > 0) {
-                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
-                    const worker = workers.find(w => w.id === wId);
-                    return worker ? worker.nombre : 'Desconocida';
-                }).join(', ');
-                trabajadorasInfo = `<div class="vestido-card-trabajadoras">👷 ${nombresTrabajadoras}</div>`;
+            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                // Show workers from intervals with time ranges
+                const intervalosInfo = horas.intervalos.map(intervalo => {
+                    const worker = workers.find(w => w.id === intervalo.trabajadoraId);
+                    const workerName = worker ? worker.nombre : 'Sin asignar';
+                    const inicio = intervalo.inicio ? new Date(intervalo.inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const fin = intervalo.fin ? new Date(intervalo.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
+                    return `<div style="font-size: 0.85em; margin: 2px 0;">👷 <strong>${workerName}</strong>: ${inicio} - ${fin}</div>`;
+                }).join('');
+                trabajadorasInfo = `<div class="vestido-card-trabajadoras">${intervalosInfo}</div>`;
             }
 
             let horasInfo = '';
@@ -5833,6 +5859,11 @@
             const currentHoras = horasConfeccion[currentEditingVestidoId] || { intervalos: [] };
             const numeroIntervalo = currentHoras.intervalos.length + 1;
             
+            // Generate worker options
+            const workerOptions = workers.map(w => 
+                `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
+            ).join('');
+            
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
                     <div class="intervalo-tiempo-header">
@@ -5840,13 +5871,22 @@
                         <button class="intervalo-eliminar" onclick="eliminarIntervalo(${numeroIntervalo - 1})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div>
-                            <label>Fecha y Hora Inicio:</label>
-                            <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Fecha y Hora Inicio:</label>
+                                <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                            </div>
+                            <div>
+                                <label>Fecha y Hora Fin (opcional):</label>
+                                <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                            </div>
                         </div>
-                        <div>
-                            <label>Fecha y Hora Fin (opcional):</label>
-                            <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                        <div class="intervalo-trabajadora">
+                            <label>👷 Trabajadora Asignada:</label>
+                            <select class="intervalo-worker">
+                                <option value="">Seleccionar trabajadora...</option>
+                                ${workerOptions}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -5873,6 +5913,11 @@
                 return;
             }
 
+            // Generate worker options
+            const workerOptions = workers.map(w => 
+                `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
+            ).join('');
+
             container.innerHTML = currentHoras.intervalos.map((intervalo, index) => `
                 <div class="intervalo-tiempo" data-intervalo-index="${index}">
                     <div class="intervalo-tiempo-header">
@@ -5880,13 +5925,25 @@
                         <button class="intervalo-eliminar" onclick="eliminarIntervalo(${index})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div>
-                            <label>Fecha y Hora Inicio:</label>
-                            <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Fecha y Hora Inicio:</label>
+                                <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                            </div>
+                            <div>
+                                <label>Fecha y Hora Fin (opcional):</label>
+                                <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
+                            </div>
                         </div>
-                        <div>
-                            <label>Fecha y Hora Fin (opcional):</label>
-                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
+                        <div class="intervalo-trabajadora">
+                            <label>👷 Trabajadora Asignada:</label>
+                            <select class="intervalo-worker">
+                                <option value="">Seleccionar trabajadora...</option>
+                                ${workerOptions}
+                            </select>
+                            <script>
+                                document.currentScript.previousElementSibling.value = "${intervalo.trabajadoraId || ''}";
+                            </script>
                         </div>
                     </div>
                 </div>
@@ -5926,7 +5983,7 @@
             const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
             if (!vestido) return;
 
-            // Get selected workers
+            // Get selected workers (global)
             const trabajadorasCheckboxes = document.querySelectorAll('#trabajadoras-selection input:checked');
             const trabajadoras = Array.from(trabajadorasCheckboxes).map(cb => parseInt(cb.value));
 
@@ -5944,6 +6001,7 @@
             intervalosElements.forEach(intervaloEl => {
                 const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
                 const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
                 
                 if (inicio) {
                     // Permitir intervalos con solo inicio (trabajo en curso)
@@ -5954,12 +6012,20 @@
                         const diffHours = diffMs / (1000 * 60 * 60);
                         
                         if (diffHours > 0) {
-                            intervalos.push({ inicio, fin });
+                            intervalos.push({ 
+                                inicio, 
+                                fin, 
+                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                            });
                             totalHoras += diffHours;
                         }
                     } else {
                         // Guardar intervalo en curso (sin fin)
-                        intervalos.push({ inicio, fin: null });
+                        intervalos.push({ 
+                            inicio, 
+                            fin: null, 
+                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                        });
                     }
                 }
             });
