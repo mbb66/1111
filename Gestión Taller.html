@@ -572,9 +572,6 @@
         }
 
         .calendario-mensual {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
             background: var(--color-borde);
             border: 1px solid var(--color-borde);
             border-radius: 0 0 12px 12px;
@@ -582,8 +579,6 @@
             box-shadow: var(--sombra-media);
             width: 100%;
             max-width: 100%;
-            min-height: 600px;
-            height: auto;
         }
 
         .calendario-grid-body {
@@ -591,6 +586,7 @@
             grid-template-columns: repeat(7, 1fr);
             gap: 2px;
             width: 100%;
+            min-height: 600px;
         }
 
         .dia-calendario {
@@ -2159,6 +2155,7 @@
         .vestido-card-planificacion.grouped {
             border: 2px dashed var(--color-primario);
             background: linear-gradient(135deg, var(--color-superficie) 0%, var(--color-primario-fondo) 100%);
+            position: relative;
         }
 
         .vestido-card-grupo-badge {
@@ -2168,6 +2165,47 @@
             border-radius: 10px;
             font-size: 0.7em;
             margin-left: 5px;
+        }
+
+        .grupo-count-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--color-primario);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 700;
+            box-shadow: var(--sombra-media);
+            z-index: 10;
+        }
+
+        .grupo-card-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: var(--color-primario);
+            margin-bottom: 10px;
+            padding-right: 60px;
+        }
+
+        .grupo-lotes-list {
+            background: var(--color-neutro-suave);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .grupo-lotes-list-title {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--color-texto-principal);
+        }
+
+        .grupo-lote-item {
+            padding: 3px 0;
+            color: var(--color-texto-secundario);
         }
 
         .grupo-actions {
@@ -5749,10 +5787,39 @@
 
             // Group badge and actions
             let grupoInfo = '';
+            let grupoCountBadge = '';
+            let grupoTitleDisplay = '';
+            let grupoLotesDisplay = '';
+            
             if (grupo) {
+                // Get all dresses in the group
+                const vestidosGrupo = grupo.vestidosIds
+                    .map(id => vestidos.find(v => v.id === id))
+                    .filter(v => v);
+                
+                // Extract batch numbers
+                const lotes = vestidosGrupo
+                    .map(v => v.lote || 'Sin lote')
+                    .filter((lote, index, self) => self.indexOf(lote) === index); // Unique lotes
+                
+                // Count badge in upper right corner
+                grupoCountBadge = `<div class="grupo-count-badge">${grupo.vestidosIds.length} vestidos</div>`;
+                
+                // Group title prominently displayed (e.g., "BALET")
+                const nombreGrupo = vestido.nombreModelo.toUpperCase();
+                grupoTitleDisplay = `<div class="grupo-card-title">🔗 ${nombreGrupo}</div>`;
+                
+                // List of batch numbers
+                grupoLotesDisplay = `
+                    <div class="grupo-lotes-list">
+                        <div class="grupo-lotes-list-title">📦 Números de Lote:</div>
+                        ${lotes.map(lote => `<div class="grupo-lote-item">• ${lote}</div>`).join('')}
+                    </div>
+                `;
+                
+                // Group actions at bottom
                 grupoInfo = `
                     <div class="grupo-actions">
-                        <span class="vestido-card-grupo-badge">🔗 ${grupo.nombre} (${grupo.vestidosIds.length} vestidos)</span>
                         <button class="btn btn-sm" onclick="event.stopPropagation(); desagruparVestido(${vestido.id})">❌ Desagrupar</button>
                     </div>
                 `;
@@ -5760,28 +5827,50 @@
 
             const groupedClass = grupo ? 'grouped' : '';
 
-            return `
-                <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
-                     draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
-                     data-vestido-id="${vestido.id}"
-                     ondragstart="onDragStartVestido(event, ${vestido.id})"
-                     ondragend="onDragEndVestido(event)"
-                     onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
-                    <div class="vestido-card-header">
-                        <div class="vestido-card-title">${vestido.nombreModelo}</div>
-                        <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
+            // If grouped, use special layout, otherwise use standard layout
+            if (grupo) {
+                return `
+                    <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
+                         draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
+                         data-vestido-id="${vestido.id}"
+                         ondragstart="onDragStartVestido(event, ${vestido.id})"
+                         ondragend="onDragEndVestido(event)"
+                         onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
+                        ${grupoCountBadge}
+                        ${grupoTitleDisplay}
+                        ${grupoLotesDisplay}
+                        <div class="vestido-card-details">
+                            <div><strong>Código Modelo:</strong> ${vestido.codigoModelo}</div>
+                            <div><strong>Proveedor:</strong> ${vestido.proveedor.toUpperCase()}</div>
+                        </div>
+                        ${horasInfo}
+                        ${trabajadorasInfo}
+                        ${grupoInfo}
                     </div>
-                    <div class="vestido-card-details">
-                        <div><strong>Código:</strong> ${vestido.codigoModelo}</div>
-                        <div><strong>Lote:</strong> ${vestido.lote || 'N/A'} ${vestido.numeroOF ? `| OF: ${vestido.numeroOF}` : ''}</div>
-                        <div><strong>Talla:</strong> ${vestido.talla || 'N/A'}</div>
-                        ${vestido.fechaLimite ? `<div><strong>Fecha límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
+                `;
+            } else {
+                return `
+                    <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
+                         draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
+                         data-vestido-id="${vestido.id}"
+                         ondragstart="onDragStartVestido(event, ${vestido.id})"
+                         ondragend="onDragEndVestido(event)"
+                         onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
+                        <div class="vestido-card-header">
+                            <div class="vestido-card-title">${vestido.nombreModelo}</div>
+                            <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
+                        </div>
+                        <div class="vestido-card-details">
+                            <div><strong>Código:</strong> ${vestido.codigoModelo}</div>
+                            <div><strong>Lote:</strong> ${vestido.lote || 'N/A'} ${vestido.numeroOF ? `| OF: ${vestido.numeroOF}` : ''}</div>
+                            <div><strong>Talla:</strong> ${vestido.talla || 'N/A'}</div>
+                            ${vestido.fechaLimite ? `<div><strong>Fecha límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
+                        </div>
+                        ${horasInfo}
+                        ${trabajadorasInfo}
                     </div>
-                    ${horasInfo}
-                    ${trabajadorasInfo}
-                    ${grupoInfo}
-                </div>
-            `;
+                `;
+            }
         }
 
         // Filter functions
