@@ -580,17 +580,20 @@
             border-radius: 0 0 12px 12px;
             overflow: hidden;
             box-shadow: var(--sombra-media);
+            width: 100%;
+            max-width: 100%;
         }
 
         .dia-calendario {
             background: var(--color-superficie);
             padding: 8px;
-            min-height: 140px;
+            min-height: 120px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
         .dia-calendario:hover {
@@ -598,6 +601,12 @@
             transform: scale(1.01);
             z-index: 1;
             box-shadow: var(--sombra-media);
+        }
+
+        .dia-calendario.drag-over {
+            background: var(--color-info-fondo);
+            border: 2px dashed var(--color-info);
+            box-shadow: var(--sombra-grande);
         }
 
         .dia-calendario.fin-semana {
@@ -2138,6 +2147,61 @@
             font-size: 0.85em;
         }
 
+        .vestido-card-planificacion.grouped {
+            border: 2px dashed var(--color-primario);
+            background: linear-gradient(135deg, var(--color-superficie) 0%, var(--color-primario-fondo) 100%);
+        }
+
+        .vestido-card-grupo-badge {
+            background: var(--color-primario);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7em;
+            margin-left: 5px;
+        }
+
+        .grupo-actions {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--color-borde);
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .grupo-actions button {
+            padding: 3px 8px;
+            font-size: 0.75em;
+            border-radius: 4px;
+        }
+
+        .selectable-mode .vestido-card-planificacion {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .vestido-card-planificacion.selected {
+            border: 2px solid var(--color-primario);
+            background: var(--color-primario-fondo);
+        }
+
+        .vestido-card-planificacion.selected::before {
+            content: "✓";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: var(--color-primario);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8em;
+        }
+
         .intervalo-tiempo {
             background: var(--color-superficie);
             border: 1px solid var(--color-borde);
@@ -2179,8 +2243,30 @@
 
         .intervalo-inputs {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 10px;
+        }
+
+        .intervalo-trabajadora {
+            margin-top: 10px;
+            padding: 8px;
+            background: var(--color-info-fondo);
+            border-radius: 6px;
+        }
+
+        .intervalo-trabajadora label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .intervalo-trabajadora select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--color-borde);
+            border-radius: 6px;
+            font-size: 0.9em;
         }
 
         .btn-sm {
@@ -2569,7 +2655,10 @@
                 <div class="planificacion-seccion">
                     <div class="seccion-header">
                         <h3>👗 En Taller</h3>
-                        <span class="seccion-count" id="count-en-taller">0 vestidos</span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span class="seccion-count" id="count-en-taller">0 vestidos</span>
+                            <button class="btn btn-small btn-info" id="btn-agrupar-taller" onclick="toggleModoAgrupar('en_taller')">🔗 Agrupar</button>
+                        </div>
                     </div>
                     <div class="seccion-filtros">
                         <input type="text" id="filtro-en-taller" placeholder="🔍 Buscar por modelo, lote, OF..." 
@@ -2580,6 +2669,13 @@
                             <option value="rosa_clara">Rosa Clará</option>
                             <option value="traka">Traka</option>
                         </select>
+                    </div>
+                    <div id="grupo-actions-taller" style="display: none; margin-bottom: 10px; padding: 10px; background: var(--color-info-fondo); border-radius: 8px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span id="count-seleccionados-taller" style="font-weight: 600;">0 seleccionados</span>
+                            <button class="btn btn-success btn-sm" onclick="crearGrupo('en_taller')">✅ Crear Grupo</button>
+                            <button class="btn btn-sm" onclick="cancelarModoAgrupar('en_taller')">❌ Cancelar</button>
+                        </div>
                     </div>
                     <div id="lista-en-taller" class="lista-vestidos-planificacion" 
                          ondrop="soltarVestidoEnSeccion(event, 'en_taller')" 
@@ -2592,7 +2688,10 @@
                 <div class="planificacion-seccion">
                     <div class="seccion-header">
                         <h3>⚙️ En Proceso</h3>
-                        <span class="seccion-count" id="count-en-proceso">0 vestidos</span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span class="seccion-count" id="count-en-proceso">0 vestidos</span>
+                            <button class="btn btn-small btn-info" id="btn-agrupar-proceso" onclick="toggleModoAgrupar('en_proceso')">🔗 Agrupar</button>
+                        </div>
                     </div>
                     <div class="seccion-filtros">
                         <input type="text" id="filtro-en-proceso" placeholder="🔍 Buscar por modelo, lote, OF..." 
@@ -2603,6 +2702,13 @@
                             <option value="rosa_clara">Rosa Clará</option>
                             <option value="traka">Traka</option>
                         </select>
+                    </div>
+                    <div id="grupo-actions-proceso" style="display: none; margin-bottom: 10px; padding: 10px; background: var(--color-info-fondo); border-radius: 8px;">
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span id="count-seleccionados-proceso" style="font-weight: 600;">0 seleccionados</span>
+                            <button class="btn btn-success btn-sm" onclick="crearGrupo('en_proceso')">✅ Crear Grupo</button>
+                            <button class="btn btn-sm" onclick="cancelarModoAgrupar('en_proceso')">❌ Cancelar</button>
+                        </div>
                     </div>
                      <div id="lista-en-proceso" class="lista-vestidos-planificacion" 
                          ondrop="soltarVestidoEnSeccion(event, 'en_proceso')" 
@@ -2627,15 +2733,18 @@
                     <!-- Calendar grid will be generated here -->
                 </div>
                 <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                         <div>
-                            <strong>🔵 En Proceso:</strong> Vestidos con horas asignadas
+                            <strong>✅ En Proceso:</strong> Vestidos con horas asignadas (prioridad alta)
                         </div>
                         <div>
-                            <strong>🟡 Pendientes:</strong> Vestidos sin horas asignadas
+                            <strong>⏳ Pendientes:</strong> Vestidos sin horas asignadas (fecha límite)
                         </div>
                         <div>
-                            <strong>🔴 Límite:</strong> Fecha límite del vestido
+                            <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
+                        </div>
+                        <div>
+                            <strong>👷 Trabajadoras:</strong> Asignadas en intervalos del día
                         </div>
                     </div>
                 </div>
@@ -3130,7 +3239,14 @@
         
         // New data structure for work hours tracking
         let horasConfeccion = JSON.parse(localStorage.getItem('horasConfeccion')) || {};
-        // Structure: { vestidoId: { trabajadoras: [workerId], intervalos: [{inicio, fin, trabajadoras: []}], horasTotales: 0, grupos: [] } }
+        // Structure: { vestidoId: { trabajadoras: [workerId], intervalos: [{inicio, fin, trabajadoraId}], horasTotales: 0, grupoId: null } }
+
+        // Data structure for dress groups
+        let vestidosGrupos = JSON.parse(localStorage.getItem('vestidosGrupos')) || {};
+        // Structure: { grupoId: { vestidosIds: [id1, id2, ...], codigoModelo: '', nombre: '' } }
+
+        let modoAgruparSeccion = null; // 'en_taller' or 'en_proceso' when in grouping mode
+        let vestidosSeleccionados = new Set();
 
         const SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbyCJR1Is1LGn8FN8jNY28mDHG5wtUhCI0Nb8Xi6HJ0owty2_hhYYCcfStKFnHKe0fXV/exec';
         const SHEETS_WEBHOOK_SECRET = 'TALLER_ANA_1967';
@@ -5548,22 +5664,40 @@
             const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
             const horasEstimadas = modelo ? modelo.horas : 0;
             
+            // Check if dress is in a group
+            const grupoId = horas ? horas.grupoId : null;
+            const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+            
             let trabajadorasInfo = '';
-            if (horas && horas.trabajadoras && horas.trabajadoras.length > 0) {
-                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
-                    const worker = workers.find(w => w.id === wId);
-                    return worker ? worker.nombre : 'Desconocida';
-                }).join(', ');
-                trabajadorasInfo = `<div class="vestido-card-trabajadoras">👷 ${nombresTrabajadoras}</div>`;
+            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                // Show workers from intervals with time ranges
+                const intervalosInfo = horas.intervalos.map(intervalo => {
+                    const worker = workers.find(w => w.id === intervalo.trabajadoraId);
+                    const workerName = worker ? worker.nombre : 'Sin asignar';
+                    const inicio = intervalo.inicio ? new Date(intervalo.inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                    const fin = intervalo.fin ? new Date(intervalo.fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
+                    return `<div style="font-size: 0.85em; margin: 2px 0;">👷 <strong>${workerName}</strong>: ${inicio} - ${fin}</div>`;
+                }).join('');
+                trabajadorasInfo = `<div class="vestido-card-trabajadoras">${intervalosInfo}</div>`;
             }
 
             let horasInfo = '';
             if (seccion === 'en_proceso' && horas) {
                 // Check if any interval is in progress (has no end time)
                 const hasInProgress = horas.intervalos.some(i => i.inicio && !i.fin);
-                const horasDisplay = hasInProgress 
-                    ? `⏳ ${horas.horasTotales.toFixed(2)}h (en curso)` 
-                    : `${horas.horasTotales.toFixed(2)}h`;
+                
+                // If in a group, calculate proportional hours
+                let horasDisplay;
+                if (grupo && grupo.vestidosIds.length > 1) {
+                    const horasPorVestido = horas.horasTotales / grupo.vestidosIds.length;
+                    horasDisplay = hasInProgress 
+                        ? `⏳ ${horasPorVestido.toFixed(2)}h (en curso, divididas)` 
+                        : `${horasPorVestido.toFixed(2)}h (de ${horas.horasTotales.toFixed(2)}h grupo)`;
+                } else {
+                    horasDisplay = hasInProgress 
+                        ? `⏳ ${horas.horasTotales.toFixed(2)}h (en curso)` 
+                        : `${horas.horasTotales.toFixed(2)}h`;
+                }
                 
                 horasInfo = `
                     <div class="vestido-card-horas">
@@ -5573,13 +5707,26 @@
                 `;
             }
 
+            // Group badge and actions
+            let grupoInfo = '';
+            if (grupo) {
+                grupoInfo = `
+                    <div class="grupo-actions">
+                        <span class="vestido-card-grupo-badge">🔗 ${grupo.nombre} (${grupo.vestidosIds.length} vestidos)</span>
+                        <button class="btn btn-sm" onclick="event.stopPropagation(); desagruparVestido(${vestido.id})">❌ Desagrupar</button>
+                    </div>
+                `;
+            }
+
+            const groupedClass = grupo ? 'grouped' : '';
+
             return `
-                <div class="vestido-card-planificacion ${vestido.proveedor}" 
-                     draggable="true" 
+                <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
+                     draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
                      data-vestido-id="${vestido.id}"
                      ondragstart="onDragStartVestido(event, ${vestido.id})"
                      ondragend="onDragEndVestido(event)"
-                     onclick="abrirModalHorasConfeccion(${vestido.id})">
+                     onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
                     <div class="vestido-card-header">
                         <div class="vestido-card-title">${vestido.nombreModelo}</div>
                         <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
@@ -5592,6 +5739,7 @@
                     </div>
                     ${horasInfo}
                     ${trabajadorasInfo}
+                    ${grupoInfo}
                 </div>
             `;
         }
@@ -5605,8 +5753,184 @@
             cargarSeccionEnProceso();
         }
 
+        // ===============================================
+        // === DRESS GROUPING FUNCTIONS ==================
+        // ===============================================
+
+        function toggleModoAgrupar(seccion) {
+            if (modoAgruparSeccion === seccion) {
+                cancelarModoAgrupar(seccion);
+            } else {
+                modoAgruparSeccion = seccion;
+                vestidosSeleccionados.clear();
+                
+                // Show grouping actions panel
+                document.getElementById(`grupo-actions-${seccion === 'en_taller' ? 'taller' : 'proceso'}`).style.display = 'block';
+                
+                // Update button text
+                const btn = document.getElementById(`btn-agrupar-${seccion === 'en_taller' ? 'taller' : 'proceso'}`);
+                btn.textContent = '❌ Cancelar';
+                btn.classList.remove('btn-info');
+                btn.classList.add('btn-error');
+                
+                // Add selectable mode to container
+                const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+                container.classList.add('selectable-mode');
+                
+                // Make cards selectable
+                attachSelectableListeners(seccion);
+            }
+        }
+
+        function cancelarModoAgrupar(seccion) {
+            modoAgruparSeccion = null;
+            vestidosSeleccionados.clear();
+            
+            // Hide grouping actions panel
+            document.getElementById(`grupo-actions-${seccion === 'en_taller' ? 'taller' : 'proceso'}`).style.display = 'none';
+            
+            // Update button text
+            const btn = document.getElementById(`btn-agrupar-${seccion === 'en_taller' ? 'taller' : 'proceso'}`);
+            btn.textContent = '🔗 Agrupar';
+            btn.classList.remove('btn-error');
+            btn.classList.add('btn-info');
+            
+            // Remove selectable mode from container
+            const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+            container.classList.remove('selectable-mode');
+            
+            // Reload section to remove selection states
+            if (seccion === 'en_taller') {
+                cargarSeccionEnTaller();
+            } else {
+                cargarSeccionEnProceso();
+            }
+        }
+
+        function attachSelectableListeners(seccion) {
+            const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+            const cards = container.querySelectorAll('.vestido-card-planificacion');
+            
+            cards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    if (modoAgruparSeccion === seccion) {
+                        e.stopPropagation();
+                        const vestidoId = parseInt(this.dataset.vestidoId);
+                        toggleVestidoSeleccion(vestidoId, seccion);
+                    }
+                });
+            });
+        }
+
+        function toggleVestidoSeleccion(vestidoId, seccion) {
+            if (vestidosSeleccionados.has(vestidoId)) {
+                vestidosSeleccionados.delete(vestidoId);
+            } else {
+                vestidosSeleccionados.add(vestidoId);
+            }
+            
+            // Update visual state
+            const card = document.querySelector(`.vestido-card-planificacion[data-vestido-id="${vestidoId}"]`);
+            if (card) {
+                card.classList.toggle('selected', vestidosSeleccionados.has(vestidoId));
+            }
+            
+            // Update count
+            document.getElementById(`count-seleccionados-${seccion === 'en_taller' ? 'taller' : 'proceso'}`).textContent = 
+                `${vestidosSeleccionados.size} seleccionado${vestidosSeleccionados.size !== 1 ? 's' : ''}`;
+        }
+
+        function crearGrupo(seccion) {
+            if (vestidosSeleccionados.size < 2) {
+                alert('⚠️ Debes seleccionar al menos 2 vestidos para crear un grupo');
+                return;
+            }
+            
+            // Get selected dresses
+            const vestidosArray = Array.from(vestidosSeleccionados);
+            const vestidosObjs = vestidosArray.map(id => vestidos.find(v => v.id === id)).filter(v => v);
+            
+            // Validate they are all the same model
+            const codigoModelo = vestidosObjs[0].codigoModelo;
+            const todosIgualModelo = vestidosObjs.every(v => v.codigoModelo === codigoModelo);
+            
+            if (!todosIgualModelo) {
+                if (!confirm('⚠️ Los vestidos seleccionados no son del mismo modelo. ¿Deseas continuar agrupándolos de todas formas?')) {
+                    return;
+                }
+            }
+            
+            // Create group
+            const grupoId = Date.now();
+            vestidosGrupos[grupoId] = {
+                vestidosIds: vestidosArray,
+                codigoModelo: codigoModelo,
+                nombre: `Grupo ${Object.keys(vestidosGrupos).length + 1} - ${vestidosObjs[0].nombreModelo}`
+            };
+            
+            // Mark dresses as grouped in horasConfeccion
+            vestidosArray.forEach(vestidoId => {
+                if (!horasConfeccion[vestidoId]) {
+                    horasConfeccion[vestidoId] = { 
+                        trabajadoras: [], 
+                        intervalos: [], 
+                        horasTotales: 0 
+                    };
+                }
+                horasConfeccion[vestidoId].grupoId = grupoId;
+            });
+            
+            // Save to localStorage
+            localStorage.setItem('vestidosGrupos', JSON.stringify(vestidosGrupos));
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+            
+            alert(`✅ Grupo creado con ${vestidosArray.length} vestidos`);
+            
+            cancelarModoAgrupar(seccion);
+            cargarPlanificacionNueva();
+        }
+
+        function desagruparVestido(vestidoId) {
+            const horas = horasConfeccion[vestidoId];
+            if (!horas || !horas.grupoId) return;
+            
+            const grupoId = horas.grupoId;
+            const grupo = vestidosGrupos[grupoId];
+            
+            if (!grupo) return;
+            
+            if (!confirm(`¿Deseas desagrupar este vestido del grupo "${grupo.nombre}"?`)) {
+                return;
+            }
+            
+            // Remove from group
+            grupo.vestidosIds = grupo.vestidosIds.filter(id => id !== vestidoId);
+            
+            // Remove grupoId from dress
+            delete horasConfeccion[vestidoId].grupoId;
+            
+            // If group is now empty or has only 1 dress, delete the group
+            if (grupo.vestidosIds.length <= 1) {
+                // Unmark remaining dress
+                if (grupo.vestidosIds.length === 1) {
+                    const remainingId = grupo.vestidosIds[0];
+                    if (horasConfeccion[remainingId]) {
+                        delete horasConfeccion[remainingId].grupoId;
+                    }
+                }
+                delete vestidosGrupos[grupoId];
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('vestidosGrupos', JSON.stringify(vestidosGrupos));
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+            
+            cargarPlanificacionNueva();
+        }
+
         // Drag and drop handlers
         let draggedVestidoId = null;
+        let draggedVestidoFechaOrigen = null;
 
         function onDragStartVestido(event, vestidoId) {
             draggedVestidoId = vestidoId;
@@ -5616,6 +5940,119 @@
         function onDragEndVestido(event) {
             event.currentTarget.classList.remove('dragging');
             draggedVestidoId = null;
+        }
+
+        // Calendar drag and drop handlers
+        function onDragStartCalendario(event, vestidoId, fechaOrigen) {
+            draggedVestidoId = vestidoId;
+            draggedVestidoFechaOrigen = fechaOrigen;
+            event.currentTarget.style.opacity = '0.4';
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function onDragEndCalendario(event) {
+            event.currentTarget.style.opacity = '1';
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
+        }
+
+        function onDragOverCalendario(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (!event.currentTarget.classList.contains('drag-over')) {
+                event.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function onDragLeaveCalendario(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function onDropCalendario(event, fechaDestino) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedVestidoId || !draggedVestidoFechaOrigen) return;
+            
+            const vestido = vestidos.find(v => v.id === draggedVestidoId);
+            if (!vestido) return;
+            
+            // Check if dress is sent - can't move sent dresses to future dates
+            const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+            const hoy = new Date().toISOString().split('T')[0];
+            
+            if (esEnviado && fechaDestino > hoy) {
+                alert('⚠️ No se pueden mover vestidos enviados a fechas futuras');
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Don't allow moving to weekends
+            const fecha = new Date(fechaDestino + 'T00:00:00');
+            const diaSemana = fecha.getDay();
+            if (diaSemana === 0 || diaSemana === 6) {
+                alert('⚠️ No se pueden asignar vestidos a fines de semana');
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Don't move if same date
+            if (draggedVestidoFechaOrigen === fechaDestino) {
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Move dress intervals from origin date to destination date
+            const horas = horasConfeccion[draggedVestidoId];
+            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                // Update all intervals from origin date to destination date
+                horas.intervalos.forEach(intervalo => {
+                    if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
+                        // Change the date part but keep the time
+                        const [_, time] = intervalo.inicio.split('T');
+                        intervalo.inicio = `${fechaDestino}T${time}`;
+                        
+                        if (intervalo.fin) {
+                            const [__, timeEnd] = intervalo.fin.split('T');
+                            intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                        }
+                    }
+                });
+                
+                // Save changes
+                localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+                
+                // If in a group, update all dresses in the group
+                const grupoId = horas.grupoId;
+                if (grupoId) {
+                    const grupo = vestidosGrupos[grupoId];
+                    if (grupo) {
+                        grupo.vestidosIds.forEach(vestidoId => {
+                            if (vestidoId !== draggedVestidoId && horasConfeccion[vestidoId]) {
+                                horasConfeccion[vestidoId] = { ...horas, grupoId: grupoId };
+                            }
+                        });
+                        localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+                    }
+                }
+            } else {
+                // If dress has no intervals, just update its fechaLimite if it's a deadline move
+                // This allows moving pending dresses to different deadline dates
+                if (confirm(`¿Mover la fecha límite de "${vestido.nombreModelo}" a ${new Date(fechaDestino + 'T00:00:00').toLocaleDateString('es-ES')}?`)) {
+                    vestido.fechaLimite = fechaDestino;
+                    guardarVestidos();
+                }
+            }
+            
+            // Regenerate calendar
+            generarCalendarioPlanificacion();
+            
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
         }
 
         function soltarVestidoEnSeccion(event, seccion) {
@@ -5672,27 +6109,113 @@
 
             // Días del mes
             const hoy = new Date();
+            const hoyStr = hoy.toISOString().split('T')[0];
+            
             for (let dia = 1; dia <= diasEnMes; dia++) {
                 const fecha = new Date(anioActualCalendario, mesActualCalendario, dia);
                 const fechaStr = fecha.toISOString().split('T')[0];
                 const esHoy = fecha.toDateString() === hoy.toDateString();
                 const diaSemana = fecha.getDay();
                 const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+                const esPasado = fechaStr < hoyStr;
 
                 // Get dresses for this date
                 const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
                 
+                // Separate dresses by status: with hours (en proceso) vs without (pendientes)
+                const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
+                const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+                
+                // Calculate total hours for the day
+                let horasTotales = 0;
+                const trabajadorasDelDia = new Set();
+                
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                                if (intervalo.fin) {
+                                    const inicioDate = new Date(intervalo.inicio);
+                                    const finDate = new Date(intervalo.fin);
+                                    const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                    horasTotales += diffHours;
+                                }
+                                if (intervalo.trabajadoraId) {
+                                    trabajadorasDelDia.add(intervalo.trabajadoraId);
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                // Generate workers summary
+                let trabajadorasHtml = '';
+                if (trabajadorasDelDia.size > 0) {
+                    const nombresWorkers = Array.from(trabajadorasDelDia).map(wId => {
+                        const worker = workers.find(w => w.id === wId);
+                        return worker ? worker.nombre : '?';
+                    }).join(', ');
+                    trabajadorasHtml = `<div style="font-size: 0.65em; color: var(--color-texto-secundario); margin-top: 4px;">👷 ${nombresWorkers}</div>`;
+                }
+                
+                // Generate hours badge
+                let horasBadge = '';
+                if (horasTotales > 0) {
+                    horasBadge = `<span style="font-size: 0.7em; background: var(--color-exito); color: white; padding: 2px 5px; border-radius: 10px;">${horasTotales.toFixed(1)}h</span>`;
+                }
+                
+                // Generate dresses HTML - prioritize dresses with assigned intervals
                 let vestidosHtml = '';
-                vestidosEnFecha.forEach(v => {
-                    const color = horasConfeccion[v.id] ? 'var(--color-info)' : 'var(--color-alerta)';
-                    const icon = horasConfeccion[v.id] ? '🔵' : '🟡';
-                    vestidosHtml += `<div style="font-size: 0.7em; margin: 2px 0; padding: 2px; background: ${color}30; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${v.nombreModelo}">${icon} ${v.nombreModelo.substring(0, 8)}...</div>`;
+                
+                // First, show dresses with hours (higher priority)
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    const grupoId = horas ? horas.grupoId : null;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    const grupoIcon = grupo ? '🔗 ' : '';
+                    
+                    // Check if dress is sent (should be opaque and not draggable to future)
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    
+                    vestidosHtml += `<div 
+                        draggable="${draggable}" 
+                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                        ondragend="onDragEndCalendario(event)"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-exito-fondo); border-left: 3px solid var(--color-exito); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
+                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${grupoIcon}${v.nombreModelo.substring(0, 10)}...</div>`;
+                });
+                
+                // Then, show pending dresses (lower priority)
+                vestidosPendientes.forEach(v => {
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                    const draggable = esEnviado && !esPasado ? 'false' : 'true';
+                    
+                    vestidosHtml += `<div 
+                        draggable="${draggable}"
+                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                        ondragend="onDragEndCalendario(event)"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: var(--color-alerta-fondo); border-left: 3px solid var(--color-alerta); border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
+                        title="${v.nombreModelo} - ${v.proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
                 });
 
                 html += `
-                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" style="min-height: 100px; cursor: pointer;" onclick="verDetallesDiaCalendario('${fechaStr}')">
-                        <div class="numero-dia">${dia}</div>
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
+                         style="min-height: 120px; cursor: pointer;" 
+                         onclick="verDetallesDiaCalendario('${fechaStr}')"
+                         ondrop="onDropCalendario(event, '${fechaStr}')"
+                         ondragover="onDragOverCalendario(event)"
+                         ondragleave="onDragLeaveCalendario(event)"
+                         data-fecha="${fechaStr}">
+                        <div class="numero-dia">
+                            <span>${dia}</span>
+                            ${horasBadge}
+                        </div>
                         ${vestidosHtml}
+                        ${trabajadorasHtml}
                     </div>
                 `;
             }
@@ -5745,12 +6268,51 @@
             const fecha = new Date(fechaStr + 'T00:00:00');
             let mensaje = `📅 Vestidos para ${fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:\n\n`;
             
-            vestidosEnFecha.forEach(v => {
-                const tieneHoras = horasConfeccion[v.id];
-                const status = tieneHoras ? '🔵 En Proceso' : '🟡 Pendiente';
-                const horas = tieneHoras ? ` (${horasConfeccion[v.id].horasTotales.toFixed(2)}h)` : '';
-                mensaje += `${status} - ${v.nombreModelo}${horas}\n`;
-            });
+            // Separate by status
+            const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
+            const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+            
+            if (vestidosEnProceso.length > 0) {
+                mensaje += '✅ EN PROCESO:\n';
+                vestidosEnProceso.forEach(v => {
+                    const horas = horasConfeccion[v.id];
+                    const grupoId = horas ? horas.grupoId : null;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    const grupoInfo = grupo ? ` 🔗 ${grupo.nombre}` : '';
+                    
+                    // Get workers for this date
+                    const trabajadoras = new Set();
+                    let horasDia = 0;
+                    
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                                if (intervalo.trabajadoraId) {
+                                    const worker = workers.find(w => w.id === intervalo.trabajadoraId);
+                                    if (worker) trabajadoras.add(worker.nombre);
+                                }
+                                if (intervalo.fin) {
+                                    const inicioDate = new Date(intervalo.inicio);
+                                    const finDate = new Date(intervalo.fin);
+                                    const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                    horasDia += diffHours;
+                                }
+                            }
+                        });
+                    }
+                    
+                    const trabajadorasInfo = trabajadoras.size > 0 ? ` | 👷 ${Array.from(trabajadoras).join(', ')}` : '';
+                    mensaje += `  • ${v.nombreModelo} (${horasDia.toFixed(2)}h${trabajadorasInfo})${grupoInfo}\n`;
+                });
+                mensaje += '\n';
+            }
+            
+            if (vestidosPendientes.length > 0) {
+                mensaje += '⏳ PENDIENTES (fecha límite):\n';
+                vestidosPendientes.forEach(v => {
+                    mensaje += `  • ${v.nombreModelo} - ${v.proveedor}\n`;
+                });
+            }
 
             alert(mensaje);
         }
@@ -5784,6 +6346,21 @@
             const infoContainer = document.getElementById('modal-horas-info');
             const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
             
+            // Check if dress is in a group
+            const horas = horasConfeccion[vestidoId];
+            const grupoId = horas ? horas.grupoId : null;
+            const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+            
+            let grupoInfo = '';
+            if (grupo) {
+                grupoInfo = `
+                    <div style="grid-column: span 2; padding: 10px; background: var(--color-alerta-fondo); border-radius: 6px; margin-top: 10px;">
+                        <strong>🔗 Vestido en Grupo:</strong> ${grupo.nombre}<br>
+                        <small>Los cambios se aplicarán a todos los ${grupo.vestidosIds.length} vestidos del grupo.</small>
+                    </div>
+                `;
+            }
+            
             // Populate vestido info
             infoContainer.innerHTML = `
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -5797,6 +6374,7 @@
                         <strong>Talla:</strong> ${vestido.talla || 'N/A'}<br>
                         <strong>Horas estimadas:</strong> ${modelo ? modelo.horas.toFixed(2) : '0.00'}h
                     </div>
+                    ${grupoInfo}
                 </div>
             `;
 
@@ -5816,6 +6394,16 @@
             
             // Calculate and display total hours
             calcularHorasTotales();
+            
+            // Update info about hour division for groups
+            const infoDivision = document.getElementById('info-division-horas');
+            if (grupo && grupo.vestidosIds.length > 1) {
+                const totalHoras = currentHoras.horasTotales || 0;
+                const horasPorVestido = totalHoras / grupo.vestidosIds.length;
+                infoDivision.innerHTML = `💡 Las horas se dividirán entre ${grupo.vestidosIds.length} vestidos: ${horasPorVestido.toFixed(2)}h por vestido`;
+            } else {
+                infoDivision.innerHTML = '';
+            }
 
             modal.classList.add('active');
             modal.style.display = 'flex';
@@ -5833,6 +6421,11 @@
             const currentHoras = horasConfeccion[currentEditingVestidoId] || { intervalos: [] };
             const numeroIntervalo = currentHoras.intervalos.length + 1;
             
+            // Generate worker options
+            const workerOptions = workers.map(w => 
+                `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
+            ).join('');
+            
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
                     <div class="intervalo-tiempo-header">
@@ -5840,13 +6433,22 @@
                         <button class="intervalo-eliminar" onclick="eliminarIntervalo(${numeroIntervalo - 1})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div>
-                            <label>Fecha y Hora Inicio:</label>
-                            <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Fecha y Hora Inicio:</label>
+                                <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                            </div>
+                            <div>
+                                <label>Fecha y Hora Fin (opcional):</label>
+                                <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                            </div>
                         </div>
-                        <div>
-                            <label>Fecha y Hora Fin (opcional):</label>
-                            <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                        <div class="intervalo-trabajadora">
+                            <label>👷 Trabajadora Asignada:</label>
+                            <select class="intervalo-worker">
+                                <option value="">Seleccionar trabajadora...</option>
+                                ${workerOptions}
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -5873,6 +6475,11 @@
                 return;
             }
 
+            // Generate worker options
+            const workerOptions = workers.map(w => 
+                `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
+            ).join('');
+
             container.innerHTML = currentHoras.intervalos.map((intervalo, index) => `
                 <div class="intervalo-tiempo" data-intervalo-index="${index}">
                     <div class="intervalo-tiempo-header">
@@ -5880,17 +6487,34 @@
                         <button class="intervalo-eliminar" onclick="eliminarIntervalo(${index})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div>
-                            <label>Fecha y Hora Inicio:</label>
-                            <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div>
+                                <label>Fecha y Hora Inicio:</label>
+                                <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                            </div>
+                            <div>
+                                <label>Fecha y Hora Fin (opcional):</label>
+                                <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
+                            </div>
                         </div>
-                        <div>
-                            <label>Fecha y Hora Fin (opcional):</label>
-                            <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
+                        <div class="intervalo-trabajadora">
+                            <label>👷 Trabajadora Asignada:</label>
+                            <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}">
+                                <option value="">Seleccionar trabajadora...</option>
+                                ${workerOptions}
+                            </select>
                         </div>
                     </div>
                 </div>
             `).join('');
+            
+            // Set selected workers after rendering
+            container.querySelectorAll('.intervalo-worker').forEach(select => {
+                const selectedId = select.dataset.selected;
+                if (selectedId) {
+                    select.value = selectedId;
+                }
+            });
         }
 
         function calcularHorasTotales() {
@@ -5918,6 +6542,21 @@
 
             const displayText = totalHoras > 0 ? `${totalHoras.toFixed(2)}h` : '⏳ En curso';
             document.getElementById('total-horas-calculadas').textContent = displayText;
+            
+            // Update info about hour division for groups
+            if (currentEditingVestidoId) {
+                const horas = horasConfeccion[currentEditingVestidoId];
+                const grupoId = horas ? horas.grupoId : null;
+                const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                const infoDivision = document.getElementById('info-division-horas');
+                
+                if (grupo && grupo.vestidosIds.length > 1 && totalHoras > 0) {
+                    const horasPorVestido = totalHoras / grupo.vestidosIds.length;
+                    infoDivision.innerHTML = `💡 Las horas se dividirán entre ${grupo.vestidosIds.length} vestidos: ${horasPorVestido.toFixed(2)}h por vestido`;
+                } else {
+                    infoDivision.innerHTML = '';
+                }
+            }
         }
 
         function guardarHorasConfeccion() {
@@ -5926,7 +6565,7 @@
             const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
             if (!vestido) return;
 
-            // Get selected workers
+            // Get selected workers (global)
             const trabajadorasCheckboxes = document.querySelectorAll('#trabajadoras-selection input:checked');
             const trabajadoras = Array.from(trabajadorasCheckboxes).map(cb => parseInt(cb.value));
 
@@ -5944,6 +6583,7 @@
             intervalosElements.forEach(intervaloEl => {
                 const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
                 const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
                 
                 if (inicio) {
                     // Permitir intervalos con solo inicio (trabajo en curso)
@@ -5954,12 +6594,20 @@
                         const diffHours = diffMs / (1000 * 60 * 60);
                         
                         if (diffHours > 0) {
-                            intervalos.push({ inicio, fin });
+                            intervalos.push({ 
+                                inicio, 
+                                fin, 
+                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                            });
                             totalHoras += diffHours;
                         }
                     } else {
                         // Guardar intervalo en curso (sin fin)
-                        intervalos.push({ inicio, fin: null });
+                        intervalos.push({ 
+                            inicio, 
+                            fin: null, 
+                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                        });
                     }
                 }
             });
@@ -5969,20 +6617,45 @@
                 return;
             }
 
+            // Check if dress is in a group
+            const currentHoras = horasConfeccion[currentEditingVestidoId] || {};
+            const grupoId = currentHoras.grupoId;
+            
             // Save to horasConfeccion
-            horasConfeccion[currentEditingVestidoId] = {
+            const horasData = {
                 trabajadoras,
                 intervalos,
                 horasTotales: totalHoras,
-                grupos: [] // For future group functionality
+                grupoId: grupoId || null
             };
+
+            horasConfeccion[currentEditingVestidoId] = horasData;
+
+            // If in a group, apply same hours to all dresses in the group
+            if (grupoId) {
+                const grupo = vestidosGrupos[grupoId];
+                if (grupo) {
+                    grupo.vestidosIds.forEach(vestidoId => {
+                        if (vestidoId !== currentEditingVestidoId) {
+                            horasConfeccion[vestidoId] = {
+                                ...horasData,
+                                grupoId: grupoId
+                            };
+                        }
+                    });
+                    alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h\n💡 Las horas se han aplicado a todos los ${grupo.vestidosIds.length} vestidos del grupo.\nCada vestido recibe ${(totalHoras / grupo.vestidosIds.length).toFixed(2)}h de forma proporcional.`);
+                } else {
+                    alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+                }
+            } else {
+                alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+            }
 
             localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
 
             // Sync with Base Modelos
             sincronizarVestidoConBaseModelos(currentEditingVestidoId);
 
-            alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
             cerrarModalHorasConfeccion();
             cargarPlanificacionNueva();
             generarCalendarioPlanificacion(); // Update calendar
