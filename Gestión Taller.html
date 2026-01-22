@@ -2853,7 +2853,6 @@
                         <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
                         <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
-                        <button class="btn btn-success btn-small" onclick="planificacionAutomatica()">🤖 Planificación Automática</button>
                     </div>
                 </div>
                 <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
@@ -7114,7 +7113,6 @@
             // Show modal with list of dresses
             const modal = document.getElementById('modal-colocar-vestido-dia');
             const fechaDisplay = document.getElementById('fecha-dia-seleccionado');
-            const listaContainer = document.getElementById('lista-vestidos-colocar');
             
             const fecha = new Date(fechaStr + 'T00:00:00');
             fechaDisplay.textContent = fecha.toLocaleDateString('es-ES', { 
@@ -7124,11 +7122,60 @@
                 day: 'numeric' 
             });
             
-            // Store the selected date for later use
+            // Store the selected date and dresses list for later use
             modal.dataset.fechaSeleccionada = fechaStr;
+            window.vestidosModalActual = vestidosEnTaller; // Store for filtering
             
-            // Generate list of dresses
-            listaContainer.innerHTML = vestidosEnTaller.map(v => {
+            // Reset filters
+            document.getElementById('filtro-modal-vestidos').value = '';
+            document.getElementById('filtro-proveedor-modal').value = 'todos';
+            
+            // Render the list (will be filtered if needed)
+            renderizarListaVestidosModal();
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+        
+        // New function to filter dresses in the modal
+        function filtrarVestidosModal() {
+            renderizarListaVestidosModal();
+        }
+        
+        // New function to render the filtered list of dresses
+        function renderizarListaVestidosModal() {
+            const modal = document.getElementById('modal-colocar-vestido-dia');
+            const listaContainer = document.getElementById('lista-vestidos-colocar');
+            const fechaStr = modal.dataset.fechaSeleccionada;
+            
+            if (!window.vestidosModalActual) return;
+            
+            // Get filter values
+            const filtroTexto = document.getElementById('filtro-modal-vestidos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtro-proveedor-modal').value;
+            
+            // Apply filters
+            const vestidosFiltrados = window.vestidosModalActual.filter(v => {
+                // Filter by text (lote, nombre, codigo)
+                const matchTexto = !filtroTexto || 
+                    (v.lote && v.lote.toLowerCase().includes(filtroTexto)) ||
+                    (v.nombreModelo && v.nombreModelo.toLowerCase().includes(filtroTexto)) ||
+                    (v.codigoModelo && v.codigoModelo.toLowerCase().includes(filtroTexto)) ||
+                    (v.numeroOF && v.numeroOF.toLowerCase().includes(filtroTexto));
+                
+                // Filter by supplier
+                const matchProveedor = filtroProveedor === 'todos' || v.proveedor === filtroProveedor;
+                
+                return matchTexto && matchProveedor;
+            });
+            
+            // Generate list of filtered dresses
+            if (vestidosFiltrados.length === 0) {
+                listaContainer.innerHTML = '<p style="text-align: center; color: var(--color-texto-secundario); padding: 20px;">No se encontraron vestidos con los filtros aplicados.</p>';
+                return;
+            }
+            
+            listaContainer.innerHTML = vestidosFiltrados.map(v => {
                 const modelo = modelos.find(m => m.codigo === v.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
                 
@@ -7144,6 +7191,7 @@
                                 <div style="font-weight: 600; font-size: 1.05em;">${v.nombreModelo}</div>
                                 <div style="font-size: 0.9em; color: var(--color-texto-secundario); margin-top: 3px;">
                                     <strong>Lote:</strong> ${v.lote || 'N/A'} | 
+                                    <strong>Código:</strong> ${v.codigoModelo || 'N/A'} |
                                     <strong>Horas estimadas:</strong> ${horasEstimadas.toFixed(1)}h
                                 </div>
                             </div>
@@ -7155,9 +7203,6 @@
                     </div>
                 `;
             }).join('');
-            
-            modal.classList.add('active');
-            modal.style.display = 'flex';
         }
 
         // Problem 4: Function to place a dress on a specific day
@@ -7581,20 +7626,53 @@
                 return;
             }
 
+            // Check if dress is in a group
+            const horas = horasConfeccion[currentEditingVestidoId];
+            const grupoId = horas ? horas.grupoId : null;
+            const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+            
+            let horasPorVestido = totalHoras;
+            let confirmMsg = `¿Marcar este vestido como finalizado?\n\nSe registrarán ${totalHoras.toFixed(2)} horas reales trabajadas.`;
+            
+            // If dress is in a group, divide hours among all dresses in the group
+            if (grupo && grupo.vestidosIds.length > 1) {
+                horasPorVestido = totalHoras / grupo.vestidosIds.length;
+                confirmMsg = `¿Marcar este grupo de ${grupo.vestidosIds.length} vestidos como finalizado?\n\n` +
+                           `Horas totales trabajadas: ${totalHoras.toFixed(2)}h\n` +
+                           `Horas por vestido: ${horasPorVestido.toFixed(2)}h\n\n` +
+                           `Los ${grupo.vestidosIds.length} vestidos del grupo se marcarán como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.`;
+            }
+
             // Confirm action
-            const confirm = window.confirm(`¿Marcar este vestido como finalizado?\n\nSe registrarán ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+            const confirm = window.confirm(confirmMsg);
             if (!confirm) return;
 
             // Save hours first
             guardarHorasConfeccion();
             
-            // Update dress with real hours
-            vestido.horasReales = totalHoras;
-            
-            // Save to localStorage
-            localStorage.setItem('vestidos', JSON.stringify(vestidos));
-
-            alert(`✅ Vestido finalizado con ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+            // Update dress(es) with real hours
+            if (grupo && grupo.vestidosIds.length > 1) {
+                // Update all dresses in the group with divided hours
+                grupo.vestidosIds.forEach(vestidoId => {
+                    const v = vestidos.find(vestido => vestido.id === vestidoId);
+                    if (v) {
+                        v.horasReales = horasPorVestido;
+                    }
+                });
+                
+                // Save to localStorage
+                localStorage.setItem('vestidos', JSON.stringify(vestidos));
+                
+                alert(`✅ Grupo finalizado.\n\n${grupo.vestidosIds.length} vestidos marcados como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.\n(Total: ${totalHoras.toFixed(2)}h)`);
+            } else {
+                // Update single dress
+                vestido.horasReales = totalHoras;
+                
+                // Save to localStorage
+                localStorage.setItem('vestidos', JSON.stringify(vestidos));
+                
+                alert(`✅ Vestido finalizado con ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+            }
             
             // Refresh views
             cargarPlanificacionNueva();
@@ -12539,6 +12617,28 @@
                 <div style="margin-bottom: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
                     <strong>Fecha seleccionada:</strong> <span id="fecha-dia-seleccionado"></span>
                 </div>
+                
+                <!-- Search and Filter Section -->
+                <div style="margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <input type="text" id="filtro-modal-vestidos" 
+                                   placeholder="🔍 Buscar por lote, nombre, código..." 
+                                   oninput="filtrarVestidosModal()"
+                                   style="width: 100%; padding: 8px; border: 2px solid var(--color-borde); border-radius: 6px;">
+                        </div>
+                        <div>
+                            <select id="filtro-proveedor-modal" onchange="filtrarVestidosModal()"
+                                    style="width: 100%; padding: 8px; border: 2px solid var(--color-borde); border-radius: 6px;">
+                                <option value="todos">Todos los proveedores</option>
+                                <option value="pronovias">Pronovias</option>
+                                <option value="rosa_clara">Rosa Clará</option>
+                                <option value="traka">Traka</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
                 <div style="margin-bottom: 10px;">
                     <strong>Selecciona un vestido para colocar en este día:</strong>
                     <small style="display: block; margin-top: 5px; color: var(--color-texto-secundario);">
