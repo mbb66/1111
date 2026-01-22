@@ -2306,6 +2306,39 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
+        .intervalo-tiempo-header:hover {
+            background: var(--color-neutro-suave);
+            margin: -5px -15px 10px -15px;
+            padding: 5px 15px;
+            border-radius: 8px;
+        }
+        
+        .intervalo-collapsed-summary {
+            display: none;
+            color: var(--color-texto-secundario);
+            font-size: 0.9em;
+            margin-left: 10px;
+        }
+        
+        .intervalo-tiempo.collapsed .intervalo-collapsed-summary {
+            display: inline;
+        }
+        
+        .intervalo-tiempo.collapsed .intervalo-inputs {
+            display: none;
+        }
+        
+        .intervalo-toggle-icon {
+            transition: transform 0.2s;
+            font-size: 1.2em;
+            margin-left: 10px;
+        }
+        
+        .intervalo-tiempo.collapsed .intervalo-toggle-icon {
+            transform: rotate(-90deg);
         }
 
         .intervalo-numero {
@@ -2723,6 +2756,7 @@
             <div class="grid-2" style="margin-bottom: 20px;">
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
+                    <button class="btn btn-info" onclick="abrirModalVestidosEnviados()">📦 Vestidos Enviados</button>
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
@@ -4779,29 +4813,37 @@
                 return;
             };
 
-            // Create standardized tabular format without prices and VAT
+            // Problem 6 fix: Use fixed-width columns to prevent misalignment
             const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie'];
-            const separator = '-'.repeat(80);
+            const separator = '-'.repeat(100);
             
-            // Build header row
+            // Build header row with fixed widths
             let textoTabular = `ALBARÁN ${numeroAlbaran} - ${proveedor.toUpperCase()}\n`;
             textoTabular += separator + '\n';
-            textoTabular += headers.join('\t') + '\n';
+            
+            // Use padEnd to create fixed-width columns
+            const colWidths = [30, 15, 10, 12, 15]; // Column widths
+            textoTabular += headers.map((h, i) => h.padEnd(colWidths[i])).join('') + '\n';
             textoTabular += separator + '\n';
             
-            // Build data rows
+            // Build data rows with fixed widths
             vestidosDelAlbaran.forEach(v => {
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : 'N/A';
                 
+                // Truncate long names to fit column width
+                const modelo = v.nombreModelo.length > colWidths[0] - 1 
+                    ? v.nombreModelo.substring(0, colWidths[0] - 4) + '...' 
+                    : v.nombreModelo;
+                
                 const row = [
-                    v.nombreModelo,
-                    v.codigoModelo,
-                    v.talla || 'N/A',
-                    v.lote || 'N/A',
-                    ofSerie
+                    modelo.padEnd(colWidths[0]),
+                    v.codigoModelo.padEnd(colWidths[1]),
+                    (v.talla || 'N/A').padEnd(colWidths[2]),
+                    (v.lote || 'N/A').padEnd(colWidths[3]),
+                    ofSerie.padEnd(colWidths[4])
                 ];
-                textoTabular += row.join('\t') + '\n';
+                textoTabular += row.join('') + '\n';
             });
             
             textoTabular += separator + '\n';
@@ -6379,23 +6421,43 @@
                 }
             }
             
-            // Move all dresses in the group or individual dress
+            // Problem 4: Move all dresses in the group or individual dress
+            // When dragging the "head" or part 1 of a dress, move ALL parts (all intervals regardless of date)
             vestidosAMover.forEach(vestido => {
                 const horas = horasConfeccion[vestido.id];
                 if (horas && horas.intervalos && horas.intervalos.length > 0) {
-                    // Update all intervals from origin date to destination date
-                    horas.intervalos.forEach(intervalo => {
-                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
-                            // Change the date part but keep the time
-                            const [_, time] = intervalo.inicio.split('T');
-                            intervalo.inicio = `${fechaDestino}T${time}`;
-                            
-                            if (intervalo.fin) {
-                                const [__, timeEnd] = intervalo.fin.split('T');
-                                intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                    // Check if we're dragging from the first partition (earliest date)
+                    const fechasUnicas = [...new Set(horas.intervalos.map(i => i.inicio ? i.inicio.split('T')[0] : null).filter(Boolean))].sort();
+                    const esPrimeraParticion = draggedVestidoFechaOrigen === fechasUnicas[0];
+                    
+                    if (esPrimeraParticion && fechasUnicas.length > 1) {
+                        // We're dragging the "head" - move ALL intervals to the new date
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio) {
+                                const [_, time] = intervalo.inicio.split('T');
+                                intervalo.inicio = `${fechaDestino}T${time}`;
+                                
+                                if (intervalo.fin) {
+                                    const [__, timeEnd] = intervalo.fin.split('T');
+                                    intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                                }
                             }
-                        }
-                    });
+                        });
+                    } else {
+                        // Only move intervals from the origin date
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === draggedVestidoFechaOrigen) {
+                                // Change the date part but keep the time
+                                const [_, time] = intervalo.inicio.split('T');
+                                intervalo.inicio = `${fechaDestino}T${time}`;
+                                
+                                if (intervalo.fin) {
+                                    const [__, timeEnd] = intervalo.fin.split('T');
+                                    intervalo.fin = `${fechaDestino}T${timeEnd}`;
+                                }
+                            }
+                        });
+                    }
                 } else {
                     // If dress has no intervals, update its fechaLimite
                     vestido.fechaLimite = fechaDestino;
@@ -6830,11 +6892,11 @@
                             // Create single grouped card - now draggable
                             const draggable = 'true';
                             const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
-                            // Simplified display: show only group name and lot numbers
+                            // Problem 3: Display dress name with "S" suffix instead of "grupo 3..."
                             const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
                             const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
-                                ? `${grupo.nombre.substring(0, 12)}... (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
-                                : `${vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10)}... [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
+                                ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
+                                : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
                             
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
@@ -7380,26 +7442,34 @@
                 `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
             ).join('');
             
+            // Problem 1 fix: Set default date to today
+            const hoy = new Date();
+            const defaultDateTime = hoy.toISOString().slice(0, 16);
+            
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
-                    <div class="intervalo-tiempo-header">
-                        <span class="intervalo-numero">Intervalo ${numeroIntervalo}</span>
-                        <button class="intervalo-eliminar" onclick="eliminarIntervalo(${numeroIntervalo - 1})">×</button>
+                    <div class="intervalo-tiempo-header" onclick="toggleIntervalo(this.parentElement)">
+                        <div style="display: flex; align-items: center;">
+                            <span class="intervalo-numero">Intervalo ${numeroIntervalo}</span>
+                            <span class="intervalo-collapsed-summary"></span>
+                            <span class="intervalo-toggle-icon">▼</span>
+                        </div>
+                        <button class="intervalo-eliminar" onclick="event.stopPropagation(); eliminarIntervalo(${numeroIntervalo - 1})">×</button>
                     </div>
                     <div class="intervalo-inputs">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
                                 <label>Fecha y Hora Inicio:</label>
-                                <input type="datetime-local" class="intervalo-inicio" onchange="calcularHorasTotales()">
+                                <input type="datetime-local" class="intervalo-inicio" value="${defaultDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                             <div>
                                 <label>Fecha y Hora Fin (opcional):</label>
-                                <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales()">
+                                <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                         </div>
                         <div class="intervalo-trabajadora">
                             <label>👷 Trabajadora Asignada:</label>
-                            <select class="intervalo-worker">
+                            <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                                 <option value="">Seleccionar trabajadora...</option>
                                 ${workerOptions}
                             </select>
@@ -7419,6 +7489,32 @@
                 calcularHorasTotales();
             }
         }
+        
+        // Problem 2: Toggle interval collapsed/expanded state
+        function toggleIntervalo(intervaloElement) {
+            intervaloElement.classList.toggle('collapsed');
+        }
+        
+        // Problem 2: Update interval summary when collapsed
+        function updateIntervaloSummary(intervaloElement) {
+            const summaryElement = intervaloElement.querySelector('.intervalo-collapsed-summary');
+            const workerSelect = intervaloElement.querySelector('.intervalo-worker');
+            const inicioInput = intervaloElement.querySelector('.intervalo-inicio');
+            const finInput = intervaloElement.querySelector('.intervalo-fin');
+            
+            const workerName = workerSelect.options[workerSelect.selectedIndex]?.text || 'Sin asignar';
+            const inicio = inicioInput.value ? new Date(inicioInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+            const fin = finInput.value ? new Date(finInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
+            
+            let horasTrabajadas = 0;
+            if (inicioInput.value && finInput.value) {
+                const inicioDate = new Date(inicioInput.value);
+                const finDate = new Date(finInput.value);
+                horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+            }
+            
+            summaryElement.textContent = `👷 ${workerName} | ${inicio} - ${fin}${horasTrabajadas > 0 ? ` (${horasTrabajadas.toFixed(2)}h)` : ''}`;
+        }
 
         function cargarIntervalos() {
             const container = document.getElementById('intervalos-container');
@@ -7435,25 +7531,29 @@
             ).join('');
 
             container.innerHTML = currentHoras.intervalos.map((intervalo, index) => `
-                <div class="intervalo-tiempo" data-intervalo-index="${index}">
-                    <div class="intervalo-tiempo-header">
-                        <span class="intervalo-numero">Intervalo ${index + 1}</span>
-                        <button class="intervalo-eliminar" onclick="eliminarIntervalo(${index})">×</button>
+                <div class="intervalo-tiempo collapsed" data-intervalo-index="${index}">
+                    <div class="intervalo-tiempo-header" onclick="toggleIntervalo(this.parentElement)">
+                        <div style="display: flex; align-items: center;">
+                            <span class="intervalo-numero">Intervalo ${index + 1}</span>
+                            <span class="intervalo-collapsed-summary"></span>
+                            <span class="intervalo-toggle-icon">▼</span>
+                        </div>
+                        <button class="intervalo-eliminar" onclick="event.stopPropagation(); eliminarIntervalo(${index})">×</button>
                     </div>
                     <div class="intervalo-inputs">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
                                 <label>Fecha y Hora Inicio:</label>
-                                <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales()">
+                                <input type="datetime-local" class="intervalo-inicio" value="${intervalo.inicio}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                             <div>
                                 <label>Fecha y Hora Fin (opcional):</label>
-                                <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales()">
+                                <input type="datetime-local" class="intervalo-fin" value="${intervalo.fin || ''}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                         </div>
                         <div class="intervalo-trabajadora">
                             <label>👷 Trabajadora Asignada:</label>
-                            <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}">
+                            <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                                 <option value="">Seleccionar trabajadora...</option>
                                 ${workerOptions}
                             </select>
@@ -7462,12 +7562,17 @@
                 </div>
             `).join('');
             
-            // Set selected workers after rendering
+            // Set selected workers and update summaries after rendering
             container.querySelectorAll('.intervalo-worker').forEach(select => {
                 const selectedId = select.dataset.selected;
                 if (selectedId) {
                     select.value = selectedId;
                 }
+            });
+            
+            // Update all summaries after loading
+            container.querySelectorAll('.intervalo-tiempo').forEach(intervaloEl => {
+                updateIntervaloSummary(intervaloEl);
             });
         }
 
@@ -7792,6 +7897,114 @@
 
         // Variables globales para el modal de división
         let dividirCargaData = null;
+        
+        // ===============================================
+        // === PROBLEM 5: SENT DRESSES MANAGEMENT ========
+        // ===============================================
+        
+        function abrirModalVestidosEnviados() {
+            const modal = document.getElementById('modal-vestidos-enviados');
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+            
+            // Populate month selector
+            const select = document.getElementById('mes-enviados-select');
+            const hoy = new Date();
+            select.innerHTML = '';
+            
+            // Generate last 12 months
+            for (let i = 0; i < 12; i++) {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+                const mes = fecha.getMonth() + 1;
+                const anio = fecha.getFullYear();
+                const valor = `${anio}-${String(mes).padStart(2, '0')}`;
+                const texto = fecha.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                
+                const option = document.createElement('option');
+                option.value = valor;
+                option.textContent = texto.charAt(0).toUpperCase() + texto.slice(1);
+                if (i === 0) option.selected = true;
+                select.appendChild(option);
+            }
+            
+            cargarVestidosEnviados();
+        }
+        
+        function cerrarModalVestidosEnviados() {
+            const modal = document.getElementById('modal-vestidos-enviados');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
+        
+        function cargarVestidosEnviados() {
+            const mesSeleccionado = document.getElementById('mes-enviados-select').value;
+            const [anio, mes] = mesSeleccionado.split('-').map(Number);
+            
+            // Get sent dresses for selected month
+            const vestidosEnviados = vestidos.filter(v => {
+                if (!v.fechaEnvio) return false;
+                const fechaEnvio = new Date(v.fechaEnvio + 'T00:00:00');
+                return fechaEnvio.getFullYear() === anio && (fechaEnvio.getMonth() + 1) === mes;
+            });
+            
+            const container = document.getElementById('lista-vestidos-enviados');
+            
+            if (vestidosEnviados.length === 0) {
+                container.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--color-texto-secundario);">No hay vestidos enviados en este mes.</p>';
+                return;
+            }
+            
+            container.innerHTML = vestidosEnviados.map(v => {
+                const horas = horasConfeccion[v.id];
+                const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                const horasTotales = tieneIntervalos ? horas.horasTotales.toFixed(2) : '0.00';
+                
+                return `
+                    <div class="vestido-card-planificacion ${v.proveedor}" style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};">
+                        <div class="vestido-card-header">
+                            <div class="vestido-card-title">${v.nombreModelo}</div>
+                            <div class="vestido-card-badge">${v.proveedor.toUpperCase()}</div>
+                        </div>
+                        <div class="vestido-card-details">
+                            <div><strong>Código:</strong> ${v.codigoModelo}</div>
+                            <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
+                            <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
+                            <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
+                            ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button class="btn btn-small ${tieneIntervalos ? 'btn-info' : 'btn-success'}" onclick="abrirModalHorasConfeccion(${v.id})">
+                                ${tieneIntervalos ? '✏️ Editar Intervalos' : '➕ Añadir Intervalos'}
+                            </button>
+                            ${tieneIntervalos ? `<button class="btn btn-small btn-info" onclick="verEnCalendario(${v.id})">📅 Ver en Calendario</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function verEnCalendario(vestidoId) {
+            const horas = horasConfeccion[vestidoId];
+            if (!horas || !horas.intervalos || horas.intervalos.length === 0) {
+                alert('Este vestido no tiene intervalos de tiempo asignados.');
+                return;
+            }
+            
+            // Get first interval date to navigate calendar to that month
+            const primerIntervalo = horas.intervalos[0];
+            if (primerIntervalo.inicio) {
+                const fecha = new Date(primerIntervalo.inicio);
+                mesActualCalendario = fecha.getMonth();
+                anioActualCalendario = fecha.getFullYear();
+                
+                // Close modal and switch to calendar view
+                cerrarModalVestidosEnviados();
+                generarCalendarioPlanificacion();
+                
+                // Scroll to calendar
+                document.getElementById('calendario-planificacion-grid').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
 
         function abrirModalDividirCarga(vestidoId, fecha, horasActuales, parte) {
             event.stopPropagation(); // Prevent drag from starting
@@ -11946,6 +12159,27 @@
                     <button class="btn-tara-option btn-tara-empresa" onclick="seleccionarTipoTara('empresa')">
                         🏢 Empresa
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for Sent Dresses (Problem 5) -->
+    <div id="modal-vestidos-enviados" class="modal-overlay">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>📦 Vestidos Enviados</h3>
+                <button class="modal-close" onclick="cerrarModalVestidosEnviados()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                    <label for="mes-enviados-select">Seleccionar mes:</label>
+                    <select id="mes-enviados-select" onchange="cargarVestidosEnviados()">
+                        <!-- Options populated dynamically -->
+                    </select>
+                </div>
+                <div id="lista-vestidos-enviados" style="max-height: 500px; overflow-y: auto;">
+                    <!-- Sent dresses list -->
                 </div>
             </div>
         </div>
