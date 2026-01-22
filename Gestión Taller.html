@@ -6146,8 +6146,8 @@
             if (!draggedVestidoFechaOrigen) return;
             
             // Don't allow moving to weekends
-            const fecha = new Date(fechaDestino + 'T00:00:00');
-            const diaSemana = fecha.getDay();
+            const fecha = new Date(fechaDestino + 'T12:00:00Z');
+            const diaSemana = fecha.getUTCDay();
             if (diaSemana === 0 || diaSemana === 6) {
                 alert('⚠️ No se pueden asignar vestidos a fines de semana');
                 draggedVestidoId = null;
@@ -6321,10 +6321,10 @@
             const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
             mesLabel.textContent = `${meses[mesActualCalendario]} ${anioActualCalendario}`;
 
-            const primerDia = new Date(anioActualCalendario, mesActualCalendario, 1);
-            const ultimoDia = new Date(anioActualCalendario, mesActualCalendario + 1, 0);
-            const diasEnMes = ultimoDia.getDate();
-            const primerDiaSemana = primerDia.getDay() === 0 ? 6 : primerDia.getDay() - 1; // Lunes = 0
+            const primerDia = new Date(Date.UTC(anioActualCalendario, mesActualCalendario, 1));
+            const ultimoDia = new Date(Date.UTC(anioActualCalendario, mesActualCalendario + 1, 0));
+            const diasEnMes = ultimoDia.getUTCDate();
+            const primerDiaSemana = primerDia.getUTCDay() === 0 ? 6 : primerDia.getUTCDay() - 1; // Lunes = 0
 
             let html = '<div class="calendario-header"><div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
             html += '<div class="calendario-grid-body">';
@@ -6339,10 +6339,12 @@
             const hoyStr = hoy.toISOString().split('T')[0];
             
             for (let dia = 1; dia <= diasEnMes; dia++) {
-                const fecha = new Date(anioActualCalendario, mesActualCalendario, dia);
+                // Create date in UTC to avoid timezone issues
+                const fecha = new Date(Date.UTC(anioActualCalendario, mesActualCalendario, dia));
                 const fechaStr = fecha.toISOString().split('T')[0];
                 const esHoy = fecha.toDateString() === hoy.toDateString();
-                const diaSemana = fecha.getDay();
+                // Use UTC methods to get day of week to match the UTC date string
+                const diaSemana = fecha.getUTCDay();
                 const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
                 const esPasado = fechaStr < hoyStr;
 
@@ -6376,15 +6378,9 @@
                     }
                 });
                 
-                // Generate workers summary
+                // Generate workers summary - REMOVED per requirement to simplify calendar view
                 let trabajadorasHtml = '';
-                if (trabajadorasDelDia.size > 0) {
-                    const nombresWorkers = Array.from(trabajadorasDelDia).map(wId => {
-                        const worker = workers.find(w => w.id === wId);
-                        return worker ? worker.nombre : '?';
-                    }).join(', ');
-                    trabajadorasHtml = `<div style="font-size: 0.65em; color: var(--color-texto-secundario); margin-top: 4px;">👷 ${nombresWorkers}</div>`;
-                }
+                // Workers are no longer shown in calendar view to focus on workload organization
                 
                 // Generate hours badge
                 let horasBadge = '';
@@ -6425,17 +6421,19 @@
                             
                             // Create single grouped card - now draggable
                             const draggable = 'true';
-                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => v.nombreModelo).join(', ');
+                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
+                            // Simplified display: show only group name and lot numbers
+                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
                             const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
-                                ? `${grupo.nombre.substring(0, 15)}... (${vestidosDelGrupoEnFecha.length})` 
-                                : vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10) + '...';
+                                ? `${grupo.nombre.substring(0, 12)}... (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
+                                : `${vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10)}... [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
                             
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
                                 ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
                                 ondragend="onDragEndCalendario(event)"
                                 style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo} - ${proveedor}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}">🔗 ${nombreDisplay}</div>`;
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}">🔗 ${nombreDisplay}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
@@ -6448,12 +6446,13 @@
                         const colorBg = `var(--color-${proveedor})`;
                         const colorBorde = `var(--color-${proveedor}-borde)`;
                         
+                        // Simplified display: dress name and lot number only
                         vestidosHtml += `<div 
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                            title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
                     }
                 });
                 
@@ -6468,12 +6467,13 @@
                     const colorBg = `var(--color-${proveedor})`;
                     const colorBorde = `var(--color-${proveedor}-borde)`;
                     
+                    // Simplified display: dress name and lot number only
                     vestidosHtml += `<div 
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
                 });
 
                 html += `
@@ -6659,8 +6659,8 @@
             // Helper function to get available hours for a date
             function getHorasDisponiblesFecha(fecha) {
                 const fechaStr = fecha.toISOString().split('T')[0];
-                const fechaObj = new Date(fechaStr + 'T12:00:00');
-                const diaSemana = fechaObj.getDay();
+                const fechaObj = new Date(fechaStr + 'T12:00:00Z');
+                const diaSemana = fechaObj.getUTCDay();
                 
                 // Skip weekends
                 if (diaSemana === 0 || diaSemana === 6) return 0;
@@ -7520,8 +7520,9 @@
 
             for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
                 const fecha = `${año}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-                const fechaObj = new Date(año, mes - 1, dia);
-                const diaSemana = fechaObj.getDay();
+                // Create date in UTC to match the date string format
+                const fechaObj = new Date(fecha + 'T12:00:00Z');
+                const diaSemana = fechaObj.getUTCDay();
                 const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
                 const esFestivo = holidays.some(h => h.fecha === fecha);
 
@@ -10293,11 +10294,11 @@
 
             grid.innerHTML = '';
 
-            const primerDia = new Date(anio, mes - 1, 1);
-            const ultimoDia = new Date(anio, mes, 0);
+            const primerDia = new Date(Date.UTC(anio, mes - 1, 1));
+            const ultimoDia = new Date(Date.UTC(anio, mes, 0));
 
             // Obtener día de la semana del primer día (0 = domingo, 1 = lunes, etc.)
-            let diaSemanaInicio = primerDia.getDay();
+            let diaSemanaInicio = primerDia.getUTCDay();
             if (diaSemanaInicio === 0) diaSemanaInicio = 7; // Ajustar domingo
 
             // Añadir celdas vacías al principio
@@ -10311,8 +10312,9 @@
             // Añadir días del mes
             for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
                 const fecha = `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-                const fechaObj = new Date(anio, mes - 1, dia);
-                const diaSemana = fechaObj.getDay();
+                // Create date in UTC to match the date string format
+                const fechaObj = new Date(fecha + 'T12:00:00Z');
+                const diaSemana = fechaObj.getUTCDay();
                 const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
                 const esFestivo = holidays.some(h => h.fecha === fecha);
                 const esHoy = fecha === new Date().toISOString().split('T')[0];
@@ -10361,8 +10363,8 @@
 
         // Renderizar estado de trabajadores para un día
         function renderWorkersStatus(fecha, esFestivo) {
-            const fechaObj = new Date(fecha + 'T12:00:00');
-            const diaSemana = fechaObj.getDay();
+            const fechaObj = new Date(fecha + 'T12:00:00Z');
+            const diaSemana = fechaObj.getUTCDay();
             const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
             
             // No mostrar trabajadores en fin de semana
@@ -10399,8 +10401,8 @@
         
         // Calcular horas totales de un día
         function calcularHorasTotalesDia(fecha, esFestivo) {
-            const fechaObj = new Date(fecha + 'T12:00:00');
-            const diaSemana = fechaObj.getDay();
+            const fechaObj = new Date(fecha + 'T12:00:00Z');
+            const diaSemana = fechaObj.getUTCDay();
             const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
             
             // No hay horas en fin de semana
@@ -10784,12 +10786,12 @@
             const horas = estado === 'falta_parcial' ? parseFloat(document.getElementById('bulk-horas').value) : 0;
 
             let count = 0;
-            const inicio = new Date(fechaInicio + 'T12:00:00');
-            const fin = new Date(fechaFin + 'T12:00:00');
+            const inicio = new Date(fechaInicio + 'T12:00:00Z');
+            const fin = new Date(fechaFin + 'T12:00:00Z');
 
-            for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+            for (let d = new Date(inicio); d <= fin; d.setUTCDate(d.getUTCDate() + 1)) {
                 const fecha = d.toISOString().split('T')[0];
-                const diaSemana = d.getDay();
+                const diaSemana = d.getUTCDay();
 
                 // Solo aplicar a días laborables (L-V) a menos que sea festivo o vacaciones
                 if (diaSemana !== 0 && diaSemana !== 6 || ['vacaciones', 'baja'].includes(estado)) {
@@ -10970,8 +10972,8 @@
             let diasLaborables = 0;
             for (let d = 1; d <= ultimoDia; d++) {
                 const fecha = `${anio}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                const fechaObj = new Date(anio, mes - 1, d);
-                const diaSemana = fechaObj.getDay();
+                const fechaObj = new Date(fecha + 'T12:00:00Z');
+                const diaSemana = fechaObj.getUTCDay();
                 const esFestivo = holidays.some(h => h.fecha === fecha);
 
                 if (diaSemana !== 0 && diaSemana !== 6 && !esFestivo) {
