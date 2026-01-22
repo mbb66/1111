@@ -6376,15 +6376,9 @@
                     }
                 });
                 
-                // Generate workers summary
+                // Generate workers summary - REMOVED per requirement to simplify calendar view
                 let trabajadorasHtml = '';
-                if (trabajadorasDelDia.size > 0) {
-                    const nombresWorkers = Array.from(trabajadorasDelDia).map(wId => {
-                        const worker = workers.find(w => w.id === wId);
-                        return worker ? worker.nombre : '?';
-                    }).join(', ');
-                    trabajadorasHtml = `<div style="font-size: 0.65em; color: var(--color-texto-secundario); margin-top: 4px;">👷 ${nombresWorkers}</div>`;
-                }
+                // Workers are no longer shown in calendar view to focus on workload organization
                 
                 // Generate hours badge
                 let horasBadge = '';
@@ -6425,17 +6419,19 @@
                             
                             // Create single grouped card - now draggable
                             const draggable = 'true';
-                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => v.nombreModelo).join(', ');
+                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
+                            // Simplified display: show only group name and lot numbers
+                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
                             const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
-                                ? `${grupo.nombre.substring(0, 15)}... (${vestidosDelGrupoEnFecha.length})` 
-                                : vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10) + '...';
+                                ? `${grupo.nombre.substring(0, 12)}... (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
+                                : `${vestidosDelGrupoEnFecha[0].nombreModelo.substring(0, 10)}... [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
                             
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
                                 ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
                                 ondragend="onDragEndCalendario(event)"
                                 style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo} - ${proveedor}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}">🔗 ${nombreDisplay}</div>`;
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}">🔗 ${nombreDisplay}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
@@ -6448,12 +6444,13 @@
                         const colorBg = `var(--color-${proveedor})`;
                         const colorBorde = `var(--color-${proveedor}-borde)`;
                         
+                        // Simplified display: dress name and lot number only
                         vestidosHtml += `<div 
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                            title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}">✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
                     }
                 });
                 
@@ -6468,12 +6465,13 @@
                     const colorBg = `var(--color-${proveedor})`;
                     const colorBorde = `var(--color-${proveedor}-borde)`;
                     
+                    // Simplified display: dress name and lot number only
                     vestidosHtml += `<div 
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - ${proveedor}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}...</div>`;
+                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}">⏳ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
                 });
 
                 html += `
