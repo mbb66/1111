@@ -6102,7 +6102,8 @@
                 btn.classList.add('btn-error');
                 
                 // Add selectable mode to container
-                const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+                const containerName = seccion === 'enviados' ? 'lista-vestidos-enviados' : `lista-${seccion.replace('_', '-')}`;
+                const container = document.getElementById(containerName);
                 container.classList.add('selectable-mode');
                 
                 // Re-render the section to update onclick handlers
@@ -6134,7 +6135,8 @@
             btn.classList.add('btn-info');
             
             // Remove selectable mode from container
-            const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+            const containerName = seccion === 'enviados' ? 'lista-vestidos-enviados' : `lista-${seccion.replace('_', '-')}`;
+            const container = document.getElementById(containerName);
             container.classList.remove('selectable-mode');
             
             // Reload section to remove selection states
@@ -6148,7 +6150,8 @@
         }
 
         function attachSelectableListeners(seccion) {
-            const container = document.getElementById(`lista-${seccion.replace('_', '-')}`);
+            const containerName = seccion === 'enviados' ? 'lista-vestidos-enviados' : `lista-${seccion.replace('_', '-')}`;
+            const container = document.getElementById(containerName);
             const cards = container.querySelectorAll('.vestido-card-planificacion');
             
             cards.forEach(card => {
