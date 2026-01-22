@@ -2114,6 +2114,11 @@
             transform: translateY(-2px);
             box-shadow: var(--sombra-media);
         }
+        
+        .vestido-item-colocar:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--sombra-media);
+        }
 
         .vestido-card-planificacion.dragging {
             opacity: 0.5;
@@ -6276,6 +6281,17 @@
         let draggedGrupoId = null;
         
         function onDragStartCalendario(event, vestidoId, fechaOrigen) {
+            // Problem 3 fix: Prevent dragging dresses with manually entered intervals
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            const horas = horasConfeccion[vestidoId];
+            
+            // If dress has manually entered intervals (in horasConfeccion), don't allow dragging
+            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                event.preventDefault();
+                alert('⚠️ No se pueden mover vestidos con intervalos de horas introducidos manualmente. Solo se pueden mover vestidos con planificación automática.');
+                return false;
+            }
+            
             draggedVestidoId = vestidoId;
             draggedVestidoFechaOrigen = fechaOrigen;
             draggedGrupoId = null;
@@ -6284,6 +6300,25 @@
         }
         
         function onDragStartCalendarioGrupo(event, grupoId, fechaOrigen) {
+            // Problem 3 fix: Prevent dragging groups with manually entered intervals
+            const grupo = vestidosGrupos[grupoId];
+            if (!grupo) {
+                event.preventDefault();
+                return false;
+            }
+            
+            // Check if any dress in the group has manually entered intervals
+            const tieneIntervalosManual = grupo.vestidosIds.some(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                return horas && horas.intervalos && horas.intervalos.length > 0;
+            });
+            
+            if (tieneIntervalosManual) {
+                event.preventDefault();
+                alert('⚠️ No se pueden mover grupos con intervalos de horas introducidos manualmente. Solo se pueden mover grupos con planificación automática.');
+                return false;
+            }
+            
             draggedGrupoId = grupoId;
             draggedVestidoFechaOrigen = fechaOrigen;
             draggedVestidoId = null;
@@ -6889,8 +6924,14 @@
                             const colorBg = `var(--color-${proveedor})`;
                             const colorBorde = `var(--color-${proveedor}-borde)`;
                             
-                            // Create single grouped card - now draggable
-                            const draggable = 'true';
+                            // Problem 3 fix: Check if group has manual intervals - if so, not draggable
+                            const tieneIntervalosManual = grupo.vestidosIds.some(vid => {
+                                const h = horasConfeccion[vid];
+                                return h && h.intervalos && h.intervalos.length > 0;
+                            });
+                            const draggable = tieneIntervalosManual ? 'false' : 'true';
+                            const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
+                            
                             const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
                             // Problem 3: Display dress name with "S" suffix instead of "grupo 3..."
                             const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
@@ -6903,14 +6944,18 @@
                                 ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
                                 ondragend="onDragEndCalendario(event)"
                                 onclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
-                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: pointer; ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - Clic para gestionar">🔗 ${nombreDisplay}</div>`;
+                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar">🔗 ${nombreDisplay}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
                         const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                         const opacidad = esEnviado ? 'opacity: 0.5;' : '';
-                        const draggable = 'true'; // Now draggable
+                        
+                        // Problem 3 fix: Check if has manual intervals - if so, not draggable
+                        const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
+                        const draggable = tieneIntervalosManual ? 'false' : 'true';
+                        const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
                         
                         // Get supplier color
                         const proveedor = v.proveedor;
@@ -6919,7 +6964,6 @@
                         
                         // Check if this dress has multiple work sessions (partitions) across different days
                         let partitionBadge = '';
-                        const horas = horasConfeccion[v.id];
                         if (horas && horas.intervalos) {
                             const fechasUnicas = [...new Set(horas.intervalos.map(i => i.inicio ? i.inicio.split('T')[0] : null).filter(Boolean))];
                             if (fechasUnicas.length > 1) {
@@ -6936,8 +6980,8 @@
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
-                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: pointer; ${opacidad}" 
-                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} - Clic para gestionar horas">${partitionBadge}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
+                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
                             <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarParticionCalendario(${v.id}, '${fechaStr}', event)">×</button>
                         </div>`;
                     }
@@ -7054,63 +7098,188 @@
         }
 
         function verDetallesDiaCalendario(fechaStr) {
-            const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+            // Problem 4 fix: Show modal with "en taller" dresses to place on this day
+            // Get "en taller" dresses that are not yet in the calendar
+            const vestidosEnTaller = vestidos.filter(v => {
+                return ['en_taller', 'con_tara'].includes(v.estado) && 
+                       !horasConfeccion[v.id] && 
+                       !v.planificacionSugerida;
+            });
             
-            if (vestidosEnFecha.length === 0) {
-                alert(`No hay vestidos programados para el ${new Date(fechaStr + 'T00:00:00').toLocaleDateString('es-ES')}`);
+            if (vestidosEnTaller.length === 0) {
+                alert('No hay vestidos "en taller" disponibles para colocar en este día.');
                 return;
             }
-
+            
+            // Show modal with list of dresses
+            const modal = document.getElementById('modal-colocar-vestido-dia');
+            const fechaDisplay = document.getElementById('fecha-dia-seleccionado');
+            const listaContainer = document.getElementById('lista-vestidos-colocar');
+            
             const fecha = new Date(fechaStr + 'T00:00:00');
-            let mensaje = `📅 Vestidos para ${fecha.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}:\n\n`;
+            fechaDisplay.textContent = fecha.toLocaleDateString('es-ES', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
             
-            // Separate by status
-            const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
-            const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+            // Store the selected date for later use
+            modal.dataset.fechaSeleccionada = fechaStr;
             
-            if (vestidosEnProceso.length > 0) {
-                mensaje += '✅ EN PROCESO:\n';
-                vestidosEnProceso.forEach(v => {
-                    const horas = horasConfeccion[v.id];
-                    const grupoId = horas ? horas.grupoId : null;
-                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
-                    const grupoInfo = grupo ? ` 🔗 ${grupo.nombre}` : '';
-                    
-                    // Get workers for this date
-                    const trabajadoras = new Set();
-                    let horasDia = 0;
-                    
+            // Generate list of dresses
+            listaContainer.innerHTML = vestidosEnTaller.map(v => {
+                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                
+                return `
+                    <div class="vestido-item-colocar ${v.proveedor}" 
+                         onclick="colocarVestidoEnDia(${v.id}, '${fechaStr}')"
+                         style="padding: 12px; margin-bottom: 8px; border-radius: 6px; cursor: pointer; 
+                                background: var(--color-${v.proveedor}); 
+                                border-left: 4px solid var(--color-${v.proveedor}-borde);
+                                transition: transform 0.2s, box-shadow 0.2s;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; font-size: 1.05em;">${v.nombreModelo}</div>
+                                <div style="font-size: 0.9em; color: var(--color-texto-secundario); margin-top: 3px;">
+                                    <strong>Lote:</strong> ${v.lote || 'N/A'} | 
+                                    <strong>Horas estimadas:</strong> ${horasEstimadas.toFixed(1)}h
+                                </div>
+                            </div>
+                            <div style="padding: 5px 12px; background: var(--color-superficie); 
+                                      border-radius: 4px; font-size: 0.85em; font-weight: 600;">
+                                ${v.proveedor.toUpperCase()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+
+        // Problem 4: Function to place a dress on a specific day
+        function colocarVestidoEnDia(vestidoId, fechaStr) {
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) return;
+            
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            const horasNecesarias = modelo ? modelo.horas : 0;
+            
+            // Calculate available hours for this day
+            const capacidadDia = obtenerLimiteHoras(fechaStr);
+            let horasUsadas = 0;
+            
+            // Calculate hours already used on this day
+            Object.keys(horasConfeccion).forEach(vid => {
+                const horas = horasConfeccion[vid];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                            if (intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasUsadas += diffHours;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            const horasDisponibles = capacidadDia - horasUsadas;
+            
+            // Create intervals to fill the day
+            let horasRestantes = horasNecesarias;
+            let fechaActual = fechaStr;
+            const intervalos = [];
+            
+            while (horasRestantes > 0) {
+                // Check if it's a weekend - skip to next weekday
+                const fecha = new Date(fechaActual + 'T12:00:00Z');
+                const diaSemana = fecha.getUTCDay();
+                
+                if (diaSemana === 0 || diaSemana === 6) {
+                    // Skip weekend
+                    const diasASumar = diaSemana === 0 ? 1 : 2;
+                    const nuevaFecha = new Date(fecha);
+                    nuevaFecha.setUTCDate(nuevaFecha.getUTCDate() + diasASumar);
+                    fechaActual = nuevaFecha.toISOString().split('T')[0];
+                    continue;
+                }
+                
+                // Calculate available hours for current day
+                let capacidadActual = obtenerLimiteHoras(fechaActual);
+                let horasUsadasActual = 0;
+                
+                Object.keys(horasConfeccion).forEach(vid => {
+                    const horas = horasConfeccion[vid];
                     if (horas && horas.intervalos) {
                         horas.intervalos.forEach(intervalo => {
-                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
-                                if (intervalo.trabajadoraId) {
-                                    const worker = workers.find(w => w.id === intervalo.trabajadoraId);
-                                    if (worker) trabajadoras.add(worker.nombre);
-                                }
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaActual) {
                                 if (intervalo.fin) {
                                     const inicioDate = new Date(intervalo.inicio);
                                     const finDate = new Date(intervalo.fin);
                                     const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
-                                    horasDia += diffHours;
+                                    horasUsadasActual += diffHours;
                                 }
                             }
                         });
                     }
-                    
-                    const trabajadorasInfo = trabajadoras.size > 0 ? ` | 👷 ${Array.from(trabajadoras).join(', ')}` : '';
-                    mensaje += `  • ${v.nombreModelo} (${horasDia.toFixed(2)}h${trabajadorasInfo})${grupoInfo}\n`;
                 });
-                mensaje += '\n';
+                
+                const disponibleEnDia = capacidadActual - horasUsadasActual;
+                const horasAAsignar = Math.min(horasRestantes, disponibleEnDia);
+                
+                if (horasAAsignar > 0) {
+                    // Create interval from 07:00 to calculated end time
+                    const horaInicio = 7; // 07:00
+                    const minutosInicio = 0;
+                    const totalMinutos = horasAAsignar * 60;
+                    const horaFin = horaInicio + Math.floor(totalMinutos / 60);
+                    const minutosFin = minutosInicio + (totalMinutos % 60);
+                    
+                    const inicio = `${fechaActual}T${String(horaInicio).padStart(2, '0')}:${String(minutosInicio).padStart(2, '0')}`;
+                    const fin = `${fechaActual}T${String(horaFin).padStart(2, '0')}:${String(minutosFin).padStart(2, '0')}`;
+                    
+                    intervalos.push({
+                        inicio: inicio,
+                        fin: fin,
+                        trabajadoraId: null
+                    });
+                    
+                    horasRestantes -= horasAAsignar;
+                }
+                
+                // Move to next day
+                const siguienteFecha = new Date(fechaActual + 'T12:00:00Z');
+                siguienteFecha.setUTCDate(siguienteFecha.getUTCDate() + 1);
+                fechaActual = siguienteFecha.toISOString().split('T')[0];
             }
             
-            if (vestidosPendientes.length > 0) {
-                mensaje += '⏳ PENDIENTES (fecha límite):\n';
-                vestidosPendientes.forEach(v => {
-                    mensaje += `  • ${v.nombreModelo} - ${v.proveedor}\n`;
-                });
-            }
-
-            alert(mensaje);
+            // Save intervals to horasConfeccion
+            horasConfeccion[vestidoId] = {
+                trabajadoras: [],
+                intervalos: intervalos,
+                horasTotales: horasNecesarias
+            };
+            
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+            
+            // Close modal and refresh calendar
+            cerrarModalColocarVestidoDia();
+            cargarPlanificacionNueva();
+            generarCalendarioPlanificacion();
+            
+            alert(`✅ Vestido "${vestido.nombreModelo}" colocado con ${horasNecesarias.toFixed(1)}h distribuidas en ${intervalos.length} día(s).`);
+        }
+        
+        function cerrarModalColocarVestidoDia() {
+            const modal = document.getElementById('modal-colocar-vestido-dia');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
         }
 
         function cambiarMesCalendarioPlanificacion(offset) {
@@ -7442,9 +7611,13 @@
                 `<option value="${w.id}">${w.nombre} (${w.rol})</option>`
             ).join('');
             
-            // Problem 1 fix: Set default date to today
+            // Problem 2 fix: Set default start time to 07:00 and end time to 15:00
             const hoy = new Date();
-            const defaultDateTime = hoy.toISOString().slice(0, 16);
+            const year = hoy.getFullYear();
+            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+            const day = String(hoy.getDate()).padStart(2, '0');
+            const defaultStartDateTime = `${year}-${month}-${day}T07:00`;
+            const defaultEndDateTime = `${year}-${month}-${day}T15:00`;
             
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
@@ -7460,11 +7633,11 @@
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div>
                                 <label>Fecha y Hora Inicio:</label>
-                                <input type="datetime-local" class="intervalo-inicio" value="${defaultDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                <input type="datetime-local" class="intervalo-inicio" value="${defaultStartDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                             <div>
                                 <label>Fecha y Hora Fin (opcional):</label>
-                                <input type="datetime-local" class="intervalo-fin" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                <input type="datetime-local" class="intervalo-fin" value="${defaultEndDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
                         </div>
                         <div class="intervalo-trabajadora">
@@ -7954,33 +8127,100 @@
                 return;
             }
             
-            container.innerHTML = vestidosEnviados.map(v => {
-                const horas = horasConfeccion[v.id];
-                const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
-                const horasTotales = tieneIntervalos ? horas.horasTotales.toFixed(2) : '0.00';
+            // Problem 1 fix: Group by model
+            const agruparPorModelo = document.getElementById('agrupar-enviados-checkbox')?.checked || false;
+            
+            let html = '';
+            
+            if (agruparPorModelo) {
+                // Group dresses by model code
+                const vestidosPorModelo = {};
+                vestidosEnviados.forEach(v => {
+                    if (!vestidosPorModelo[v.codigoModelo]) {
+                        vestidosPorModelo[v.codigoModelo] = [];
+                    }
+                    vestidosPorModelo[v.codigoModelo].push(v);
+                });
                 
-                return `
-                    <div class="vestido-card-planificacion ${v.proveedor}" style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};">
-                        <div class="vestido-card-header">
-                            <div class="vestido-card-title">${v.nombreModelo}</div>
-                            <div class="vestido-card-badge">${v.proveedor.toUpperCase()}</div>
+                // Generate grouped HTML
+                Object.keys(vestidosPorModelo).forEach(codigoModelo => {
+                    const vestidosGrupo = vestidosPorModelo[codigoModelo];
+                    const primerVestido = vestidosGrupo[0];
+                    const totalHoras = vestidosGrupo.reduce((sum, v) => {
+                        const horas = horasConfeccion[v.id];
+                        return sum + (horas && horas.horasTotales ? horas.horasTotales : 0);
+                    }, 0);
+                    
+                    html += `
+                        <div class="vestido-card-planificacion grouped ${primerVestido.proveedor}" style="margin-bottom: 15px;">
+                            <div class="vestido-card-header">
+                                <div class="vestido-card-title">🔗 ${primerVestido.nombreModelo} (${vestidosGrupo.length} vestidos)</div>
+                                <div class="vestido-card-badge">${primerVestido.proveedor.toUpperCase()}</div>
+                            </div>
+                            <div class="vestido-card-details">
+                                <div><strong>Código Modelo:</strong> ${codigoModelo}</div>
+                                <div><strong>Total Horas:</strong> ${totalHoras.toFixed(2)}h</div>
+                            </div>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; font-weight: 600; padding: 5px;">Ver detalles (${vestidosGrupo.length} vestidos)</summary>
+                                <div style="margin-top: 10px; padding-left: 15px; border-left: 3px solid var(--color-borde);">
+                                    ${vestidosGrupo.map(v => {
+                                        const horas = horasConfeccion[v.id];
+                                        const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                                        const horasTotales = tieneIntervalos ? horas.horasTotales.toFixed(2) : '0.00';
+                                        
+                                        return `
+                                            <div style="padding: 10px; margin-bottom: 10px; background: var(--color-neutro-suave); border-radius: 6px;">
+                                                <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
+                                                <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
+                                                <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
+                                                ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
+                                                <div style="margin-top: 8px;">
+                                                    <button class="btn btn-small ${tieneIntervalos ? 'btn-info' : 'btn-success'}" onclick="abrirModalHorasConfeccion(${v.id})">
+                                                        ${tieneIntervalos ? '✏️ Editar Intervalos' : '➕ Añadir Intervalos'}
+                                                    </button>
+                                                    ${tieneIntervalos ? `<button class="btn btn-small btn-info" onclick="verEnCalendario(${v.id})">📅 Ver en Calendario</button>` : ''}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </details>
                         </div>
-                        <div class="vestido-card-details">
-                            <div><strong>Código:</strong> ${v.codigoModelo}</div>
-                            <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
-                            <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
-                            <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
-                            ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <button class="btn btn-small ${tieneIntervalos ? 'btn-info' : 'btn-success'}" onclick="abrirModalHorasConfeccion(${v.id})">
-                                ${tieneIntervalos ? '✏️ Editar Intervalos' : '➕ Añadir Intervalos'}
-                            </button>
-                            ${tieneIntervalos ? `<button class="btn btn-small btn-info" onclick="verEnCalendario(${v.id})">📅 Ver en Calendario</button>` : ''}
-                        </div>
+                    `;
+                });
+            } else {
+                // Display ungrouped (original behavior)
+                html = vestidosEnviados.map(v => {
+                    const horas = horasConfeccion[v.id];
+                    const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                    const horasTotales = tieneIntervalos ? horas.horasTotales.toFixed(2) : '0.00';
+                    
+                    return `
+                        <div class="vestido-card-planificacion ${v.proveedor}" style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};">
+                            <div class="vestido-card-header">
+                                <div class="vestido-card-title">${v.nombreModelo}</div>
+                                <div class="vestido-card-badge">${v.proveedor.toUpperCase()}</div>
+                            </div>
+                            <div class="vestido-card-details">
+                                <div><strong>Código:</strong> ${v.codigoModelo}</div>
+                                <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
+                                <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
+                                <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
+                                ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <button class="btn btn-small ${tieneIntervalos ? 'btn-info' : 'btn-success'}" onclick="abrirModalHorasConfeccion(${v.id})">
+                                    ${tieneIntervalos ? '✏️ Editar Intervalos' : '➕ Añadir Intervalos'}
+                                </button>
+                                ${tieneIntervalos ? `<button class="btn btn-small btn-info" onclick="verEnCalendario(${v.id})">📅 Ver en Calendario</button>` : ''}
+                            </div>
                     </div>
                 `;
             }).join('');
+            }
+            
+            container.innerHTML = html;
         }
         
         function verEnCalendario(vestidoId) {
@@ -12172,11 +12412,19 @@
                 <button class="modal-close" onclick="cerrarModalVestidosEnviados()">&times;</button>
             </div>
             <div class="modal-body">
-                <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-                    <label for="mes-enviados-select">Seleccionar mes:</label>
-                    <select id="mes-enviados-select" onchange="cargarVestidosEnviados()">
-                        <!-- Options populated dynamically -->
-                    </select>
+                <div style="margin-bottom: 15px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label for="mes-enviados-select">Seleccionar mes:</label>
+                        <select id="mes-enviados-select" onchange="cargarVestidosEnviados()">
+                            <!-- Options populated dynamically -->
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label for="agrupar-enviados-checkbox" style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="agrupar-enviados-checkbox" onchange="cargarVestidosEnviados()" style="margin-right: 5px;">
+                            🔗 Agrupar por modelos
+                        </label>
+                    </div>
                 </div>
                 <div id="lista-vestidos-enviados" style="max-height: 500px; overflow-y: auto;">
                     <!-- Sent dresses list -->
@@ -12276,6 +12524,31 @@
             <div class="modal-footer">
                 <button class="btn" onclick="cerrarModalGestionarHorasCalendario()">Cancelar</button>
                 <button class="btn btn-success" onclick="confirmarMoverHoras()">➡️ Mover Horas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Problem 4: Modal for placing dresses on a calendar day -->
+    <div id="modal-colocar-vestido-dia" class="modal-overlay">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📅 Colocar Vestido en Día</h3>
+                <button class="modal-close" onclick="cerrarModalColocarVestidoDia()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <strong>Fecha seleccionada:</strong> <span id="fecha-dia-seleccionado"></span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Selecciona un vestido para colocar en este día:</strong>
+                    <small style="display: block; margin-top: 5px; color: var(--color-texto-secundario);">
+                        💡 El vestido se colocará automáticamente llenando las horas disponibles del día. 
+                        Si sobran horas, se pasarán al día siguiente.
+                    </small>
+                </div>
+                <div id="lista-vestidos-colocar" style="max-height: 400px; overflow-y: auto;">
+                    <!-- List of dresses will be populated here -->
+                </div>
             </div>
         </div>
     </div>
