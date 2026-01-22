@@ -2780,16 +2780,19 @@
                 <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                         <div>
-                            <strong>✅ En Proceso:</strong> Vestidos con horas asignadas (prioridad alta)
+                            <strong>✅ En Proceso:</strong> Vestidos con intervalos manuales asignados
                         </div>
                         <div>
-                            <strong>⏳ Pendientes:</strong> Vestidos sin horas asignadas (fecha límite)
+                            <strong>📅 Planificados:</strong> Vestidos con planificación automática sugerida
+                        </div>
+                        <div>
+                            <strong>⏳ Pendientes:</strong> Vestidos sin planificar (solo fecha límite)
                         </div>
                         <div>
                             <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
                         </div>
-                        <div>
-                            <strong>👷 Trabajadoras:</strong> Asignadas en intervalos del día
+                        <div style="grid-column: span 2;">
+                            <strong>💡 Tip:</strong> Haz doble clic en un vestido para dividir/reasignar horas manualmente
                         </div>
                     </div>
                 </div>
@@ -6570,6 +6573,10 @@
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
                     const draggable = 'true';
                     
+                    // Check if has suggested planning
+                    const tienePlanificacionSugerida = v.planificacionSugerida && v.planificacionSugerida.diasAsignados;
+                    const icono = tienePlanificacionSugerida ? '📅' : '⏳'; // Calendar icon for suggested, hourglass for deadline only
+                    
                     // Get supplier color
                     const proveedor = v.proveedor;
                     const colorBg = `var(--color-${proveedor})`;
@@ -6582,7 +6589,7 @@
                         ondragend="onDragEndCalendario(event)"
                         ondblclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} - Doble clic para dividir horas">⏳ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
+                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tienePlanificacionSugerida ? ' (Planificación sugerida)' : ' (Por fecha límite)'} - Doble clic para dividir horas">${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</div>`;
                 });
 
                 html += `
@@ -7220,7 +7227,8 @@
                 trabajadoras,
                 intervalos,
                 horasTotales: totalHoras,
-                grupoId: grupoId || null
+                grupoId: grupoId || null,
+                esManual: true // Mark as manually created
             };
 
             horasConfeccion[currentEditingVestidoId] = horasData;
@@ -7236,7 +7244,8 @@
                                 trabajadoras: [...trabajadoras],
                                 intervalos: intervalos.map(i => ({ ...i })),
                                 horasTotales: totalHoras,
-                                grupoId: grupoId
+                                grupoId: grupoId,
+                                esManual: true // Mark as manually created
                             };
                         }
                     });
