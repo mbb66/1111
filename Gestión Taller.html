@@ -741,6 +741,19 @@
             opacity: 1;
         }
 
+        .partition-badge {
+            position: absolute;
+            top: 2px;
+            right: 22px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 9px;
+            font-weight: bold;
+            line-height: 14px;
+        }
+
         .finanzas-subtabs {
             display: flex;
             border-bottom: 2px solid var(--color-borde);
@@ -5448,10 +5461,10 @@
                 ondragstart="empezarArrastre(event, ${vestido.id}, '${fecha}', ${entrada.horas}, ${entrada.parte || 'null'})"
                 onclick="abrirModalDividirCarga(${vestido.id}, '${fecha}', ${entrada.horas}, ${entrada.parte || 'null'})"
                 title="${tooltip}">
-                ${esParcial ? `<span style="opacity: 0.7;">[${entrada.parte}]</span> ` : ''}
+                ${esParcial && entrada.parte ? `<span class="partition-badge">${entrada.parte}</span>` : ''}
                 <strong>${vestido.nombreModelo}${vestido.proveedor === 'rosa_clara' && vestido.numeroSerie ? ` (Serie: ${vestido.numeroSerie})` : ''}</strong>
                 <div class="parte-info">${entrada.horas.toFixed(1)}h${esParcial ? ` / ${horasTotales.toFixed(1)}h total` : ''}</div>
-                <button class="btn-eliminar-vestido" onclick="eliminarVestidoPlanificado(${vestido.id}, event)">×</button>
+                <button class="btn-eliminar-vestido" onclick="eliminarPartePlanificada(${vestido.id}, '${fecha}', ${entrada.parte || 'null'}, event)">×</button>
             </div>`;
         }
 
@@ -5483,12 +5496,60 @@
             if (!vestido) return;
 
             if (data.fechaOrigen) {
+                // Moving from calendar - check if destination has enough capacity
+                const limiteDestino = obtenerLimiteHoras(fechaDestino);
+                const ocupadasDestino = (planificacion[fechaDestino] || []).reduce((t, v) => t + v.horas, 0);
+                const disponiblesDestino = limiteDestino - ocupadasDestino;
+                
+                // Remove from origin first
                 planificacion[data.fechaOrigen] = (planificacion[data.fechaOrigen] || []).filter(v => !(v.vestidoId === data.vestidoId && v.parte === data.parte));
                 if (planificacion[data.fechaOrigen].length === 0) delete planificacion[data.fechaOrigen];
-                if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
-                planificacion[fechaDestino].push({ vestidoId: data.vestidoId, horas: data.horas, parte: data.parte });
+                
+                if (data.horas <= disponiblesDestino) {
+                    // Fits completely in destination
+                    if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
+                    planificacion[fechaDestino].push({ vestidoId: data.vestidoId, horas: data.horas, parte: data.parte });
+                } else {
+                    // Need to split across multiple days
+                    let horasRestantes = data.horas;
+                    let fechaActual = new Date(fechaDestino + 'T12:00:00Z');
+                    
+                    // Find the highest existing parte number for this vestido
+                    let maxParte = 0;
+                    Object.keys(planificacion).forEach(f => {
+                        planificacion[f].forEach(v => {
+                            if (v.vestidoId === data.vestidoId && v.parte && v.parte > maxParte) {
+                                maxParte = v.parte;
+                            }
+                        });
+                    });
+                    let parteNum = maxParte + 1;
+                    
+                    while (horasRestantes > 0.01) {
+                        let diaSemana = fechaActual.getUTCDay();
+                        while (diaSemana === 6 || diaSemana === 0) {
+                            fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+                            diaSemana = fechaActual.getUTCDay();
+                        }
+                        const fechaActualStr = fechaActual.toISOString().split('T')[0];
+                        const limite = obtenerLimiteHoras(fechaActualStr);
+                        const ocupadas = (planificacion[fechaActualStr] || []).reduce((t, v) => t + v.horas, 0);
+                        const disponibles = limite - ocupadas;
+
+                        if (disponibles > 0) {
+                            const asignar = Math.min(horasRestantes, disponibles);
+                            if (!planificacion[fechaActualStr]) planificacion[fechaActualStr] = [];
+                            planificacion[fechaActualStr].push({ vestidoId: vestido.id, horas: asignar, parte: parteNum++ });
+                            horasRestantes -= asignar;
+                        }
+                        if (horasRestantes > 0.01) {
+                            fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+                        }
+                    }
+                }
             }
             else {
+                // Dragging from unplanned list - auto-split as needed
                 let horasRestantes = obtenerHorasPlanificacion(vestido);
                 let fechaActual = new Date(fechaDestino + 'T12:00:00Z');
                 let parteNum = 1;
@@ -5515,6 +5576,52 @@
                 }
             }
             guardarYRecargarPlanificacion();
+        }
+
+        function eliminarPartePlanificada(vestidoId, fecha, parte, event) {
+            event.stopPropagation();
+            
+            // Check if there are multiple parts of this dress in the calendar
+            let totalPartes = 0;
+            Object.keys(planificacion).forEach(f => {
+                const partesEnFecha = planificacion[f].filter(v => v.vestidoId === vestidoId);
+                totalPartes += partesEnFecha.length;
+            });
+            
+            // If this is the only part or parte is null, ask if user wants to delete all
+            if (totalPartes === 1 || parte === null) {
+                if (confirm('¿Eliminar este vestido de la planificación?')) {
+                    Object.keys(planificacion).forEach(f => {
+                        planificacion[f] = planificacion[f].filter(v => v.vestidoId !== vestidoId);
+                        if (planificacion[f].length === 0) delete planificacion[f];
+                    });
+                    vestidosPlanificadosAuto.delete(vestidoId);
+                    guardarYRecargarPlanificacion();
+                }
+            } else {
+                // Multiple parts exist, ask if user wants to delete just this part or all
+                const mensaje = `Este vestido está dividido en ${totalPartes} partes.\n\n` +
+                    `¿Qué deseas eliminar?\n\n` +
+                    `OK = Solo esta parte (${parte})\n` +
+                    `Cancelar = Todas las partes del vestido`;
+                
+                const soloEstaParte = confirm(mensaje);
+                
+                if (soloEstaParte) {
+                    // Delete only this specific part
+                    planificacion[fecha] = planificacion[fecha].filter(v => !(v.vestidoId === vestidoId && v.parte === parte));
+                    if (planificacion[fecha].length === 0) delete planificacion[fecha];
+                    guardarYRecargarPlanificacion();
+                } else {
+                    // Delete all parts
+                    Object.keys(planificacion).forEach(f => {
+                        planificacion[f] = planificacion[f].filter(v => v.vestidoId !== vestidoId);
+                        if (planificacion[f].length === 0) delete planificacion[f];
+                    });
+                    vestidosPlanificadosAuto.delete(vestidoId);
+                    guardarYRecargarPlanificacion();
+                }
+            }
         }
 
         function eliminarVestidoPlanificado(vestidoId, event) {
