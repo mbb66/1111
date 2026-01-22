@@ -4779,8 +4779,8 @@
                 return;
             };
 
-            // Create standardized tabular format
-            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie', 'Precio'];
+            // Create standardized tabular format without prices and VAT
+            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie'];
             const separator = '-'.repeat(80);
             
             // Build header row
@@ -4799,19 +4799,11 @@
                     v.codigoModelo,
                     v.talla || 'N/A',
                     v.lote || 'N/A',
-                    ofSerie,
-                    v.precioBase.toFixed(2) + '€'
+                    ofSerie
                 ];
                 textoTabular += row.join('\t') + '\n';
             });
             
-            // Add totals
-            const totalBase = vestidosDelAlbaran.reduce((sum, v) => sum + (v.precioBase || 0), 0);
-            const totalConIva = totalBase * 1.21;
-            
-            textoTabular += separator + '\n';
-            textoTabular += `TOTAL BASE:\t\t\t\t\t${totalBase.toFixed(2)}€\n`;
-            textoTabular += `TOTAL (IVA 21%):\t\t\t\t\t${totalConIva.toFixed(2)}€\n`;
             textoTabular += separator + '\n';
 
             navigator.clipboard.writeText(textoTabular).then(() => {
@@ -6485,20 +6477,87 @@
                 return;
             }
             
-            // Prompt for hours to move to next day
-            const horasAMover = parseFloat(prompt(
-                `Vestido: ${vestido.nombreModelo}\n` +
-                `Horas en ${new Date(fechaActual + 'T00:00:00').toLocaleDateString('es-ES')}: ${horasEnFecha.toFixed(2)}h\n` +
-                `Horas totales estimadas: ${horasEstimadas.toFixed(2)}h\n\n` +
-                `¿Cuántas horas deseas mover al siguiente día laboral?`,
-                horasEnFecha.toFixed(2)
-            ));
+            // If has manual intervals, redirect to full hours modal
+            if (horas && horas.intervalos && horas.esManual) {
+                alert('Este vestido tiene intervalos manuales. Usa el modal de horas de confección para editar manualmente.');
+                abrirModalHorasConfeccion(vestidoId);
+                return;
+            }
             
-            if (isNaN(horasAMover) || horasAMover <= 0) return;
+            // Open modal with dress information
+            const modal = document.getElementById('modal-gestionar-horas-calendario');
+            const infoContainer = document.getElementById('modal-calendario-info');
+            const horasInput = document.getElementById('horas-a-mover');
+            
+            // Populate dress info with more details
+            const fechaFormateada = new Date(fechaActual + 'T00:00:00').toLocaleDateString('es-ES', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            
+            infoContainer.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>👗 Modelo:</strong> ${vestido.nombreModelo}<br>
+                        <strong>📦 Lote:</strong> ${vestido.lote || 'N/A'}${vestido.numeroOF ? ` | OF: ${vestido.numeroOF}` : ''}${vestido.numeroSerie ? ` | Serie: ${vestido.numeroSerie}` : ''}<br>
+                        <strong>📏 Talla:</strong> ${vestido.talla || 'N/A'}
+                    </div>
+                    <div>
+                        <strong>🏭 Proveedor:</strong> ${vestido.proveedor.toUpperCase()}<br>
+                        <strong>📅 Fecha:</strong> ${fechaFormateada}<br>
+                        ${vestido.fechaLimite ? `<strong>⏰ Fecha Límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}` : ''}
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: var(--color-alerta-fondo); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><strong>⏱️ Horas en esta fecha:</strong></span>
+                        <span style="font-size: 1.2em; font-weight: 700; color: var(--color-primario);">${horasEnFecha.toFixed(2)}h</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span><strong>📊 Horas totales estimadas:</strong></span>
+                        <span style="font-weight: 600;">${horasEstimadas.toFixed(2)}h</span>
+                    </div>
+                </div>
+            `;
+            
+            // Set default value for hours to move
+            horasInput.value = horasEnFecha.toFixed(2);
+            horasInput.max = horasEnFecha;
+            
+            // Store context for later use
+            modal.dataset.vestidoId = vestidoId;
+            modal.dataset.fechaActual = fechaActual;
+            modal.dataset.horasEnFecha = horasEnFecha;
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
+        }
+        
+        function cerrarModalGestionarHorasCalendario() {
+            const modal = document.getElementById('modal-gestionar-horas-calendario');
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+        }
+        
+        function confirmarMoverHoras() {
+            const modal = document.getElementById('modal-gestionar-horas-calendario');
+            const vestidoId = parseInt(modal.dataset.vestidoId);
+            const fechaActual = modal.dataset.fechaActual;
+            const horasEnFecha = parseFloat(modal.dataset.horasEnFecha);
+            const horasInput = document.getElementById('horas-a-mover');
+            const horasAMover = parseFloat(horasInput.value);
+            
+            if (isNaN(horasAMover) || horasAMover <= 0) {
+                alert('Por favor, introduce un número válido de horas a mover.');
+                return;
+            }
+            
             if (horasAMover > horasEnFecha) {
                 alert('No puedes mover más horas de las asignadas en este día.');
                 return;
             }
+            
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) return;
             
             // Find next working day
             const fechaDate = new Date(fechaActual + 'T00:00:00');
@@ -6511,11 +6570,7 @@
             const fechaSiguiente = siguienteDia.toISOString().split('T')[0];
             
             // Update planning
-            if (horas && horas.intervalos && horas.esManual) {
-                // Has manual intervals - need to open the full modal to edit
-                alert('Este vestido tiene intervalos manuales. Usa el modal de horas de confección para editar manualmente.');
-                abrirModalHorasConfeccion(vestidoId);
-            } else if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados) {
+            if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados) {
                 // Has suggested planning - update it
                 const diasAsignados = vestido.planificacionSugerida.diasAsignados;
                 const diaActualIdx = diasAsignados.findIndex(d => d.fecha === fechaActual);
@@ -6541,7 +6596,11 @@
                 
                 guardarTodo();
                 generarCalendarioPlanificacion();
+                cerrarModalGestionarHorasCalendario();
                 alert(`✅ ${horasAMover.toFixed(2)}h movidas al ${siguienteDia.toLocaleDateString('es-ES')}`);
+            } else {
+                alert('Este vestido no tiene planificación sugerida para modificar.');
+                cerrarModalGestionarHorasCalendario();
             }
         }
         
@@ -6781,9 +6840,9 @@
                                 draggable="${draggable}" 
                                 ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
                                 ondragend="onDragEndCalendario(event)"
-                                ondblclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
-                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - Doble clic para dividir horas">🔗 ${nombreDisplay}</div>`;
+                                onclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
+                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: pointer; ${opacidad}" 
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - Clic para gestionar">🔗 ${nombreDisplay}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
@@ -6814,9 +6873,9 @@
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
-                            ondblclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
-                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: move; ${opacidad}" 
-                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} - Doble clic para dividir horas">${partitionBadge}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                            onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
+                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: pointer; ${opacidad}" 
+                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} - Clic para gestionar horas">${partitionBadge}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
                             <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarParticionCalendario(${v.id}, '${fechaStr}', event)">×</button>
                         </div>`;
                     }
@@ -6851,9 +6910,9 @@
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
-                        ondblclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
-                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: ${draggable === 'true' ? 'move' : 'default'}; ${opacidad}" 
-                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tienePlanificacionSugerida ? ' (Planificación sugerida)' : ' (Por fecha límite)'} - Doble clic para dividir horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                        onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
+                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tienePlanificacionSugerida ? ' (Planificación sugerida)' : ' (Por fecha límite)'} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
                         <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarParticionCalendario(${v.id}, '${fechaStr}', event)">×</button>
                     </div>`;
                 });
@@ -7033,7 +7092,8 @@
             const confirmMsg = window.confirm(
                 `¿Desea planificar automáticamente ${vestidosPendientes.length} vestido(s) pendiente(s)?\n\n` +
                 `La planificación automática:\n` +
-                `✓ Organizará vestidos en días según horas de confección\n` +
+                `✓ Llenará todas las horas disponibles del día con vestidos\n` +
+                `✓ Si un vestido necesita más horas, continuará al día siguiente\n` +
                 `✓ Respetará las horas diarias disponibles\n` +
                 `✓ Optimizará la carga entre lunes y viernes\n` +
                 `✓ NO creará intervalos de tiempo manuales\n\n` +
@@ -7046,10 +7106,12 @@
             hoy.setHours(0, 0, 0, 0);
 
             let vestidosPlanificados = 0;
-            let vestidosConIntervalos = 0;
 
-            // Helper function to get available hours for a date
-            function getHorasDisponiblesFecha(fecha) {
+            // Track hours used per day
+            const horasUsadasPorDia = {}; // { 'YYYY-MM-DD': horasUsadas }
+
+            // Helper function to get total available hours for a date
+            function getHorasTotalesFecha(fecha) {
                 const fechaStr = fecha.toISOString().split('T')[0];
                 const fechaObj = new Date(fechaStr + 'T12:00:00Z');
                 const diaSemana = fechaObj.getUTCDay();
@@ -7065,19 +7127,37 @@
                 return calcularHorasTotalesDia(fechaStr, esFestivo);
             }
 
-            // Helper function to find next working date
+            // Helper function to get remaining available hours for a date
+            function getHorasDisponiblesFecha(fecha) {
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const horasTotales = getHorasTotalesFecha(fecha);
+                const horasUsadas = horasUsadasPorDia[fechaStr] || 0;
+                return Math.max(0, horasTotales - horasUsadas);
+            }
+
+            // Helper function to find next working date with available hours
             function getSiguienteFechaLaboral(fecha) {
                 const siguiente = new Date(fecha);
-                do {
+                let intentos = 0;
+                while (intentos < 365) { // Prevent infinite loop
                     siguiente.setDate(siguiente.getDate() + 1);
-                } while (getHorasDisponiblesFecha(siguiente) === 0);
-                return siguiente;
+                    if (getHorasDisponiblesFecha(siguiente) > 0) {
+                        return siguiente;
+                    }
+                    intentos++;
+                }
+                // If no day with available hours found, return next working day anyway
+                const fallback = new Date(fecha);
+                do {
+                    fallback.setDate(fallback.getDate() + 1);
+                } while (getHorasTotalesFecha(fallback) === 0);
+                return fallback;
             }
 
             // Track current planning date (start from today)
             let fechaActualPlanificacion = new Date(hoy);
             // Skip to next working day if today is not a working day
-            if (getHorasDisponiblesFecha(fechaActualPlanificacion) === 0) {
+            if (getHorasTotalesFecha(fechaActualPlanificacion) === 0) {
                 fechaActualPlanificacion = getSiguienteFechaLaboral(fechaActualPlanificacion);
             }
 
@@ -7087,16 +7167,17 @@
                 
                 let horasRestantes = horasEstimadas;
                 const diasAsignados = []; // Track which days this dress is assigned to
+                
+                // Start from the current planning date
                 let fechaPlanificacion = new Date(fechaActualPlanificacion);
                 
-                // If the dress has a deadline, check if we need to start earlier
+                // If the dress has a deadline, check if we need to prioritize it
                 if (vestido.fechaLimite) {
                     const fechaLimite = new Date(vestido.fechaLimite + 'T00:00:00');
-                    // Ensure we don't start planning past the deadline
+                    // If current planning date is past deadline, reset to today
                     if (fechaPlanificacion > fechaLimite) {
-                        // This dress is overdue, plan it starting from today anyway
                         fechaPlanificacion = new Date(hoy);
-                        if (getHorasDisponiblesFecha(fechaPlanificacion) === 0) {
+                        if (getHorasTotalesFecha(fechaPlanificacion) === 0) {
                             fechaPlanificacion = getSiguienteFechaLaboral(fechaPlanificacion);
                         }
                     }
@@ -7105,7 +7186,7 @@
                 // Store the initial start date for this dress
                 const fechaInicioSugerida = fechaPlanificacion.toISOString().split('T')[0];
                 
-                // Distribute hours across available days
+                // Distribute hours across available days, filling each day completely
                 const maxDiasPlanificacion = 60; // Limit to avoid infinite loops
                 let diasUsados = 0;
                 
@@ -7113,30 +7194,32 @@
                     const horasDisponibles = getHorasDisponiblesFecha(fechaPlanificacion);
                     
                     if (horasDisponibles > 0) {
-                        // Assign hours for this day (up to available hours)
+                        // Assign as many hours as possible for this day
                         const horasAsignadas = Math.min(horasRestantes, horasDisponibles);
                         const fechaStr = fechaPlanificacion.toISOString().split('T')[0];
                         
-                        // Track this day assignment (but don't create intervals)
+                        // Track this day assignment
                         diasAsignados.push({
                             fecha: fechaStr,
                             horas: horasAsignadas
                         });
                         
+                        // Update hours used for this day
+                        horasUsadasPorDia[fechaStr] = (horasUsadasPorDia[fechaStr] || 0) + horasAsignadas;
+                        
                         horasRestantes -= horasAsignadas;
                         diasUsados++;
                     }
                     
-                    // Move to next day
-                    fechaPlanificacion = getSiguienteFechaLaboral(fechaPlanificacion);
+                    // Move to next day only if current day is full or we've assigned all hours
+                    if (horasRestantes > 0) {
+                        fechaPlanificacion = getSiguienteFechaLaboral(fechaPlanificacion);
+                    }
                 }
 
-                // Store the suggested planning info (but NOT as intervals)
-                // This keeps dresses in "en taller" while showing them in calendar
+                // Store the suggested planning info
                 if (diasAsignados.length > 0) {
-                    // Update the dress with suggested start date so it appears in calendar
                     vestido.fechaInicioSugerida = fechaInicioSugerida;
-                    // Store day assignments for display purposes (not in horasConfeccion)
                     if (!vestido.planificacionSugerida) {
                         vestido.planificacionSugerida = {};
                     }
@@ -7145,7 +7228,8 @@
                     vestidosPlanificados++;
                 }
                 
-                // Update current planning date to continue from where we left off
+                // Continue planning from current date (don't skip forward unnecessarily)
+                // This allows multiple dresses to be assigned to the same day
                 fechaActualPlanificacion = new Date(fechaPlanificacion);
             });
 
@@ -11927,6 +12011,37 @@
                 <button class="btn" onclick="cerrarModalHorasConfeccion()">Cancelar</button>
                 <button class="btn btn-info" onclick="marcarComoFinalizado()">✅ Finalizado</button>
                 <button class="btn btn-success" onclick="guardarHorasConfeccion()">💾 Guardar Horas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for managing dress hours in calendar view -->
+    <div id="modal-gestionar-horas-calendario" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>🎨 Gestionar Horas del Vestido</h3>
+                <button class="modal-close" onclick="cerrarModalGestionarHorasCalendario()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-calendario-info" style="margin-bottom: 20px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <!-- Dress info will be populated here -->
+                </div>
+                
+                <div class="form-group">
+                    <label for="horas-a-mover" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                        ⏰ Horas a mover al día siguiente:
+                    </label>
+                    <input type="number" id="horas-a-mover" step="0.5" min="0" 
+                           style="width: 100%; padding: 10px; font-size: 1em; border: 2px solid var(--color-borde); border-radius: 6px;"
+                           placeholder="Introduce las horas a mover">
+                    <small style="display: block; margin-top: 5px; color: var(--color-texto-secundario);">
+                        💡 Las horas se moverán al siguiente día laboral (lunes-viernes)
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="cerrarModalGestionarHorasCalendario()">Cancelar</button>
+                <button class="btn btn-success" onclick="confirmarMoverHoras()">➡️ Mover Horas</button>
             </div>
         </div>
     </div>
