@@ -8255,7 +8255,7 @@
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor} ${groupedClass}" 
                              data-vestido-id="${v.id}"
-                             onclick="${modoAgruparSeccion === 'enviados' ? '' : `abrirModalHorasConfeccion(${v.id})`}">
+                             onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${v.id})`}">
                             <div class="grupo-count-badge">${grupo.vestidosIds.length} vestidos</div>
                             <div class="grupo-card-title">🔗 ${v.nombreModelo.toUpperCase()}</div>
                             <div class="grupo-lotes-list">
@@ -8278,7 +8278,7 @@
                         <div class="vestido-card-planificacion ${v.proveedor}" 
                              style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};"
                              data-vestido-id="${v.id}"
-                             onclick="${modoAgruparSeccion === 'enviados' ? '' : `abrirModalHorasConfeccion(${v.id})`}">
+                             onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${v.id})`}">
                             <div class="vestido-card-header">
                                 <div class="vestido-card-title">${v.nombreModelo}</div>
                                 <div class="vestido-card-badge">${v.proveedor.toUpperCase()}</div>
