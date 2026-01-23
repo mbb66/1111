@@ -6303,9 +6303,14 @@
                     .map(id => vestidos.find(v => v.id === id))
                     .filter(v => v);
                 
-                // Extract batch numbers
+                // Extract batch numbers and serial numbers for Rosa Clará
                 const lotes = vestidosGrupo
-                    .map(v => v.lote || 'Sin lote')
+                    .map(v => {
+                        if (v.proveedor === 'rosa_clara' && v.lote && v.numeroSerie) {
+                            return `${v.lote} (Serie: ${v.numeroSerie})`;
+                        }
+                        return v.lote || 'Sin lote';
+                    })
                     .filter((lote, index, self) => self.indexOf(lote) === index); // Unique lotes
                 
                 // Count badge in upper right corner
@@ -6350,6 +6355,12 @@
                 `;
             } else {
                 // Simplified compact card showing name and batch number
+                // For Rosa Clará, also show serial number
+                let loteInfo = vestido.lote || 'N/A';
+                if (vestido.proveedor === 'rosa_clara' && vestido.numeroSerie) {
+                    loteInfo += ` (Serie: ${vestido.numeroSerie})`;
+                }
+                
                 return `
                     <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
                          draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
@@ -6358,7 +6369,7 @@
                          ondragend="onDragEndVestido(event)"
                          onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${vestido.lote || 'N/A'}</div>
+                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${loteInfo}</div>
                         </div>
                     </div>
                 `;
@@ -6557,27 +6568,19 @@
             
             if (!grupo) return;
             
-            if (!confirm(`¿Deseas desagrupar este vestido del grupo "${grupo.nombre}"?`)) {
+            if (!confirm(`¿Deseas desagrupar TODOS los ${grupo.vestidosIds.length} vestidos del grupo "${grupo.nombre}"?`)) {
                 return;
             }
             
-            // Remove from group
-            grupo.vestidosIds = grupo.vestidosIds.filter(id => id !== vestidoId);
-            
-            // Remove grupoId from dress
-            delete horasConfeccion[vestidoId].grupoId;
-            
-            // If group is now empty or has only 1 dress, delete the group
-            if (grupo.vestidosIds.length <= 1) {
-                // Unmark remaining dress
-                if (grupo.vestidosIds.length === 1) {
-                    const remainingId = grupo.vestidosIds[0];
-                    if (horasConfeccion[remainingId]) {
-                        delete horasConfeccion[remainingId].grupoId;
-                    }
+            // Remove grupoId from ALL dresses in the group
+            grupo.vestidosIds.forEach(id => {
+                if (horasConfeccion[id]) {
+                    delete horasConfeccion[id].grupoId;
                 }
-                delete vestidosGrupos[grupoId];
-            }
+            });
+            
+            // Delete the entire group
+            delete vestidosGrupos[grupoId];
             
             // Save to localStorage
             localStorage.setItem('vestidosGrupos', JSON.stringify(vestidosGrupos));
@@ -7375,12 +7378,24 @@
                             const draggable = tieneIntervalosManual ? 'false' : 'true';
                             const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
                             
-                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
+                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => {
+                                let info = `${v.nombreModelo} (Lote: ${v.lote || 'N/A'}`;
+                                if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                                    info += `, Serie: ${v.numeroSerie}`;
+                                }
+                                info += ')';
+                                return info;
+                            }).join(', ');
                             // Problem 3: Display dress name with "S" suffix instead of "grupo 3..."
-                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
+                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => {
+                                if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                                    return `${v.lote || 'N/A'}(${v.numeroSerie})`;
+                                }
+                                return v.lote || 'N/A';
+                            }).join(',');
                             const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
-                                ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
-                                : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
+                                ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 12)}]` 
+                                : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}${vestidosDelGrupoEnFecha[0].proveedor === 'rosa_clara' && vestidosDelGrupoEnFecha[0].numeroSerie ? '(' + vestidosDelGrupoEnFecha[0].numeroSerie + ')' : ''}]`;
                             
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
@@ -7419,13 +7434,20 @@
                         }
                         
                         // Simplified display: dress name and lot number only
+                        let loteDisplay = v.lote || 'N/A';
+                        let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                        if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                            loteDisplay += `(${v.numeroSerie})`;
+                            tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                        }
+                        
                         vestidosHtml += `<div 
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
                             <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                         </div>`;
                     }
@@ -7480,13 +7502,20 @@
                     }
                     
                     // Simplified display: dress name and lot number only
+                    let loteDisplay = v.lote || 'N/A';
+                    let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                    }
+                    
                     vestidosHtml += `<div 
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                        title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
                         <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                     </div>`;
                 });
@@ -7499,11 +7528,19 @@
                     const opacidad = 'opacity: 0.5;'; // 50% opacity for sent dresses
                     
                     // Display model name and lot in red
+                    let loteDisplay = v.lote || 'N/A';
+                    let tituloDisplay = `ALBARÁN: ${v.nombreModelo} - Lote: ${loteDisplay}`;
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                    }
+                    tituloDisplay += ` - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles`;
+                    
                     vestidosHtml += `<div 
                         draggable="false"
                         onclick="event.stopPropagation(); mostrarDetallesVestido(${v.id});"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="ALBARÁN: ${v.nombreModelo} - Lote: ${v.lote || 'N/A'} - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</span>
+                        title="${tituloDisplay}">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]</span>
                     </div>`;
                 });
 
@@ -8223,8 +8260,9 @@
             const year = hoy.getFullYear();
             const month = String(hoy.getMonth() + 1).padStart(2, '0');
             const day = String(hoy.getDate()).padStart(2, '0');
-            const defaultStartDateTime = `${year}-${month}-${day}T07:00`;
-            const defaultEndDateTime = `${year}-${month}-${day}T15:00`;
+            const defaultDate = `${year}-${month}-${day}`;
+            const defaultStartTime = '07:00';
+            const defaultEndTime = '15:00';
             
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
@@ -8237,14 +8275,21 @@
                         <button class="intervalo-eliminar" onclick="event.stopPropagation(); eliminarIntervalo(${numeroIntervalo - 1})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <label>📅 Fecha:</label>
+                            <input type="date" class="intervalo-fecha" value="${defaultDate}" onchange="actualizarFechaIntervalo(this); calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div>
-                                <label>Fecha y Hora Inicio:</label>
-                                <input type="datetime-local" class="intervalo-inicio" value="${defaultStartDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                <label>🕐 Hora Inicio:</label>
+                                <input type="time" class="intervalo-hora-inicio" value="${defaultStartTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
-                            <div>
-                                <label>Fecha y Hora Fin (opcional):</label>
-                                <input type="datetime-local" class="intervalo-fin" value="${defaultEndDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                            <div style="position: relative;">
+                                <label>🕐 Hora Fin:</label>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="time" class="intervalo-hora-fin" value="${defaultEndTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))" style="flex: 1;">
+                                    <button type="button" class="btn btn-small btn-info" onclick="marcarEnCurso(this)" title="Marcar como en curso" style="padding: 5px 10px; white-space: nowrap;">⏳ En Curso</button>
+                                </div>
                             </div>
                         </div>
                         <div class="intervalo-trabajadora">
@@ -8270,6 +8315,36 @@
             }
         }
         
+        // Helper function to update date for both start and end times
+        function actualizarFechaIntervalo(dateInput) {
+            const intervaloElement = dateInput.closest('.intervalo-tiempo');
+            // No need to do anything special - the date is now shared
+            // Just trigger recalculation
+            calcularHorasTotales();
+            updateIntervaloSummary(intervaloElement);
+        }
+        
+        // Helper function to mark interval as "In Progress" (no end time)
+        function marcarEnCurso(button) {
+            const intervaloElement = button.closest('.intervalo-tiempo');
+            const horaFinInput = intervaloElement.querySelector('.intervalo-hora-fin');
+            
+            // Clear the end time to mark as in progress
+            horaFinInput.value = '';
+            
+            // Update summary and recalculate
+            calcularHorasTotales();
+            updateIntervaloSummary(intervaloElement);
+            
+            // Show feedback
+            button.style.background = 'var(--color-exito)';
+            button.textContent = '✓ En Curso';
+            setTimeout(() => {
+                button.style.background = '';
+                button.textContent = '⏳ En Curso';
+            }, 1500);
+        }
+        
         // Problem 2: Toggle interval collapsed/expanded state
         function toggleIntervalo(intervaloElement) {
             intervaloElement.classList.toggle('collapsed');
@@ -8279,18 +8354,42 @@
         function updateIntervaloSummary(intervaloElement) {
             const summaryElement = intervaloElement.querySelector('.intervalo-collapsed-summary');
             const workerSelect = intervaloElement.querySelector('.intervalo-worker');
+            
+            // Try new format first (date + time separate)
+            const fechaInput = intervaloElement.querySelector('.intervalo-fecha');
+            const horaInicioInput = intervaloElement.querySelector('.intervalo-hora-inicio');
+            const horaFinInput = intervaloElement.querySelector('.intervalo-hora-fin');
+            
+            // Fallback to old format (datetime-local)
             const inicioInput = intervaloElement.querySelector('.intervalo-inicio');
             const finInput = intervaloElement.querySelector('.intervalo-fin');
             
             const workerName = workerSelect.options[workerSelect.selectedIndex]?.text || 'Sin asignar';
-            const inicio = inicioInput.value ? new Date(inicioInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-            const fin = finInput.value ? new Date(finInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
             
+            let inicio = '';
+            let fin = '';
             let horasTrabajadas = 0;
-            if (inicioInput.value && finInput.value) {
-                const inicioDate = new Date(inicioInput.value);
-                const finDate = new Date(finInput.value);
-                horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+            
+            if (fechaInput && horaInicioInput) {
+                // New format: separate date and time
+                inicio = horaInicioInput.value || '';
+                fin = horaFinInput.value || 'En curso';
+                
+                if (fechaInput.value && horaInicioInput.value && horaFinInput.value) {
+                    const inicioDate = new Date(`${fechaInput.value}T${horaInicioInput.value}`);
+                    const finDate = new Date(`${fechaInput.value}T${horaFinInput.value}`);
+                    horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+                }
+            } else if (inicioInput && finInput) {
+                // Old format: datetime-local
+                inicio = inicioInput.value ? new Date(inicioInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                fin = finInput.value ? new Date(finInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
+                
+                if (inicioInput.value && finInput.value) {
+                    const inicioDate = new Date(inicioInput.value);
+                    const finDate = new Date(finInput.value);
+                    horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+                }
             }
             
             summaryElement.textContent = `👷 ${workerName} | ${inicio} - ${fin}${horasTrabajadas > 0 ? ` (${horasTrabajadas.toFixed(2)}h)` : ''}`;
@@ -8362,21 +8461,44 @@
             let totalHoras = 0;
 
             intervalosElements.forEach(intervaloEl => {
-                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
-                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                // Try new format first (separate date and time)
+                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
+                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
+                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
                 
-                if (inicio && fin) {
-                    const inicioDate = new Date(inicio);
-                    const finDate = new Date(fin);
+                // Fallback to old format
+                const inicioInput = intervaloEl.querySelector('.intervalo-inicio');
+                const finInput = intervaloEl.querySelector('.intervalo-fin');
+                
+                let inicioDate = null;
+                let finDate = null;
+                
+                if (fechaInput && horaInicioInput) {
+                    // New format: separate date and time
+                    if (fechaInput.value && horaInicioInput.value) {
+                        inicioDate = new Date(`${fechaInput.value}T${horaInicioInput.value}`);
+                        if (horaFinInput.value) {
+                            finDate = new Date(`${fechaInput.value}T${horaFinInput.value}`);
+                        }
+                    }
+                } else if (inicioInput) {
+                    // Old format: datetime-local
+                    if (inicioInput.value) {
+                        inicioDate = new Date(inicioInput.value);
+                        if (finInput.value) {
+                            finDate = new Date(finInput.value);
+                        }
+                    }
+                }
+                
+                if (inicioDate && finDate) {
                     const diffMs = finDate - inicioDate;
                     const diffHours = diffMs / (1000 * 60 * 60);
                     if (diffHours > 0) {
                         totalHoras += diffHours;
                     }
-                } else if (inicio) {
-                    // Si solo hay inicio (trabajo en curso), mostrar indicador
-                    // No suma horas pero el intervalo es válido
                 }
+                // If only inicio (work in progress), don't add hours but interval is valid
             });
 
             const displayText = totalHoras > 0 ? `${totalHoras.toFixed(2)}h` : '⏳ En curso';
@@ -8412,12 +8534,36 @@
             const trabajadorasSet = new Set(); // Collect unique workers from intervals
 
             intervalosElements.forEach(intervaloEl => {
-                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
-                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                // Try new format first (separate date and time)
+                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
+                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
+                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
+                
+                // Fallback to old format
+                const inicioInput = intervaloEl.querySelector('.intervalo-inicio');
+                const finInput = intervaloEl.querySelector('.intervalo-fin');
+                
                 const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
                 
+                let inicio = null;
+                let fin = null;
+                
+                if (fechaInput && horaInicioInput) {
+                    // New format: combine date and time
+                    if (fechaInput.value && horaInicioInput.value) {
+                        inicio = `${fechaInput.value}T${horaInicioInput.value}`;
+                        if (horaFinInput.value) {
+                            fin = `${fechaInput.value}T${horaFinInput.value}`;
+                        }
+                    }
+                } else if (inicioInput) {
+                    // Old format
+                    inicio = inicioInput.value;
+                    fin = finInput.value;
+                }
+                
                 if (inicio) {
-                    // Permitir intervalos con solo inicio (trabajo en curso)
+                    // Allow intervals with only start time (work in progress)
                     if (fin) {
                         const inicioDate = new Date(inicio);
                         const finDate = new Date(fin);
@@ -8434,7 +8580,7 @@
                             if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                         }
                     } else {
-                        // Guardar intervalo en curso (sin fin)
+                        // Save interval in progress (without end)
                         intervalos.push({ 
                             inicio, 
                             fin: null, 
@@ -8765,9 +8911,14 @@
                         .map(id => vestidos.find(v => v.id === id))
                         .filter(v => v);
                     
-                    // Extract batch numbers
+                    // Extract batch numbers and serial numbers for Rosa Clará
                     const lotes = vestidosGrupo
-                        .map(v => v.lote || 'Sin lote')
+                        .map(v => {
+                            if (v.proveedor === 'rosa_clara' && v.lote && v.numeroSerie) {
+                                return `${v.lote} (Serie: ${v.numeroSerie})`;
+                            }
+                            return v.lote || 'Sin lote';
+                        })
                         .filter((lote, index, self) => self.indexOf(lote) === index);
                     
                     // Calculate total hours for the group
@@ -8800,6 +8951,12 @@
                     `;
                 } else {
                     // Ungrouped dress
+                    // For Rosa Clará, also show serial number
+                    let loteInfo = v.lote || 'N/A';
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteInfo += ` (Serie: ${v.numeroSerie})`;
+                    }
+                    
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor}" 
                              style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};"
@@ -8811,7 +8968,7 @@
                             </div>
                             <div class="vestido-card-details">
                                 <div><strong>Código:</strong> ${v.codigoModelo}</div>
-                                <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
+                                <div><strong>Lote:</strong> ${loteInfo}</div>
                                 <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
                                 <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
                                 ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
