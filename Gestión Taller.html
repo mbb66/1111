@@ -2103,8 +2103,8 @@
             background: var(--color-superficie);
             border: 1px solid var(--color-borde);
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: var(--sombra-suave);
@@ -2762,6 +2762,7 @@
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
                     <button class="btn btn-info" onclick="abrirModalVestidosEnviados()">📦 Vestidos Enviados</button>
+                    <button class="btn btn-success" onclick="planificarAutomatico()">🤖 Planificación Automática</button>
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
@@ -4771,6 +4772,17 @@
 
                 const totalBase = lista.reduce((sum, v) => sum + (v.precioBase || 0), 0);
                 const totalConIva = totalBase * 1.21;
+                
+                // Calculate total real and estimated hours
+                const totalHorasReales = lista.reduce((sum, v) => {
+                    const horas = horasConfeccion[v.id];
+                    return sum + (horas && horas.horasTotales ? horas.horasTotales : 0);
+                }, 0);
+                
+                const totalHorasEstimadas = lista.reduce((sum, v) => {
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    return sum + (modelo ? modelo.horas : 0);
+                }, 0);
 
                 // Format date for display
                 const fechaDisplay = fecha && fecha !== 'null' ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES') : '';
@@ -4792,10 +4804,17 @@
                         </div>
                     </div>
                     <div class="grupo-detalles">
-                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
+                        <ul>${lista.map(v => {
+                            const horas = horasConfeccion[v.id];
+                            const horasReales = horas && horas.horasTotales ? horas.horasTotales.toFixed(2) : '0.00';
+                            const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                            const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
+                            return `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€ | ⏱️ ${horasReales}h / ${horasEstimadas}h est.</li>`;
+                        }).join('')}</ul>
                         <div class="total-grupo">
                             Total Base: ${totalBase.toFixed(2)}€<br>
-                            <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong>
+                            <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong><br>
+                            <span style="font-size: 0.9em; color: var(--color-texto-secundario);">⏱️ Horas: ${totalHorasReales.toFixed(2)}h reales / ${totalHorasEstimadas.toFixed(2)}h estimadas</span>
                         </div>
                     </div>
                 </div>`;
@@ -5833,6 +5852,167 @@
             alert('✅ Planificación limpiada correctamente.');
         }
 
+        function planificarAutomatico() {
+            if (!confirm('⚠️ Esta función planificará automáticamente todos los vestidos "en taller" en el calendario.\n\n¿Deseas continuar?')) {
+                return;
+            }
+
+            // Get all dresses in workshop (en_taller and con_tara)
+            let vestidosEnTaller = vestidos.filter(v => ['en_taller', 'con_tara'].includes(v.estado));
+            
+            // Get hours for each dress (from model or confection hours)
+            vestidosEnTaller = vestidosEnTaller.map(v => {
+                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horas = horasConfeccion[v.id];
+                const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.some(i => i.manual);
+                
+                return {
+                    ...v,
+                    horasEstimadas,
+                    tieneIntervalosManual,
+                    horasConfeccion: horas
+                };
+            });
+
+            // Priority 1: Dresses with manually added intervals
+            const prioridad1 = vestidosEnTaller.filter(v => v.tieneIntervalosManual);
+            
+            // Priority 2: Dresses with end date
+            const prioridad2 = vestidosEnTaller.filter(v => !v.tieneIntervalosManual && v.fechaLimite);
+            
+            // Priority 3: Rest of dresses
+            const prioridad3 = vestidosEnTaller.filter(v => !v.tieneIntervalosManual && !v.fechaLimite);
+            
+            // Sort priority 2 by end date (earliest first)
+            prioridad2.sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite));
+
+            let vestidosPlanificados = 0;
+            const hoy = new Date();
+            hoy.setHours(12, 0, 0, 0);
+
+            // Process Priority 1: Mark in calendar when they would be finished based on manual intervals
+            prioridad1.forEach(v => {
+                if (v.horasConfeccion && v.horasConfeccion.intervalos && v.horasConfeccion.intervalos.length > 0) {
+                    // Get the latest interval end date
+                    const intervalos = v.horasConfeccion.intervalos.filter(i => i.fin);
+                    if (intervalos.length > 0) {
+                        const ultimoIntervalo = intervalos.reduce((max, i) => 
+                            new Date(i.fin) > new Date(max.fin) ? i : max
+                        );
+                        const fechaFinalizacion = new Date(ultimoIntervalo.fin);
+                        const fechaStr = fechaFinalizacion.toISOString().split('T')[0];
+                        
+                        // Mark completion in the calendar (add a note or marker)
+                        // For now, we'll just add it to the planning if there are remaining hours
+                        const horasRestantes = v.horasEstimadas - v.horasConfeccion.horasTotales;
+                        if (horasRestantes > 0) {
+                            planificarVestidoDesde(v, fechaStr, horasRestantes);
+                            vestidosPlanificados++;
+                        }
+                    }
+                }
+            });
+
+            // Process Priority 2: Dresses with end date - calculate backward from end date
+            prioridad2.forEach(v => {
+                if (v.horasEstimadas > 0 && v.fechaLimite) {
+                    const fechaLimite = new Date(v.fechaLimite + 'T23:59:59');
+                    const horasNecesarias = v.horasEstimadas;
+                    
+                    // Calculate how many working days needed
+                    let horasAcumuladas = 0;
+                    let fechaActual = new Date(fechaLimite);
+                    fechaActual.setDate(fechaActual.getDate() - 1); // Start one day before limit
+                    
+                    // Work backward to find start date
+                    const diasPlanificar = [];
+                    while (horasAcumuladas < horasNecesarias && diasPlanificar.length < 60) {
+                        const fechaStr = fechaActual.toISOString().split('T')[0];
+                        const capacidadDia = obtenerLimiteHoras(fechaStr);
+                        const ocupadasDia = (planificacion[fechaStr] || []).reduce((sum, e) => sum + e.horas, 0);
+                        const disponiblesDia = capacidadDia - ocupadasDia;
+                        
+                        if (disponiblesDia > 0 && fechaActual >= hoy) {
+                            const horasAsignar = Math.min(horasNecesarias - horasAcumuladas, disponiblesDia);
+                            diasPlanificar.unshift({ fecha: fechaStr, horas: horasAsignar });
+                            horasAcumuladas += horasAsignar;
+                        }
+                        
+                        fechaActual.setDate(fechaActual.getDate() - 1);
+                    }
+                    
+                    // Add to planning
+                    if (horasAcumuladas >= horasNecesarias || diasPlanificar.length > 0) {
+                        let parteNum = 1;
+                        diasPlanificar.forEach(dia => {
+                            if (!planificacion[dia.fecha]) planificacion[dia.fecha] = [];
+                            planificacion[dia.fecha].push({ 
+                                vestidoId: v.id, 
+                                horas: dia.horas, 
+                                parte: diasPlanificar.length > 1 ? parteNum++ : null 
+                            });
+                        });
+                        vestidosPlanificados++;
+                        vestidosPlanificadosAuto.add(v.id);
+                    }
+                }
+            });
+
+            // Process Priority 3: Fill remaining gaps
+            let fechaBusqueda = new Date(hoy);
+            prioridad3.forEach(v => {
+                if (v.horasEstimadas > 0) {
+                    const fechaStr = fechaBusqueda.toISOString().split('T')[0];
+                    planificarVestidoDesde(v, fechaStr, v.horasEstimadas);
+                    vestidosPlanificados++;
+                }
+            });
+
+            guardarYRecargarPlanificacion();
+            alert(`✅ Planificación automática completada.\n\n${vestidosPlanificados} vestidos planificados.`);
+        }
+
+        function planificarVestidoDesde(vestido, fechaInicio, horasNecesarias) {
+            let horasRestantes = horasNecesarias;
+            let fechaActual = new Date(fechaInicio + 'T12:00:00Z');
+            let parteNum = 1;
+            let diasAsignados = 0;
+            
+            while (horasRestantes > 0.01 && diasAsignados < 60) {
+                // Skip weekends
+                let diaSemana = fechaActual.getUTCDay();
+                while (diaSemana === 6 || diaSemana === 0) {
+                    fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+                    diaSemana = fechaActual.getUTCDay();
+                }
+                
+                const fechaStr = fechaActual.toISOString().split('T')[0];
+                const capacidadDia = obtenerLimiteHoras(fechaStr);
+                const ocupadasDia = (planificacion[fechaStr] || []).reduce((sum, e) => sum + e.horas, 0);
+                const disponiblesDia = capacidadDia - ocupadasDia;
+                
+                if (disponiblesDia > 0) {
+                    const horasAsignar = Math.min(horasRestantes, disponiblesDia);
+                    if (!planificacion[fechaStr]) planificacion[fechaStr] = [];
+                    planificacion[fechaStr].push({ 
+                        vestidoId: vestido.id, 
+                        horas: horasAsignar, 
+                        parte: horasNecesarias > disponiblesDia || parteNum > 1 ? parteNum : null 
+                    });
+                    horasRestantes -= horasAsignar;
+                    parteNum++;
+                    diasAsignados++;
+                }
+                
+                fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+            }
+            
+            if (horasRestantes <= 0.01) {
+                vestidosPlanificadosAuto.add(vestido.id);
+            }
+        }
+
         function guardarYRecargarPlanificacion() {
             guardarTodo();
             cargarPlanificacion();
@@ -6037,16 +6217,11 @@
                         ${grupoCountBadge}
                         ${grupoTitleDisplay}
                         ${grupoLotesDisplay}
-                        <div class="vestido-card-details">
-                            <div><strong>Código Modelo:</strong> ${vestido.codigoModelo}</div>
-                            <div><strong>Proveedor:</strong> ${vestido.proveedor.toUpperCase()}</div>
-                        </div>
-                        ${horasInfo}
-                        ${trabajadorasInfo}
                         ${grupoInfo}
                     </div>
                 `;
             } else {
+                // Simplified compact card showing name and batch number
                 return `
                     <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
                          draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
@@ -6054,18 +6229,9 @@
                          ondragstart="onDragStartVestido(event, ${vestido.id})"
                          ondragend="onDragEndVestido(event)"
                          onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
-                        <div class="vestido-card-header">
-                            <div class="vestido-card-title">${vestido.nombreModelo}</div>
-                            <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${vestido.lote || 'N/A'}</div>
                         </div>
-                        <div class="vestido-card-details">
-                            <div><strong>Código:</strong> ${vestido.codigoModelo}</div>
-                            <div><strong>Lote:</strong> ${vestido.lote || 'N/A'} ${vestido.numeroOF ? `| OF: ${vestido.numeroOF}` : ''}</div>
-                            <div><strong>Talla:</strong> ${vestido.talla || 'N/A'}</div>
-                            ${vestido.fechaLimite ? `<div><strong>Fecha límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
-                        </div>
-                        ${horasInfo}
-                        ${trabajadorasInfo}
                     </div>
                 `;
             }
@@ -8255,7 +8421,7 @@
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor} ${groupedClass}" 
                              data-vestido-id="${v.id}"
-                             onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${v.id})`}">
+                             ${modoAgruparSeccion === 'enviados' ? '' : `onclick="abrirModalHorasConfeccion(${v.id})"`}>
                             <div class="grupo-count-badge">${grupo.vestidosIds.length} vestidos</div>
                             <div class="grupo-card-title">🔗 ${v.nombreModelo.toUpperCase()}</div>
                             <div class="grupo-lotes-list">
@@ -8278,7 +8444,7 @@
                         <div class="vestido-card-planificacion ${v.proveedor}" 
                              style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};"
                              data-vestido-id="${v.id}"
-                             onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${v.id})`}">
+                             ${modoAgruparSeccion === 'enviados' ? '' : `onclick="abrirModalHorasConfeccion(${v.id})"`}>
                             <div class="vestido-card-header">
                                 <div class="vestido-card-title">${v.nombreModelo}</div>
                                 <div class="vestido-card-badge">${v.proveedor.toUpperCase()}</div>
