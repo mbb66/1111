@@ -4771,6 +4771,17 @@
 
                 const totalBase = lista.reduce((sum, v) => sum + (v.precioBase || 0), 0);
                 const totalConIva = totalBase * 1.21;
+                
+                // Calculate total real and estimated hours
+                const totalHorasReales = lista.reduce((sum, v) => {
+                    const horas = horasConfeccion[v.id];
+                    return sum + (horas && horas.horasTotales ? horas.horasTotales : 0);
+                }, 0);
+                
+                const totalHorasEstimadas = lista.reduce((sum, v) => {
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    return sum + (modelo ? modelo.horas : 0);
+                }, 0);
 
                 // Format date for display
                 const fechaDisplay = fecha && fecha !== 'null' ? new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES') : '';
@@ -4792,10 +4803,17 @@
                         </div>
                     </div>
                     <div class="grupo-detalles">
-                        <ul>${lista.map(v => `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€</li>`).join('')}</ul>
+                        <ul>${lista.map(v => {
+                            const horas = horasConfeccion[v.id];
+                            const horasReales = horas && horas.horasTotales ? horas.horasTotales.toFixed(2) : '0.00';
+                            const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                            const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
+                            return `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€ | ⏱️ ${horasReales}h / ${horasEstimadas}h est.</li>`;
+                        }).join('')}</ul>
                         <div class="total-grupo">
                             Total Base: ${totalBase.toFixed(2)}€<br>
-                            <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong>
+                            <strong>Total (IVA incl.): ${totalConIva.toFixed(2)}€</strong><br>
+                            <span style="font-size: 0.9em; color: var(--color-texto-secundario);">⏱️ Horas: ${totalHorasReales.toFixed(2)}h reales / ${totalHorasEstimadas.toFixed(2)}h estimadas</span>
                         </div>
                     </div>
                 </div>`;
