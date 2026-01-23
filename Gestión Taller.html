@@ -6320,16 +6320,30 @@
         function attachSelectableListeners(seccion) {
             const containerName = seccion === 'enviados' ? 'lista-vestidos-enviados' : `lista-${seccion.replace('_', '-')}`;
             const container = document.getElementById(containerName);
+            if (!container) return;
+            
             const cards = container.querySelectorAll('.vestido-card-planificacion');
             
             cards.forEach(card => {
-                card.addEventListener('click', function(e) {
+                // Remove any existing listener by cloning the node
+                const newCard = card.cloneNode(true);
+                card.parentNode.replaceChild(newCard, card);
+                
+                // Add new listener to the cloned card
+                newCard.addEventListener('click', function(e) {
                     if (modoAgruparSeccion === seccion) {
+                        // Don't prevent clicks on buttons
+                        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+                            return;
+                        }
                         e.stopPropagation();
                         const vestidoId = parseInt(this.dataset.vestidoId);
                         toggleVestidoSeleccion(vestidoId, seccion);
                     }
                 });
+                
+                // Make sure the card has pointer cursor in selection mode
+                newCard.style.cursor = 'pointer';
             });
         }
 
@@ -7176,9 +7190,22 @@
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
                     const draggable = 'true';
                     
+                    // Check if dress is in automatic planning for this date
+                    const enPlanificacionAuto = planificacion[fechaStr] && planificacion[fechaStr].some(e => e.vestidoId === v.id);
+                    
                     // Check if has suggested planning
                     const tienePlanificacionSugerida = v.planificacionSugerida && v.planificacionSugerida.diasAsignados;
-                    const icono = tienePlanificacionSugerida ? '📅' : '⏳'; // Calendar icon for suggested, hourglass for deadline only
+                    
+                    // Determine icon: 🤖 for automatic planning, 📅 for suggested, ⏳ for deadline only
+                    let icono = '⏳'; // Default: deadline only
+                    let tooltipType = '(Por fecha límite)';
+                    if (enPlanificacionAuto) {
+                        icono = '🤖'; // Robot icon for automatic planning
+                        tooltipType = '(Planificación automática)';
+                    } else if (tienePlanificacionSugerida) {
+                        icono = '📅'; // Calendar icon for suggested
+                        tooltipType = '(Planificación sugerida)';
+                    }
                     
                     // Get supplier color
                     const proveedor = v.proveedor;
@@ -7187,7 +7214,13 @@
                     
                     // Check if this dress is split across multiple days and get partition number
                     let partitionBadge = '';
-                    if (tienePlanificacionSugerida && v.planificacionSugerida.diasAsignados.length > 1) {
+                    if (enPlanificacionAuto && planificacion[fechaStr]) {
+                        // For automatic planning, check if dress has multiple parts
+                        const entradas = planificacion[fechaStr].filter(e => e.vestidoId === v.id);
+                        if (entradas.length > 0 && entradas[0].parte) {
+                            partitionBadge = `<span class="partition-badge">${entradas[0].parte}</span>`;
+                        }
+                    } else if (tienePlanificacionSugerida && v.planificacionSugerida.diasAsignados.length > 1) {
                         const partitionIndex = v.planificacionSugerida.diasAsignados.findIndex(d => d.fecha === fechaStr);
                         if (partitionIndex >= 0) {
                             partitionBadge = `<span class="partition-badge">${partitionIndex + 1}</span>`;
@@ -7201,7 +7234,7 @@
                         ondragend="onDragEndCalendario(event)"
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tienePlanificacionSugerida ? ' (Planificación sugerida)' : ' (Por fecha límite)'} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
                         <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                     </div>`;
                 });
@@ -7230,6 +7263,16 @@
 
         function obtenerVestidosParaFecha(fechaStr) {
             const resultado = [];
+            
+            // Get dresses from automatic planning in the planificacion object
+            if (planificacion[fechaStr]) {
+                planificacion[fechaStr].forEach(entrada => {
+                    const vestido = vestidos.find(v => v.id === entrada.vestidoId);
+                    if (vestido && !resultado.find(v => v.id === vestido.id)) {
+                        resultado.push(vestido);
+                    }
+                });
+            }
             
             // Get dresses with hours assigned for this date (can span multiple days)
             Object.keys(horasConfeccion).forEach(vestidoId => {
