@@ -2103,8 +2103,8 @@
             background: var(--color-superficie);
             border: 1px solid var(--color-borde);
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
             cursor: pointer;
             transition: all 0.2s ease;
             box-shadow: var(--sombra-suave);
@@ -6037,16 +6037,11 @@
                         ${grupoCountBadge}
                         ${grupoTitleDisplay}
                         ${grupoLotesDisplay}
-                        <div class="vestido-card-details">
-                            <div><strong>Código Modelo:</strong> ${vestido.codigoModelo}</div>
-                            <div><strong>Proveedor:</strong> ${vestido.proveedor.toUpperCase()}</div>
-                        </div>
-                        ${horasInfo}
-                        ${trabajadorasInfo}
                         ${grupoInfo}
                     </div>
                 `;
             } else {
+                // Simplified compact card showing name and batch number
                 return `
                     <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
                          draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
@@ -6054,18 +6049,9 @@
                          ondragstart="onDragStartVestido(event, ${vestido.id})"
                          ondragend="onDragEndVestido(event)"
                          onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
-                        <div class="vestido-card-header">
-                            <div class="vestido-card-title">${vestido.nombreModelo}</div>
-                            <div class="vestido-card-badge">${vestido.proveedor.toUpperCase()}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${vestido.lote || 'N/A'}</div>
                         </div>
-                        <div class="vestido-card-details">
-                            <div><strong>Código:</strong> ${vestido.codigoModelo}</div>
-                            <div><strong>Lote:</strong> ${vestido.lote || 'N/A'} ${vestido.numeroOF ? `| OF: ${vestido.numeroOF}` : ''}</div>
-                            <div><strong>Talla:</strong> ${vestido.talla || 'N/A'}</div>
-                            ${vestido.fechaLimite ? `<div><strong>Fecha límite:</strong> ${new Date(vestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}</div>` : ''}
-                        </div>
-                        ${horasInfo}
-                        ${trabajadorasInfo}
                     </div>
                 `;
             }
