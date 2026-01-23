@@ -8474,6 +8474,8 @@
             }
             
             // Render dresses with grouping support (like "en taller")
+            // Group dresses by grupoId - show only ONE card per group
+            const gruposYaRendeados = new Set();
             let html = '';
             
             vestidosEnviados.forEach(v => {
@@ -8485,6 +8487,15 @@
                 const grupoId = horas ? horas.grupoId : null;
                 const grupo = grupoId ? vestidosGrupos[grupoId] : null;
                 const groupedClass = grupo ? 'grouped' : '';
+                
+                // Skip if this group was already rendered
+                if (grupoId && gruposYaRendeados.has(grupoId)) {
+                    return;
+                }
+                
+                if (grupoId) {
+                    gruposYaRendeados.add(grupoId);
+                }
                 
                 // If grouped, show group view
                 if (grupo) {
