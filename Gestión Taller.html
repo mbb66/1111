@@ -6568,27 +6568,19 @@
             
             if (!grupo) return;
             
-            if (!confirm(`¿Deseas desagrupar este vestido del grupo "${grupo.nombre}"?`)) {
+            if (!confirm(`¿Deseas desagrupar TODOS los ${grupo.vestidosIds.length} vestidos del grupo "${grupo.nombre}"?`)) {
                 return;
             }
             
-            // Remove from group
-            grupo.vestidosIds = grupo.vestidosIds.filter(id => id !== vestidoId);
-            
-            // Remove grupoId from dress
-            delete horasConfeccion[vestidoId].grupoId;
-            
-            // If group is now empty or has only 1 dress, delete the group
-            if (grupo.vestidosIds.length <= 1) {
-                // Unmark remaining dress
-                if (grupo.vestidosIds.length === 1) {
-                    const remainingId = grupo.vestidosIds[0];
-                    if (horasConfeccion[remainingId]) {
-                        delete horasConfeccion[remainingId].grupoId;
-                    }
+            // Remove grupoId from ALL dresses in the group
+            grupo.vestidosIds.forEach(id => {
+                if (horasConfeccion[id]) {
+                    delete horasConfeccion[id].grupoId;
                 }
-                delete vestidosGrupos[grupoId];
-            }
+            });
+            
+            // Delete the entire group
+            delete vestidosGrupos[grupoId];
             
             // Save to localStorage
             localStorage.setItem('vestidosGrupos', JSON.stringify(vestidosGrupos));
