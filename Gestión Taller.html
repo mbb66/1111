@@ -5857,8 +5857,14 @@
                 return;
             }
 
-            // Get all dresses in workshop (en_taller and con_tara)
-            let vestidosEnTaller = vestidos.filter(v => ['en_taller', 'con_tara'].includes(v.estado));
+            // Get all dresses in workshop (en_taller and con_tara) - EXCLUDE sent dresses
+            let vestidosEnTaller = vestidos.filter(v => {
+                // Only include dresses in workshop that are NOT sent
+                if (!['en_taller', 'con_tara'].includes(v.estado)) return false;
+                // Exclude sent dresses from automatic planning
+                if (v.estado === 'enviado' || v.estado === 'pagado') return false;
+                return true;
+            });
             
             // Get hours for each dress (from model or confection hours)
             vestidosEnTaller = vestidosEnTaller.map(v => {
@@ -7084,10 +7090,14 @@
                 let trabajadorasHtml = '';
                 // Workers are no longer shown in calendar view to focus on workload organization
                 
-                // Generate hours badge
+                // Generate hours badge - show "occupied hours / available hours"
                 let horasBadge = '';
-                if (horasTotales > 0) {
-                    horasBadge = `<span style="font-size: 0.7em; background: var(--color-exito); color: white; padding: 2px 5px; border-radius: 10px;">${horasTotales.toFixed(1)}h</span>`;
+                if (!esFinDeSemana) {
+                    const horasDisponibles = obtenerLimiteHoras(fechaStr);
+                    const colorBadge = horasTotales > horasDisponibles ? 'var(--color-error)' : 
+                                      horasTotales >= horasDisponibles * 0.8 ? 'var(--color-alerta)' : 
+                                      'var(--color-exito)';
+                    horasBadge = `<span style="font-size: 0.7em; background: ${colorBadge}; color: white; padding: 2px 5px; border-radius: 10px;">${horasTotales.toFixed(1)}h / ${horasDisponibles.toFixed(1)}h</span>`;
                 }
                 
                 // Generate dresses HTML - prioritize dresses with assigned intervals
@@ -7115,6 +7125,7 @@
                             // Check if any dress in the group is sent
                             const algunoEnviado = vestidosDelGrupoEnFecha.some(v => v.estado === 'enviado' || v.estado === 'pagado');
                             const opacidad = algunoEnviado ? 'opacity: 0.5;' : '';
+                            const emojiEnviado = algunoEnviado ? '↗️ ' : '';
                             
                             // Get primary supplier color (from first dress in group)
                             const proveedor = vestidosDelGrupoEnFecha[0].proveedor;
@@ -7142,12 +7153,13 @@
                                 ondragend="onDragEndCalendario(event)"
                                 onclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
                                 style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar">🔗 ${nombreDisplay}</div>`;
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar">${emojiEnviado}🔗 ${nombreDisplay}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
                         const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                         const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                        const emojiEnviado = esEnviado ? '↗️ ' : '';
                         
                         // Problem 3 fix: Check if has manual intervals - if so, not draggable
                         const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
@@ -7178,7 +7190,7 @@
                             ondragend="onDragEndCalendario(event)"
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
                             <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                         </div>`;
                     }
@@ -7205,6 +7217,11 @@
                     } else if (tienePlanificacionSugerida) {
                         icono = '📅'; // Calendar icon for suggested
                         tooltipType = '(Planificación sugerida)';
+                    }
+                    
+                    // Add sent emoji if dress is sent
+                    if (esEnviado) {
+                        icono = '↗️ ' + icono;
                     }
                     
                     // Get supplier color
@@ -7268,8 +7285,14 @@
             if (planificacion[fechaStr]) {
                 planificacion[fechaStr].forEach(entrada => {
                     const vestido = vestidos.find(v => v.id === entrada.vestidoId);
+                    // Don't show sent dresses in automatic planning on future dates
+                    const esEnviado = vestido && (vestido.estado === 'enviado' || vestido.estado === 'pagado');
+                    const hoy = new Date().toISOString().split('T')[0];
                     if (vestido && !resultado.find(v => v.id === vestido.id)) {
-                        resultado.push(vestido);
+                        // Only add if not sent OR if the date is in the past
+                        if (!esEnviado || fechaStr <= hoy) {
+                            resultado.push(vestido);
+                        }
                     }
                 });
             }
@@ -7292,30 +7315,48 @@
                 }
             });
 
-            // Get dresses with deadline on this date (pending dresses)
+            // Get dresses with deadline on this date (pending dresses) - EXCLUDE sent dresses from future dates
             vestidos.forEach(vestido => {
+                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                const hoy = new Date().toISOString().split('T')[0];
+                
                 if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    if (!resultado.find(v => v.id === vestido.id)) {
-                        resultado.push(vestido);
+                    // Don't show sent dresses on future dates
+                    if (!esEnviado || fechaStr <= hoy) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
                     }
                 }
             });
 
-            // Get dresses with suggested start date on this date (from automatic planning)
+            // Get dresses with suggested start date on this date (from automatic planning) - EXCLUDE sent dresses from future dates
             vestidos.forEach(vestido => {
+                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                const hoy = new Date().toISOString().split('T')[0];
+                
                 if (vestido.fechaInicioSugerida === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    if (!resultado.find(v => v.id === vestido.id)) {
-                        resultado.push(vestido);
+                    // Don't show sent dresses on future dates
+                    if (!esEnviado || fechaStr <= hoy) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
                     }
                 }
             });
             
-            // Get dresses with suggested planning for this specific date
+            // Get dresses with suggested planning for this specific date - EXCLUDE sent dresses from future dates
             vestidos.forEach(vestido => {
+                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                const hoy = new Date().toISOString().split('T')[0];
+                
                 if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados && ['en_taller', 'con_tara'].includes(vestido.estado)) {
                     const tieneFechaAsignada = vestido.planificacionSugerida.diasAsignados.some(dia => dia.fecha === fechaStr);
-                    if (tieneFechaAsignada && !resultado.find(v => v.id === vestido.id)) {
-                        resultado.push(vestido);
+                    // Don't show sent dresses on future dates
+                    if (tieneFechaAsignada && (!esEnviado || fechaStr <= hoy)) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
                     }
                 }
             });
@@ -8433,6 +8474,8 @@
             }
             
             // Render dresses with grouping support (like "en taller")
+            // Group dresses by grupoId - show only ONE card per group
+            const gruposYaRendeados = new Set();
             let html = '';
             
             vestidosEnviados.forEach(v => {
@@ -8444,6 +8487,15 @@
                 const grupoId = horas ? horas.grupoId : null;
                 const grupo = grupoId ? vestidosGrupos[grupoId] : null;
                 const groupedClass = grupo ? 'grouped' : '';
+                
+                // Skip if this group was already rendered
+                if (grupoId && gruposYaRendeados.has(grupoId)) {
+                    return;
+                }
+                
+                if (grupoId) {
+                    gruposYaRendeados.add(grupoId);
+                }
                 
                 // If grouped, show group view
                 if (grupo) {
