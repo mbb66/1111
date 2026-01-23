@@ -5852,6 +5852,31 @@
             alert('✅ Planificación limpiada correctamente.');
         }
 
+        /**
+         * REFINED AUTOMATIC PLANNING FUNCTION
+         * 
+         * This function implements an optimized automatic scheduling system for dress production
+         * with the following priority-based logic:
+         * 
+         * PRIORITY SYSTEM:
+         * ----------------
+         * 1. Dresses with manual intervals: Redistribute unfinished hours to consecutive days
+         * 2. Sent dresses without intervals: Schedule day before delivery date
+         * 3. Dresses with deadlines: Backward scheduling from deadline (nearest first)
+         * 4. Other dresses: Fill remaining available slots
+         * 
+         * KEY FEATURES:
+         * -------------
+         * - Respects manually defined time intervals exactly (Requirement 1)
+         * - Handles sent dresses specially - displays on delivery date with arrow emoji (Requirement 2)
+         * - Uses work calendar capacity: 7:00-15:00 (8h daily) (Requirement 3)
+         * - Optimizes with 30-minute minimum slots (Requirement 4)
+         * - Prioritizes by nearest delivery date in conflicts (Requirement 3)
+         * - Extends to 120 days (4 months) if needed (Requirement 4)
+         * 
+         * @author Sistema de Gestión Taller
+         * @version 2.0 - Refactored for optimized scheduling
+         */
         function planificarAutomatico() {
             if (!confirm('⚠️ Esta función planificará automáticamente todos los vestidos "en taller" en el calendario.\n\n¿Deseas continuar?')) {
                 return;
