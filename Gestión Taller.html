@@ -6303,9 +6303,14 @@
                     .map(id => vestidos.find(v => v.id === id))
                     .filter(v => v);
                 
-                // Extract batch numbers
+                // Extract batch numbers and serial numbers for Rosa Clará
                 const lotes = vestidosGrupo
-                    .map(v => v.lote || 'Sin lote')
+                    .map(v => {
+                        if (v.proveedor === 'rosa_clara' && v.lote && v.numeroSerie) {
+                            return `${v.lote} (Serie: ${v.numeroSerie})`;
+                        }
+                        return v.lote || 'Sin lote';
+                    })
                     .filter((lote, index, self) => self.indexOf(lote) === index); // Unique lotes
                 
                 // Count badge in upper right corner
@@ -6350,6 +6355,12 @@
                 `;
             } else {
                 // Simplified compact card showing name and batch number
+                // For Rosa Clará, also show serial number
+                let loteInfo = vestido.lote || 'N/A';
+                if (vestido.proveedor === 'rosa_clara' && vestido.numeroSerie) {
+                    loteInfo += ` (Serie: ${vestido.numeroSerie})`;
+                }
+                
                 return `
                     <div class="vestido-card-planificacion ${vestido.proveedor} ${groupedClass}" 
                          draggable="${modoAgruparSeccion ? 'false' : 'true'}" 
@@ -6358,7 +6369,7 @@
                          ondragend="onDragEndVestido(event)"
                          onclick="${modoAgruparSeccion ? '' : `abrirModalHorasConfeccion(${vestido.id})`}">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${vestido.lote || 'N/A'}</div>
+                            <div class="vestido-card-title">${vestido.nombreModelo} - Lote: ${loteInfo}</div>
                         </div>
                     </div>
                 `;
@@ -7375,12 +7386,24 @@
                             const draggable = tieneIntervalosManual ? 'false' : 'true';
                             const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
                             
-                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => `${v.nombreModelo} (Lote: ${v.lote || 'N/A'})`).join(', ');
+                            const tituloGrupo = vestidosDelGrupoEnFecha.map(v => {
+                                let info = `${v.nombreModelo} (Lote: ${v.lote || 'N/A'}`;
+                                if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                                    info += `, Serie: ${v.numeroSerie}`;
+                                }
+                                info += ')';
+                                return info;
+                            }).join(', ');
                             // Problem 3: Display dress name with "S" suffix instead of "grupo 3..."
-                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => v.lote || 'N/A').join(',');
+                            const lotesGrupo = vestidosDelGrupoEnFecha.map(v => {
+                                if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                                    return `${v.lote || 'N/A'}(${v.numeroSerie})`;
+                                }
+                                return v.lote || 'N/A';
+                            }).join(',');
                             const nombreDisplay = vestidosDelGrupoEnFecha.length > 1 
-                                ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 8)}]` 
-                                : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}]`;
+                                ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 12)}]` 
+                                : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}${vestidosDelGrupoEnFecha[0].proveedor === 'rosa_clara' && vestidosDelGrupoEnFecha[0].numeroSerie ? '(' + vestidosDelGrupoEnFecha[0].numeroSerie + ')' : ''}]`;
                             
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
@@ -7419,13 +7442,20 @@
                         }
                         
                         // Simplified display: dress name and lot number only
+                        let loteDisplay = v.lote || 'N/A';
+                        let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                        if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                            loteDisplay += `(${v.numeroSerie})`;
+                            tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                        }
+                        
                         vestidosHtml += `<div 
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                            title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
                             <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                         </div>`;
                     }
@@ -7480,13 +7510,20 @@
                     }
                     
                     // Simplified display: dress name and lot number only
+                    let loteDisplay = v.lote || 'N/A';
+                    let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                    }
+                    
                     vestidosHtml += `<div 
                         draggable="${draggable}"
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="${v.nombreModelo} - Lote: ${v.lote || 'N/A'}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]
+                        title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
                         <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
                     </div>`;
                 });
@@ -7499,11 +7536,19 @@
                     const opacidad = 'opacity: 0.5;'; // 50% opacity for sent dresses
                     
                     // Display model name and lot in red
+                    let loteDisplay = v.lote || 'N/A';
+                    let tituloDisplay = `ALBARÁN: ${v.nombreModelo} - Lote: ${loteDisplay}`;
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                    }
+                    tituloDisplay += ` - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles`;
+                    
                     vestidosHtml += `<div 
                         draggable="false"
                         onclick="event.stopPropagation(); mostrarDetallesVestido(${v.id});"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="ALBARÁN: ${v.nombreModelo} - Lote: ${v.lote || 'N/A'} - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</span>
+                        title="${tituloDisplay}">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]</span>
                     </div>`;
                 });
 
@@ -8765,9 +8810,14 @@
                         .map(id => vestidos.find(v => v.id === id))
                         .filter(v => v);
                     
-                    // Extract batch numbers
+                    // Extract batch numbers and serial numbers for Rosa Clará
                     const lotes = vestidosGrupo
-                        .map(v => v.lote || 'Sin lote')
+                        .map(v => {
+                            if (v.proveedor === 'rosa_clara' && v.lote && v.numeroSerie) {
+                                return `${v.lote} (Serie: ${v.numeroSerie})`;
+                            }
+                            return v.lote || 'Sin lote';
+                        })
                         .filter((lote, index, self) => self.indexOf(lote) === index);
                     
                     // Calculate total hours for the group
@@ -8800,6 +8850,12 @@
                     `;
                 } else {
                     // Ungrouped dress
+                    // For Rosa Clará, also show serial number
+                    let loteInfo = v.lote || 'N/A';
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteInfo += ` (Serie: ${v.numeroSerie})`;
+                    }
+                    
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor}" 
                              style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};"
@@ -8811,7 +8867,7 @@
                             </div>
                             <div class="vestido-card-details">
                                 <div><strong>Código:</strong> ${v.codigoModelo}</div>
-                                <div><strong>Lote:</strong> ${v.lote || 'N/A'}</div>
+                                <div><strong>Lote:</strong> ${loteInfo}</div>
                                 <div><strong>Fecha Envío:</strong> ${new Date(v.fechaEnvio + 'T00:00:00').toLocaleDateString('es-ES')}</div>
                                 <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
                                 ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
