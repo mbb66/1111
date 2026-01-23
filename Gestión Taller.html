@@ -8268,8 +8268,9 @@
             const year = hoy.getFullYear();
             const month = String(hoy.getMonth() + 1).padStart(2, '0');
             const day = String(hoy.getDate()).padStart(2, '0');
-            const defaultStartDateTime = `${year}-${month}-${day}T07:00`;
-            const defaultEndDateTime = `${year}-${month}-${day}T15:00`;
+            const defaultDate = `${year}-${month}-${day}`;
+            const defaultStartTime = '07:00';
+            const defaultEndTime = '15:00';
             
             const intervaloHtml = `
                 <div class="intervalo-tiempo" data-intervalo-index="${numeroIntervalo - 1}">
@@ -8282,14 +8283,21 @@
                         <button class="intervalo-eliminar" onclick="event.stopPropagation(); eliminarIntervalo(${numeroIntervalo - 1})">×</button>
                     </div>
                     <div class="intervalo-inputs">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <label>📅 Fecha:</label>
+                            <input type="date" class="intervalo-fecha" value="${defaultDate}" onchange="actualizarFechaIntervalo(this); calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                             <div>
-                                <label>Fecha y Hora Inicio:</label>
-                                <input type="datetime-local" class="intervalo-inicio" value="${defaultStartDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                <label>🕐 Hora Inicio:</label>
+                                <input type="time" class="intervalo-hora-inicio" value="${defaultStartTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                             </div>
-                            <div>
-                                <label>Fecha y Hora Fin (opcional):</label>
-                                <input type="datetime-local" class="intervalo-fin" value="${defaultEndDateTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                            <div style="position: relative;">
+                                <label>🕐 Hora Fin:</label>
+                                <div style="display: flex; gap: 5px; align-items: center;">
+                                    <input type="time" class="intervalo-hora-fin" value="${defaultEndTime}" onchange="calcularHorasTotales(); updateIntervaloSummary(this.closest('.intervalo-tiempo'))" style="flex: 1;">
+                                    <button type="button" class="btn btn-small btn-info" onclick="marcarEnCurso(this)" title="Marcar como en curso" style="padding: 5px 10px; white-space: nowrap;">⏳ En Curso</button>
+                                </div>
                             </div>
                         </div>
                         <div class="intervalo-trabajadora">
@@ -8315,6 +8323,36 @@
             }
         }
         
+        // Helper function to update date for both start and end times
+        function actualizarFechaIntervalo(dateInput) {
+            const intervaloElement = dateInput.closest('.intervalo-tiempo');
+            // No need to do anything special - the date is now shared
+            // Just trigger recalculation
+            calcularHorasTotales();
+            updateIntervaloSummary(intervaloElement);
+        }
+        
+        // Helper function to mark interval as "In Progress" (no end time)
+        function marcarEnCurso(button) {
+            const intervaloElement = button.closest('.intervalo-tiempo');
+            const horaFinInput = intervaloElement.querySelector('.intervalo-hora-fin');
+            
+            // Clear the end time to mark as in progress
+            horaFinInput.value = '';
+            
+            // Update summary and recalculate
+            calcularHorasTotales();
+            updateIntervaloSummary(intervaloElement);
+            
+            // Show feedback
+            button.style.background = 'var(--color-exito)';
+            button.textContent = '✓ En Curso';
+            setTimeout(() => {
+                button.style.background = '';
+                button.textContent = '⏳ En Curso';
+            }, 1500);
+        }
+        
         // Problem 2: Toggle interval collapsed/expanded state
         function toggleIntervalo(intervaloElement) {
             intervaloElement.classList.toggle('collapsed');
@@ -8324,18 +8362,42 @@
         function updateIntervaloSummary(intervaloElement) {
             const summaryElement = intervaloElement.querySelector('.intervalo-collapsed-summary');
             const workerSelect = intervaloElement.querySelector('.intervalo-worker');
+            
+            // Try new format first (date + time separate)
+            const fechaInput = intervaloElement.querySelector('.intervalo-fecha');
+            const horaInicioInput = intervaloElement.querySelector('.intervalo-hora-inicio');
+            const horaFinInput = intervaloElement.querySelector('.intervalo-hora-fin');
+            
+            // Fallback to old format (datetime-local)
             const inicioInput = intervaloElement.querySelector('.intervalo-inicio');
             const finInput = intervaloElement.querySelector('.intervalo-fin');
             
             const workerName = workerSelect.options[workerSelect.selectedIndex]?.text || 'Sin asignar';
-            const inicio = inicioInput.value ? new Date(inicioInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
-            const fin = finInput.value ? new Date(finInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
             
+            let inicio = '';
+            let fin = '';
             let horasTrabajadas = 0;
-            if (inicioInput.value && finInput.value) {
-                const inicioDate = new Date(inicioInput.value);
-                const finDate = new Date(finInput.value);
-                horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+            
+            if (fechaInput && horaInicioInput) {
+                // New format: separate date and time
+                inicio = horaInicioInput.value || '';
+                fin = horaFinInput.value || 'En curso';
+                
+                if (fechaInput.value && horaInicioInput.value && horaFinInput.value) {
+                    const inicioDate = new Date(`${fechaInput.value}T${horaInicioInput.value}`);
+                    const finDate = new Date(`${fechaInput.value}T${horaFinInput.value}`);
+                    horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+                }
+            } else if (inicioInput && finInput) {
+                // Old format: datetime-local
+                inicio = inicioInput.value ? new Date(inicioInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '';
+                fin = finInput.value ? new Date(finInput.value).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : 'En curso';
+                
+                if (inicioInput.value && finInput.value) {
+                    const inicioDate = new Date(inicioInput.value);
+                    const finDate = new Date(finInput.value);
+                    horasTrabajadas = (finDate - inicioDate) / (1000 * 60 * 60);
+                }
             }
             
             summaryElement.textContent = `👷 ${workerName} | ${inicio} - ${fin}${horasTrabajadas > 0 ? ` (${horasTrabajadas.toFixed(2)}h)` : ''}`;
@@ -8407,21 +8469,44 @@
             let totalHoras = 0;
 
             intervalosElements.forEach(intervaloEl => {
-                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
-                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                // Try new format first (separate date and time)
+                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
+                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
+                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
                 
-                if (inicio && fin) {
-                    const inicioDate = new Date(inicio);
-                    const finDate = new Date(fin);
+                // Fallback to old format
+                const inicioInput = intervaloEl.querySelector('.intervalo-inicio');
+                const finInput = intervaloEl.querySelector('.intervalo-fin');
+                
+                let inicioDate = null;
+                let finDate = null;
+                
+                if (fechaInput && horaInicioInput) {
+                    // New format: separate date and time
+                    if (fechaInput.value && horaInicioInput.value) {
+                        inicioDate = new Date(`${fechaInput.value}T${horaInicioInput.value}`);
+                        if (horaFinInput.value) {
+                            finDate = new Date(`${fechaInput.value}T${horaFinInput.value}`);
+                        }
+                    }
+                } else if (inicioInput) {
+                    // Old format: datetime-local
+                    if (inicioInput.value) {
+                        inicioDate = new Date(inicioInput.value);
+                        if (finInput.value) {
+                            finDate = new Date(finInput.value);
+                        }
+                    }
+                }
+                
+                if (inicioDate && finDate) {
                     const diffMs = finDate - inicioDate;
                     const diffHours = diffMs / (1000 * 60 * 60);
                     if (diffHours > 0) {
                         totalHoras += diffHours;
                     }
-                } else if (inicio) {
-                    // Si solo hay inicio (trabajo en curso), mostrar indicador
-                    // No suma horas pero el intervalo es válido
                 }
+                // If only inicio (work in progress), don't add hours but interval is valid
             });
 
             const displayText = totalHoras > 0 ? `${totalHoras.toFixed(2)}h` : '⏳ En curso';
@@ -8457,12 +8542,36 @@
             const trabajadorasSet = new Set(); // Collect unique workers from intervals
 
             intervalosElements.forEach(intervaloEl => {
-                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
-                const fin = intervaloEl.querySelector('.intervalo-fin').value;
+                // Try new format first (separate date and time)
+                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
+                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
+                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
+                
+                // Fallback to old format
+                const inicioInput = intervaloEl.querySelector('.intervalo-inicio');
+                const finInput = intervaloEl.querySelector('.intervalo-fin');
+                
                 const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
                 
+                let inicio = null;
+                let fin = null;
+                
+                if (fechaInput && horaInicioInput) {
+                    // New format: combine date and time
+                    if (fechaInput.value && horaInicioInput.value) {
+                        inicio = `${fechaInput.value}T${horaInicioInput.value}`;
+                        if (horaFinInput.value) {
+                            fin = `${fechaInput.value}T${horaFinInput.value}`;
+                        }
+                    }
+                } else if (inicioInput) {
+                    // Old format
+                    inicio = inicioInput.value;
+                    fin = finInput.value;
+                }
+                
                 if (inicio) {
-                    // Permitir intervalos con solo inicio (trabajo en curso)
+                    // Allow intervals with only start time (work in progress)
                     if (fin) {
                         const inicioDate = new Date(inicio);
                         const finDate = new Date(fin);
@@ -8479,7 +8588,7 @@
                             if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                         }
                     } else {
-                        // Guardar intervalo en curso (sin fin)
+                        // Save interval in progress (without end)
                         intervalos.push({ 
                             inicio, 
                             fin: null, 
