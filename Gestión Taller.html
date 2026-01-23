@@ -5857,13 +5857,18 @@
                 return;
             }
 
-            // Get all dresses in workshop (en_taller and con_tara) - EXCLUDE sent dresses
+            // Get all dresses in workshop (en_taller and con_tara) - EXCLUDE sent/paid dresses without hours
             let vestidosEnTaller = vestidos.filter(v => {
-                // Only include dresses in workshop that are NOT sent
-                if (!['en_taller', 'con_tara'].includes(v.estado)) return false;
-                // Exclude sent dresses from automatic planning
-                if (v.estado === 'enviado' || v.estado === 'pagado') return false;
-                return true;
+                // Include dresses in workshop
+                if (['en_taller', 'con_tara'].includes(v.estado)) return true;
+                // Include sent/paid dresses that don't have manual intervals assigned yet
+                // This allows planning sent dresses without manual time tracking
+                if (['enviado', 'pagado'].includes(v.estado)) {
+                    const horas = horasConfeccion[v.id];
+                    const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
+                    return !tieneIntervalosManual;
+                }
+                return false;
             });
             
             // Get hours for each dress (from model or confection hours)
@@ -5871,57 +5876,97 @@
                 const modelo = modelos.find(m => m.codigo === v.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
                 const horas = horasConfeccion[v.id];
-                const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.some(i => i.manual);
+                const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
+                const esEnviado = ['enviado', 'pagado'].includes(v.estado);
                 
                 return {
                     ...v,
                     horasEstimadas,
                     tieneIntervalosManual,
-                    horasConfeccion: horas
+                    horasConfeccion: horas,
+                    esEnviado
                 };
             });
 
-            // Priority 1: Dresses with manually added intervals
+            // Priority 1: Dresses with manually added intervals - redistribute remaining hours
             const prioridad1 = vestidosEnTaller.filter(v => v.tieneIntervalosManual);
             
-            // Priority 2: Dresses with end date
-            const prioridad2 = vestidosEnTaller.filter(v => !v.tieneIntervalosManual && v.fechaLimite);
+            // Priority 2: Sent dresses without manual intervals - schedule day before delivery
+            const prioridad2 = vestidosEnTaller.filter(v => v.esEnviado && !v.tieneIntervalosManual && v.fechaEnvio);
             
-            // Priority 3: Rest of dresses
-            const prioridad3 = vestidosEnTaller.filter(v => !v.tieneIntervalosManual && !v.fechaLimite);
+            // Priority 3: Dresses with end date (not sent)
+            const prioridad3 = vestidosEnTaller.filter(v => !v.esEnviado && !v.tieneIntervalosManual && v.fechaLimite);
             
-            // Sort priority 2 by end date (earliest first)
-            prioridad2.sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite));
+            // Priority 4: Rest of dresses
+            const prioridad4 = vestidosEnTaller.filter(v => !v.esEnviado && !v.tieneIntervalosManual && !v.fechaLimite);
+            
+            // Sort priority 2 by delivery date (earliest first)
+            prioridad2.sort((a, b) => new Date(a.fechaEnvio) - new Date(b.fechaEnvio));
+            
+            // Sort priority 3 by end date (earliest first)
+            prioridad3.sort((a, b) => new Date(a.fechaLimite) - new Date(b.fechaLimite));
 
             let vestidosPlanificados = 0;
             const hoy = new Date();
             hoy.setHours(12, 0, 0, 0);
 
-            // Process Priority 1: Mark in calendar when they would be finished based on manual intervals
+            // Process Priority 1: Dresses with manual intervals - redistribute remaining hours
+            // Requirement 1: Respect manually defined intervals, redistribute unfinished hours
             prioridad1.forEach(v => {
                 if (v.horasConfeccion && v.horasConfeccion.intervalos && v.horasConfeccion.intervalos.length > 0) {
-                    // Get the latest interval end date
-                    const intervalos = v.horasConfeccion.intervalos.filter(i => i.fin);
-                    if (intervalos.length > 0) {
-                        const ultimoIntervalo = intervalos.reduce((max, i) => 
-                            new Date(i.fin) > new Date(max.fin) ? i : max
-                        );
-                        const fechaFinalizacion = new Date(ultimoIntervalo.fin);
-                        const fechaStr = fechaFinalizacion.toISOString().split('T')[0];
-                        
-                        // Mark completion in the calendar (add a note or marker)
-                        // For now, we'll just add it to the planning if there are remaining hours
-                        const horasRestantes = v.horasEstimadas - v.horasConfeccion.horasTotales;
-                        if (horasRestantes > 0) {
-                            planificarVestidoDesde(v, fechaStr, horasRestantes);
+                    // Calculate total hours worked from manual intervals
+                    let horasTrabajadas = 0;
+                    v.horasConfeccion.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.fin) {
+                            const inicioDate = new Date(intervalo.inicio);
+                            const finDate = new Date(intervalo.fin);
+                            const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                            horasTrabajadas += diffHours;
+                        }
+                    });
+                    
+                    // Calculate remaining hours
+                    const horasRestantes = v.horasEstimadas - horasTrabajadas;
+                    
+                    // If there are remaining hours, schedule them starting from the day after the last interval
+                    if (horasRestantes > 0.5) { // Use 0.5h minimum threshold (30 minutes)
+                        const intervalos = v.horasConfeccion.intervalos.filter(i => i.fin);
+                        if (intervalos.length > 0) {
+                            const ultimoIntervalo = intervalos.reduce((max, i) => 
+                                new Date(i.fin) > new Date(max.fin) ? i : max
+                            );
+                            const fechaFinalizacion = new Date(ultimoIntervalo.fin);
+                            // Start next day
+                            fechaFinalizacion.setDate(fechaFinalizacion.getDate() + 1);
+                            const fechaStr = fechaFinalizacion.toISOString().split('T')[0];
+                            
+                            planificarVestidoDesdeConMinimos(v, fechaStr, horasRestantes);
                             vestidosPlanificados++;
                         }
                     }
                 }
             });
 
-            // Process Priority 2: Dresses with end date - calculate backward from end date
+            // Process Priority 2: Sent dresses without manual intervals
+            // Requirement 2: Distribute production hours on the day before delivery date
             prioridad2.forEach(v => {
+                if (v.horasEstimadas > 0 && v.fechaEnvio) {
+                    const fechaEnvio = new Date(v.fechaEnvio + 'T00:00:00');
+                    // Schedule for the day before delivery
+                    fechaEnvio.setDate(fechaEnvio.getDate() - 1);
+                    const fechaStr = fechaEnvio.toISOString().split('T')[0];
+                    
+                    // Only schedule if date is not in the past
+                    if (fechaStr >= hoy.toISOString().split('T')[0]) {
+                        planificarVestidoDesdeConMinimos(v, fechaStr, v.horasEstimadas);
+                        vestidosPlanificados++;
+                    }
+                }
+            });
+
+            // Process Priority 3: Dresses with end date - calculate backward from end date
+            // Requirement 3 & 5: Priority by nearest delivery date
+            prioridad3.forEach(v => {
                 if (v.horasEstimadas > 0 && v.fechaLimite) {
                     const fechaLimite = new Date(v.fechaLimite + 'T23:59:59');
                     const horasNecesarias = v.horasEstimadas;
@@ -5933,13 +5978,14 @@
                     
                     // Work backward to find start date
                     const diasPlanificar = [];
-                    while (horasAcumuladas < horasNecesarias && diasPlanificar.length < 60) {
+                    while (horasAcumuladas < horasNecesarias && diasPlanificar.length < 120) { // Increased to 120 days (4 months)
                         const fechaStr = fechaActual.toISOString().split('T')[0];
                         const capacidadDia = obtenerLimiteHoras(fechaStr);
                         const ocupadasDia = (planificacion[fechaStr] || []).reduce((sum, e) => sum + e.horas, 0);
                         const disponiblesDia = capacidadDia - ocupadasDia;
                         
-                        if (disponiblesDia > 0 && fechaActual >= hoy) {
+                        // Requirement 4: Use up to 30-minute free slots
+                        if (disponiblesDia >= 0.5 && fechaActual >= hoy) {
                             const horasAsignar = Math.min(horasNecesarias - horasAcumuladas, disponiblesDia);
                             diasPlanificar.unshift({ fecha: fechaStr, horas: horasAsignar });
                             horasAcumuladas += horasAsignar;
@@ -5965,12 +6011,13 @@
                 }
             });
 
-            // Process Priority 3: Fill remaining gaps
+            // Process Priority 4: Fill remaining gaps
+            // Requirement 5: Auto-assign to free slots, random assignment on ties
             let fechaBusqueda = new Date(hoy);
-            prioridad3.forEach(v => {
+            prioridad4.forEach(v => {
                 if (v.horasEstimadas > 0) {
                     const fechaStr = fechaBusqueda.toISOString().split('T')[0];
-                    planificarVestidoDesde(v, fechaStr, v.horasEstimadas);
+                    planificarVestidoDesdeConMinimos(v, fechaStr, v.horasEstimadas);
                     vestidosPlanificados++;
                 }
             });
@@ -6001,6 +6048,54 @@
                 const disponiblesDia = capacidadDia - ocupadasDia;
                 
                 if (disponiblesDia > 0) {
+                    const horasAsignar = Math.min(horasRestantes, disponiblesDia);
+                    if (!planificacion[fechaStr]) planificacion[fechaStr] = [];
+                    planificacion[fechaStr].push({ 
+                        vestidoId: vestido.id, 
+                        horas: horasAsignar, 
+                        parte: horasNecesarias > disponiblesDia || parteNum > 1 ? parteNum : null 
+                    });
+                    horasRestantes -= horasAsignar;
+                    parteNum++;
+                    diasAsignados++;
+                }
+                
+                fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+            }
+            
+            if (horasRestantes <= 0.01) {
+                vestidosPlanificadosAuto.add(vestido.id);
+            }
+        }
+
+        /**
+         * Schedule a dress starting from a given date, using minimum 30-minute slots
+         * Requirement 4: Use up to 30-minute free slots to optimize daily occupation
+         * Continues into next months if current month has insufficient time
+         */
+        function planificarVestidoDesdeConMinimos(vestido, fechaInicio, horasNecesarias) {
+            let horasRestantes = horasNecesarias;
+            let fechaActual = new Date(fechaInicio + 'T12:00:00Z');
+            let parteNum = 1;
+            let diasAsignados = 0;
+            const minHorasSlot = 0.5; // 30 minutes minimum
+            
+            // Extend search to up to 120 days (4 months) to ensure we can continue into next months
+            while (horasRestantes > 0.01 && diasAsignados < 120) {
+                // Skip weekends and holidays
+                let diaSemana = fechaActual.getUTCDay();
+                while (diaSemana === 6 || diaSemana === 0) {
+                    fechaActual.setUTCDate(fechaActual.getUTCDate() + 1);
+                    diaSemana = fechaActual.getUTCDay();
+                }
+                
+                const fechaStr = fechaActual.toISOString().split('T')[0];
+                const capacidadDia = obtenerLimiteHoras(fechaStr);
+                const ocupadasDia = (planificacion[fechaStr] || []).reduce((sum, e) => sum + e.horas, 0);
+                const disponiblesDia = capacidadDia - ocupadasDia;
+                
+                // Only assign if there's at least 30 minutes available
+                if (disponiblesDia >= minHorasSlot) {
                     const horasAsignar = Math.min(horasRestantes, disponiblesDia);
                     if (!planificacion[fechaStr]) planificacion[fechaStr] = [];
                     planificacion[fechaStr].push({ 
@@ -7059,9 +7154,21 @@
                 // Get dresses for this date
                 const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
                 
-                // Separate dresses by status: with hours (en proceso) vs without (pendientes)
-                const vestidosEnProceso = vestidosEnFecha.filter(v => horasConfeccion[v.id]);
-                const vestidosPendientes = vestidosEnFecha.filter(v => !horasConfeccion[v.id]);
+                // Separate dresses by status: with hours (en proceso) vs without (pendientes) vs sent on delivery date
+                const vestidosEnProceso = vestidosEnFecha.filter(v => {
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    return horasConfeccion[v.id] && !esAlbaranDelDia;
+                });
+                const vestidosPendientes = vestidosEnFecha.filter(v => {
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    return !horasConfeccion[v.id] && !esAlbaranDelDia;
+                });
+                const vestidosAlbaranDelDia = vestidosEnFecha.filter(v => {
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    return esEnviado && v.fechaEnvio === fechaStr;
+                });
                 
                 // Calculate total hours for the day
                 let horasTotales = 0;
@@ -7256,6 +7363,22 @@
                     </div>`;
                 });
 
+                // Requirement 2: Display sent dresses on delivery date with arrow emoji and red color
+                vestidosAlbaranDelDia.forEach(v => {
+                    const proveedor = v.proveedor;
+                    const colorBg = `var(--color-${proveedor})`;
+                    const colorBorde = `var(--color-${proveedor}-borde)`;
+                    const opacidad = 'opacity: 0.5;'; // 50% opacity for sent dresses
+                    
+                    // Display model name and lot in red
+                    vestidosHtml += `<div 
+                        draggable="false"
+                        onclick="event.stopPropagation(); mostrarDetallesVestido(${v.id});"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
+                        title="ALBARÁN: ${v.nombreModelo} - Lote: ${v.lote || 'N/A'} - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${v.lote || 'N/A'}]</span>
+                    </div>`;
+                });
+
                 html += `
                     <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
                          style="min-height: 120px; cursor: pointer;" 
@@ -7312,6 +7435,16 @@
                             }
                         }
                     });
+                }
+            });
+
+            // Requirement 2: Show sent dresses on their delivery date with arrow emoji
+            vestidos.forEach(vestido => {
+                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                if (esEnviado && vestido.fechaEnvio === fechaStr) {
+                    if (!resultado.find(v => v.id === vestido.id)) {
+                        resultado.push(vestido);
+                    }
                 }
             });
 
