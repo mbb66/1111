@@ -2762,7 +2762,6 @@
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
                     <button class="btn btn-info" onclick="abrirModalVestidosEnviados()">📦 Vestidos Enviados</button>
-                    <button class="btn btn-success" onclick="planificarAutomatico()">🤖 Planificación Automática</button>
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
@@ -2850,6 +2849,7 @@
                 <div class="seccion-header">
                     <h3>📅 Vista de Calendario</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-success" onclick="planificarAutomatico()">🤖 Planificación Automática</button>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(-1)">◀ Anterior</button>
                         <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
@@ -5969,7 +5969,9 @@
                 }
             });
 
-            guardarYRecargarPlanificacion();
+            guardarTodo();
+            cargarPlanificacionNueva();
+            generarCalendarioPlanificacion();
             alert(`✅ Planificación automática completada.\n\n${vestidosPlanificados} vestidos planificados.`);
         }
 
@@ -8433,9 +8435,11 @@
                                 <div><strong>Proveedor:</strong> ${v.proveedor.toUpperCase()}</div>
                                 <div><strong>Total Horas:</strong> ${totalHoras.toFixed(2)}h</div>
                             </div>
+                            ${modoAgruparSeccion === 'enviados' ? '' : `
                             <div class="grupo-actions">
                                 <button class="btn btn-sm" onclick="event.stopPropagation(); desagruparVestido(${v.id})">❌ Desagrupar</button>
                             </div>
+                            `}
                         </div>
                     `;
                 } else {
@@ -8456,12 +8460,14 @@
                                 <div><strong>Horas trabajadas:</strong> ${horasTotales}h</div>
                                 ${tieneIntervalos ? `<div><strong>Intervalos:</strong> ${horas.intervalos.length}</div>` : ''}
                             </div>
+                            ${modoAgruparSeccion === 'enviados' ? '' : `
                             <div style="margin-top: 10px;">
                                 <button class="btn btn-small ${tieneIntervalos ? 'btn-info' : 'btn-success'}" onclick="event.stopPropagation(); abrirModalHorasConfeccion(${v.id})">
                                     ${tieneIntervalos ? '✏️ Editar Intervalos' : '➕ Añadir Intervalos'}
                                 </button>
                                 ${tieneIntervalos ? `<button class="btn btn-small btn-info" onclick="event.stopPropagation(); verEnCalendario(${v.id})">📅 Ver en Calendario</button>` : ''}
                             </div>
+                            `}
                         </div>
                     `;
                 }
