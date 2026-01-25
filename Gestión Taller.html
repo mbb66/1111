@@ -6642,6 +6642,7 @@
                 return false;
             }
             
+            // Allow dragging for automatic planning dresses
             draggedVestidoId = vestidoId;
             draggedVestidoFechaOrigen = fechaOrigen;
             draggedGrupoId = null;
@@ -6754,6 +6755,15 @@
             // Calculate hours needed for the dresses being moved
             let horasNecesarias = 0;
             vestidosAMover.forEach(v => {
+                // Check if dress is in automatic planning
+                if (planificacion[draggedVestidoFechaOrigen]) {
+                    const entradasOrigen = planificacion[draggedVestidoFechaOrigen].filter(e => e.vestidoId === v.id);
+                    entradasOrigen.forEach(entrada => {
+                        horasNecesarias += entrada.horas || 0;
+                    });
+                }
+                
+                // Also check manual intervals
                 const horas = horasConfeccion[v.id];
                 if (horas && horas.intervalos) {
                     horas.intervalos.forEach(intervalo => {
@@ -6771,6 +6781,17 @@
             
             // Calculate current hours used on destination date (excluding dresses being moved if they're already there)
             let horasYaUsadas = 0;
+            
+            // Count hours from automatic planning
+            if (planificacion[fechaDestino]) {
+                planificacion[fechaDestino].forEach(entrada => {
+                    // Skip if this dress is being moved
+                    if (vestidosAMover.some(v => v.id === entrada.vestidoId)) return;
+                    horasYaUsadas += entrada.horas || 0;
+                });
+            }
+            
+            // Count hours from manual intervals
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const vid = parseInt(vestidoId);
                 // Skip if this dress is being moved
@@ -6810,7 +6831,59 @@
             // When dragging the "head" or part 1 of a dress, move ALL parts (all intervals regardless of date)
             vestidosAMover.forEach(vestido => {
                 const horas = horasConfeccion[vestido.id];
-                if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                
+                // Check if dress is in automatic planning (planificacion object)
+                const enPlanificacionAuto = planificacion[draggedVestidoFechaOrigen] && 
+                                          planificacion[draggedVestidoFechaOrigen].some(e => e.vestidoId === vestido.id);
+                
+                if (enPlanificacionAuto) {
+                    // Handle automatic planning - move the dress entries
+                    const entradasOrigen = planificacion[draggedVestidoFechaOrigen].filter(e => e.vestidoId === vestido.id);
+                    
+                    // Check if this dress has multiple parts in the planning
+                    let todasLasPartes = [];
+                    Object.keys(planificacion).forEach(f => {
+                        planificacion[f].forEach(e => {
+                            if (e.vestidoId === vestido.id) {
+                                todasLasPartes.push({ fecha: f, ...e });
+                            }
+                        });
+                    });
+                    
+                    // Sort by parte number to find if we're dragging part 1
+                    todasLasPartes.sort((a, b) => (a.parte || 0) - (b.parte || 0));
+                    const esPrimeraParticion = todasLasPartes.length > 0 && todasLasPartes[0].fecha === draggedVestidoFechaOrigen;
+                    
+                    if (esPrimeraParticion && todasLasPartes.length > 1) {
+                        // We're dragging part 1 - move ALL parts to the new date
+                        Object.keys(planificacion).forEach(f => {
+                            planificacion[f] = planificacion[f].filter(e => e.vestidoId !== vestido.id);
+                            if (planificacion[f].length === 0) delete planificacion[f];
+                        });
+                        
+                        // Add all parts to the destination date
+                        if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
+                        todasLasPartes.forEach(parte => {
+                            planificacion[fechaDestino].push({ vestidoId: vestido.id, horas: parte.horas, parte: parte.parte });
+                        });
+                    } else {
+                        // Only move the part(s) from the origin date
+                        entradasOrigen.forEach(entrada => {
+                            // Remove from origin
+                            planificacion[draggedVestidoFechaOrigen] = planificacion[draggedVestidoFechaOrigen].filter(e => 
+                                !(e.vestidoId === vestido.id && e.parte === entrada.parte));
+                            if (planificacion[draggedVestidoFechaOrigen].length === 0) delete planificacion[draggedVestidoFechaOrigen];
+                            
+                            // Add to destination
+                            if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
+                            planificacion[fechaDestino].push({ vestidoId: vestido.id, horas: entrada.horas, parte: entrada.parte });
+                        });
+                    }
+                    
+                    // Save planificacion
+                    localStorage.setItem('planificacion', JSON.stringify(planificacion));
+                } else if (horas && horas.intervalos && horas.intervalos.length > 0) {
+                    // Handle manual intervals (horasConfeccion)
                     // Check if we're dragging from the first partition (earliest date)
                     const fechasUnicas = [...new Set(horas.intervalos.map(i => i.inicio ? i.inicio.split('T')[0] : null).filter(Boolean))].sort();
                     const esPrimeraParticion = draggedVestidoFechaOrigen === fechasUnicas[0];
@@ -6844,7 +6917,7 @@
                         });
                     }
                 } else {
-                    // If dress has no intervals, update its fechaLimite
+                    // If dress has no intervals and not in planning, update its fechaLimite
                     vestido.fechaLimite = fechaDestino;
                 }
             });
@@ -7171,6 +7244,16 @@
             event.stopPropagation();
             const vestido = vestidos.find(v => v.id === vestidoId);
             if (!vestido) return;
+            
+            // Check if this dress is in automatic planning (planificacion object)
+            const enPlanificacionAuto = planificacion[fecha] && planificacion[fecha].some(e => e.vestidoId === vestidoId);
+            
+            if (enPlanificacionAuto) {
+                // Handle automatic planning deletion using the existing eliminarPartePlanificada function
+                const entrada = planificacion[fecha].find(e => e.vestidoId === vestidoId);
+                eliminarPartePlanificada(vestidoId, fecha, entrada ? entrada.parte : null, event);
+                return;
+            }
             
             // Check if this is a suggested planning or actual work hours
             if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados) {
