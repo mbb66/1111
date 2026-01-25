@@ -1525,17 +1525,28 @@
         }
 
         .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
+            background: var(--color-neutro-suave);
+            border: 1px solid var(--color-borde);
+            font-size: 28px;
             cursor: pointer;
-            color: var(--color-texto-secundario);
-            padding: 0;
+            color: var(--color-texto-principal);
+            padding: 4px 10px;
             line-height: 1;
+            border-radius: 6px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .modal-close:hover {
-            color: var(--color-error);
+            background: var(--color-error);
+            color: white;
+            border-color: var(--color-error);
+            transform: scale(1.1);
         }
 
         .modal-body {
@@ -1791,15 +1802,28 @@
         }
 
         .modal-close {
-            background: none;
-            border: none;
-            font-size: 24px;
+            background: var(--color-neutro-suave);
+            border: 1px solid var(--color-borde);
+            font-size: 28px;
             cursor: pointer;
-            color: var(--color-texto-secundario);
+            color: var(--color-texto-principal);
+            padding: 4px 10px;
+            line-height: 1;
+            border-radius: 6px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .modal-close:hover {
-            color: var(--color-texto-principal);
+            background: var(--color-error);
+            color: white;
+            border-color: var(--color-error);
+            transform: scale(1.1);
         }
 
         .modal-body {
@@ -7304,10 +7328,21 @@
                 // Calculate total hours for the day
                 let horasTotales = 0;
                 const trabajadorasDelDia = new Set();
+                const gruposProcesados = new Set(); // Track processed groups to avoid counting hours multiple times
                 
                 vestidosEnProceso.forEach(v => {
                     const horas = horasConfeccion[v.id];
                     if (horas && horas.intervalos) {
+                        // ISSUE FIX: If dress is in a group, only count hours once per group
+                        const grupoId = horas.grupoId;
+                        if (grupoId && gruposProcesados.has(grupoId)) {
+                            // Skip - already counted this group's hours
+                            return;
+                        }
+                        if (grupoId) {
+                            gruposProcesados.add(grupoId);
+                        }
+                        
                         horas.intervalos.forEach(intervalo => {
                             if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
                                 if (intervalo.fin) {
@@ -7576,9 +7611,11 @@
                     // Don't show sent dresses in automatic planning on future dates
                     const esEnviado = vestido && (vestido.estado === 'enviado' || vestido.estado === 'pagado');
                     const hoy = new Date().toISOString().split('T')[0];
+                    // ISSUE FIX: Don't show finished dresses (with horasReales) in automatic planning
+                    const estaFinalizado = vestido && vestido.horasReales && vestido.horasReales > 0;
                     if (vestido && !resultado.find(v => v.id === vestido.id)) {
-                        // Only add if not sent OR if the date is in the past
-                        if (!esEnviado || fechaStr <= hoy) {
+                        // Only add if not sent OR if the date is in the past, AND not finished
+                        if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
                             resultado.push(vestido);
                         }
                     }
@@ -7617,10 +7654,12 @@
             vestidos.forEach(vestido => {
                 const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                 const hoy = new Date().toISOString().split('T')[0];
+                // ISSUE FIX: Don't show finished dresses (with horasReales) in deadline-based display
+                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                 
                 if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    // Don't show sent dresses on future dates
-                    if (!esEnviado || fechaStr <= hoy) {
+                    // Don't show sent dresses on future dates AND don't show finished dresses
+                    if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -7632,10 +7671,12 @@
             vestidos.forEach(vestido => {
                 const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                 const hoy = new Date().toISOString().split('T')[0];
+                // ISSUE FIX: Don't show finished dresses (with horasReales) in suggested planning
+                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                 
                 if (vestido.fechaInicioSugerida === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    // Don't show sent dresses on future dates
-                    if (!esEnviado || fechaStr <= hoy) {
+                    // Don't show sent dresses on future dates AND don't show finished dresses
+                    if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -7647,11 +7688,13 @@
             vestidos.forEach(vestido => {
                 const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                 const hoy = new Date().toISOString().split('T')[0];
+                // ISSUE FIX: Don't show finished dresses (with horasReales) in suggested planning
+                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                 
                 if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados && ['en_taller', 'con_tara'].includes(vestido.estado)) {
                     const tieneFechaAsignada = vestido.planificacionSugerida.diasAsignados.some(dia => dia.fecha === fechaStr);
-                    // Don't show sent dresses on future dates
-                    if (tieneFechaAsignada && (!esEnviado || fechaStr <= hoy)) {
+                    // Don't show sent dresses on future dates AND don't show finished dresses
+                    if (tieneFechaAsignada && (!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
