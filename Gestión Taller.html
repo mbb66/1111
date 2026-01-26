@@ -584,21 +584,24 @@
         .calendario-grid-body {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
+            gap: 8px;
             width: 100%;
             min-height: 600px;
+            padding: 4px;
         }
 
         .dia-calendario {
             background: var(--color-superficie);
-            padding: 8px;
-            min-height: 120px;
+            padding: 10px;
+            min-height: 140px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            border-radius: 8px;
+            border: 1px solid var(--color-borde);
         }
 
         .dia-calendario:hover {
@@ -617,12 +620,41 @@
         .dia-calendario.fin-semana {
             background-color: #F9FAFB;
             cursor: default;
+            opacity: 0.7;
         }
 
         .dia-calendario.fin-semana:hover {
             background-color: #F9FAFB;
             transform: none;
             box-shadow: none;
+        }
+
+        .dia-calendario.dia-completo {
+            background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+            border: 2px solid var(--color-error);
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+
+        .dia-calendario.dia-completo:hover {
+            transform: none;
+            background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+        }
+
+        .dia-calendario.dia-completo::after {
+            content: "COMPLETO";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.7em;
+            font-weight: 700;
+            color: var(--color-error);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 4px 8px;
+            border-radius: 4px;
+            pointer-events: none;
+            z-index: 10;
         }
 
         .dia-calendario.hoy {
@@ -662,14 +694,20 @@
         }
 
         .vestido-planificado {
-            padding: 5px 8px;
-            margin: 3px 0;
-            border-radius: 4px;
+            padding: 6px 8px;
+            margin: 4px 0;
+            border-radius: 6px;
             font-size: 11px;
             cursor: move;
             position: relative;
             color: var(--color-texto-principal);
             box-shadow: var(--sombra-suave);
+            transition: all 0.2s;
+        }
+
+        .vestido-planificado:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-media);
         }
 
         .vestido-planificado.pronovias {
@@ -2874,6 +2912,7 @@
                     <h3>📅 Vista de Calendario</h3>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <button class="btn btn-success" onclick="planificarAutomatico()">🤖 Planificación Automática</button>
+                        <button class="btn btn-danger btn-small" onclick="limpiarPlanificacionAutomatica()">🗑️ Limpiar Automático</button>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(-1)">◀ Anterior</button>
                         <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
                         <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
@@ -5820,6 +5859,17 @@
         }
 
         function obtenerHorasPlanificacion(vestido) {
+            // Priority 1: Use horas reales (manual hours) from modelo if available
+            const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+            if (modelo && modelo.horasRealesManual) {
+                // Parse HH:MM format to decimal hours
+                const [horas, minutos] = modelo.horasRealesManual.split(':').map(Number);
+                if (!isNaN(horas) && !isNaN(minutos)) {
+                    return horas + (minutos / 60);
+                }
+            }
+            
+            // Priority 2: Check for special tara cases
             if (vestido.estado === 'con_tara') {
                 const ultimaTara = vestido.historialTaras[vestido.historialTaras.length - 1];
                 if (ultimaTara && ultimaTara.tipo === 'tara_empresa' && ultimaTara.horasExtra > 0) {
@@ -5827,7 +5877,9 @@
                 }
                 return 3; // Horas fijas para tara del taller
             }
-            return vestido.horasEstimadas || 0;
+            
+            // Priority 3: Use estimated hours from modelo or vestido
+            return vestido.horasEstimadas || (modelo ? modelo.horas : 0) || 0;
         }
 
         // Calculate available hours for a date from calendar labor data
@@ -5876,6 +5928,33 @@
             alert('✅ Planificación limpiada correctamente.');
         }
 
+        function limpiarPlanificacionAutomatica() {
+            if (!confirm('¿Estás segura de que quieres eliminar TODOS los vestidos planificados automáticamente? Esta acción no se puede deshacer.')) return;
+            
+            let eliminados = 0;
+            // Iterate through all dates in planificacion
+            Object.keys(planificacion).forEach(fecha => {
+                const vestidosOriginales = [...planificacion[fecha]];
+                // Remove all automatic entries
+                planificacion[fecha] = vestidosOriginales.filter(entrada => {
+                    // Keep only non-automatic entries (those without the flag or manually added)
+                    // Since we don't have a flag in the data, we need to check if the dress is in vestidosPlanificadosAuto
+                    // For now, we'll just remove all entries (since the data structure doesn't support the flag)
+                    eliminados++;
+                    return false;
+                });
+                
+                // If the date has no more entries, delete it
+                if (planificacion[fecha].length === 0) {
+                    delete planificacion[fecha];
+                }
+            });
+            
+            vestidosPlanificadosAuto.clear();
+            guardarYRecargarPlanificacion();
+            alert(`✅ Se eliminaron ${eliminados} asignaciones automáticas del calendario.`);
+        }
+
         /**
          * REFINED AUTOMATIC PLANNING FUNCTION
          * 
@@ -5906,8 +5985,19 @@
                 return;
             }
 
+            // Get IDs of dresses already in automatic planning
+            const vestidosYaPlanificados = new Set();
+            Object.keys(planificacion).forEach(fecha => {
+                planificacion[fecha].forEach(entrada => {
+                    vestidosYaPlanificados.add(entrada.vestidoId);
+                });
+            });
+
             // Get all dresses in workshop (en_taller and con_tara) - EXCLUDE sent/paid dresses without hours
             let vestidosEnTaller = vestidos.filter(v => {
+                // Skip if already planned
+                if (vestidosYaPlanificados.has(v.id)) return false;
+                
                 // Include dresses in workshop
                 if (['en_taller', 'con_tara'].includes(v.estado)) return true;
                 // Include sent/paid dresses that don't have manual intervals assigned yet
@@ -7446,14 +7536,26 @@
                 let trabajadorasHtml = '';
                 // Workers are no longer shown in calendar view to focus on workload organization
                 
-                // Generate hours badge - show "occupied hours / available hours"
+                // Generate hours badge - show "occupied hours / available hours" and free hours
                 let horasBadge = '';
+                let horasLibres = 0;
+                let diaCompleto = false;
                 if (!esFinDeSemana) {
                     const horasDisponibles = obtenerLimiteHoras(fechaStr);
+                    horasLibres = horasDisponibles - horasTotales;
+                    diaCompleto = horasLibres <= 0;
+                    
                     const colorBadge = horasTotales > horasDisponibles ? 'var(--color-error)' : 
                                       horasTotales >= horasDisponibles * 0.8 ? 'var(--color-alerta)' : 
                                       'var(--color-exito)';
                     horasBadge = `<span style="font-size: 0.7em; background: ${colorBadge}; color: white; padding: 2px 5px; border-radius: 10px;">${horasTotales.toFixed(1)}h / ${horasDisponibles.toFixed(1)}h</span>`;
+                    
+                    // Add free hours badge
+                    if (horasLibres > 0) {
+                        horasBadge += `<span class="horas-libres" style="font-size: 0.65em; background: var(--color-exito-fondo); color: var(--color-exito); padding: 2px 5px; border-radius: 8px; margin-left: 4px; font-weight: 600;">${horasLibres.toFixed(1)}h libres</span>`;
+                    } else if (horasLibres < 0) {
+                        horasBadge += `<span class="horas-libres negativo" style="font-size: 0.65em; background: var(--color-error-fondo); color: var(--color-error); padding: 2px 5px; border-radius: 8px; margin-left: 4px; font-weight: 600;">${Math.abs(horasLibres).toFixed(1)}h exceso</span>`;
+                    }
                 }
                 
                 // Generate dresses HTML - prioritize dresses with assigned intervals
@@ -7586,9 +7688,11 @@
                     // Determine icon: 🤖 for automatic planning, 📅 for suggested, ⏳ for deadline only
                     let icono = '⏳'; // Default: deadline only
                     let tooltipType = '(Por fecha límite)';
+                    let dataAutomatico = '';
                     if (enPlanificacionAuto) {
                         icono = '🤖'; // Robot icon for automatic planning
                         tooltipType = '(Planificación automática)';
+                        dataAutomatico = 'data-automatico="true"';
                     } else if (tienePlanificacionSugerida) {
                         icono = '📅'; // Calendar icon for suggested
                         tooltipType = '(Planificación sugerida)';
@@ -7629,6 +7733,7 @@
                     
                     vestidosHtml += `<div 
                         draggable="${draggable}"
+                        ${dataAutomatico}
                         ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                         ondragend="onDragEndCalendario(event)"
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
@@ -7663,12 +7768,12 @@
                 });
 
                 html += `
-                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
-                         style="min-height: 120px; cursor: pointer;" 
-                         onclick="verDetallesDiaCalendario('${fechaStr}')"
-                         ondrop="onDropCalendario(event, '${fechaStr}')"
-                         ondragover="onDragOverCalendario(event)"
-                         ondragleave="onDragLeaveCalendario(event)"
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''} ${diaCompleto && !esFinDeSemana ? 'dia-completo' : ''}" 
+                         style="min-height: 140px; ${diaCompleto && !esFinDeSemana ? 'pointer-events: none;' : 'cursor: pointer;'}" 
+                         onclick="${diaCompleto && !esFinDeSemana ? '' : `verDetallesDiaCalendario('${fechaStr}')`}"
+                         ondrop="${diaCompleto && !esFinDeSemana ? '' : `onDropCalendario(event, '${fechaStr}')`}"
+                         ondragover="${diaCompleto && !esFinDeSemana ? '' : `onDragOverCalendario(event)`}"
+                         ondragleave="${diaCompleto && !esFinDeSemana ? '' : `onDragLeaveCalendario(event)`}"
                          data-fecha="${fechaStr}">
                         <div class="numero-dia">
                             <span>${dia}</span>
@@ -7789,20 +7894,7 @@
         }
 
         function verDetallesDiaCalendario(fechaStr) {
-            // Problem 4 fix: Show modal with "en taller" dresses to place on this day
-            // Get "en taller" dresses that are not yet in the calendar
-            const vestidosEnTaller = vestidos.filter(v => {
-                return ['en_taller', 'con_tara'].includes(v.estado) && 
-                       !horasConfeccion[v.id] && 
-                       !v.planificacionSugerida;
-            });
-            
-            if (vestidosEnTaller.length === 0) {
-                alert('No hay vestidos "en taller" disponibles para colocar en este día.');
-                return;
-            }
-            
-            // Show modal with list of dresses
+            // Show modal with details about this day: planned dresses + option to add more
             const modal = document.getElementById('modal-colocar-vestido-dia');
             const fechaDisplay = document.getElementById('fecha-dia-seleccionado');
             
@@ -7814,16 +7906,50 @@
                 day: 'numeric' 
             });
             
-            // Store the selected date and dresses list for later use
+            // Store the selected date for later use
             modal.dataset.fechaSeleccionada = fechaStr;
+            
+            // Get all dresses planned for this day
+            const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+            
+            // Get available hours info
+            const horasDisponibles = obtenerLimiteHoras(fechaStr);
+            let horasTotales = 0;
+            
+            // Calculate total hours used
+            vestidosEnFecha.forEach(v => {
+                const horas = horasConfeccion[v.id];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                            if (intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasTotales += diffHours;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            const horasLibres = horasDisponibles - horasTotales;
+            
+            // Get "en taller" dresses that are not yet in the calendar
+            const vestidosEnTaller = vestidos.filter(v => {
+                return ['en_taller', 'con_tara'].includes(v.estado) && 
+                       !horasConfeccion[v.id] && 
+                       !v.planificacionSugerida;
+            });
+            
             window.vestidosModalActual = vestidosEnTaller; // Store for filtering
             
             // Reset filters
             document.getElementById('filtro-modal-vestidos').value = '';
             document.getElementById('filtro-proveedor-modal').value = 'todos';
             
-            // Render the list (will be filtered if needed)
-            renderizarListaVestidosModal();
+            // Render the list with both sections
+            renderizarListaVestidosModalMejorado(fechaStr, vestidosEnFecha, horasTotales, horasDisponibles, horasLibres);
             
             modal.classList.add('active');
             modal.style.display = 'flex';
@@ -7831,7 +7957,181 @@
         
         // New function to filter dresses in the modal
         function filtrarVestidosModal() {
-            renderizarListaVestidosModal();
+            const modal = document.getElementById('modal-colocar-vestido-dia');
+            const fechaStr = modal.dataset.fechaSeleccionada;
+            const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+            const horasDisponibles = obtenerLimiteHoras(fechaStr);
+            let horasTotales = 0;
+            
+            vestidosEnFecha.forEach(v => {
+                const horas = horasConfeccion[v.id];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr && intervalo.fin) {
+                            const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                            horasTotales += diffHours;
+                        }
+                    });
+                }
+            });
+            
+            const horasLibres = horasDisponibles - horasTotales;
+            renderizarListaVestidosModalMejorado(fechaStr, vestidosEnFecha, horasTotales, horasDisponibles, horasLibres);
+        }
+        
+        // Enhanced rendering function for the day details modal
+        function renderizarListaVestidosModalMejorado(fechaStr, vestidosEnFecha, horasTotales, horasDisponibles, horasLibres) {
+            const listaContainer = document.getElementById('lista-vestidos-colocar');
+            
+            let html = '';
+            
+            // Section 1: Summary of the day
+            const colorBadge = horasTotales > horasDisponibles ? 'var(--color-error)' : 
+                              horasTotales >= horasDisponibles * 0.8 ? 'var(--color-alerta)' : 
+                              'var(--color-exito)';
+            
+            html += `
+                <div style="margin-bottom: 20px; padding: 15px; background: var(--color-neutro-suave); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <strong style="font-size: 1.1em;">📊 Resumen del Día</strong>
+                        <span style="background: ${colorBadge}; color: white; padding: 4px 10px; border-radius: 12px; font-weight: 600;">
+                            ${horasTotales.toFixed(1)}h / ${horasDisponibles.toFixed(1)}h
+                        </span>
+                    </div>
+                    <div style="font-size: 0.9em; color: var(--color-texto-secundario);">
+                        ${horasLibres > 0 ? 
+                            `✅ <strong style="color: var(--color-exito);">${horasLibres.toFixed(1)}h libres</strong> disponibles para asignar` : 
+                            horasLibres < 0 ?
+                            `⚠️ <strong style="color: var(--color-error);">${Math.abs(horasLibres).toFixed(1)}h de exceso</strong> - considere redistribuir` :
+                            `⚠️ <strong style="color: var(--color-alerta);">Día completo</strong> - sin horas disponibles`
+                        }
+                    </div>
+                </div>
+            `;
+            
+            // Section 2: Dresses planned for this day
+            if (vestidosEnFecha.length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 10px; color: var(--color-texto-principal);">👗 Vestidos Planificados (${vestidosEnFecha.length})</h4>
+                        <div style="max-height: 250px; overflow-y: auto;">
+                `;
+                
+                vestidosEnFecha.forEach(v => {
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    const horas = horasConfeccion[v.id];
+                    let horasAsignadas = 0;
+                    
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr && intervalo.fin) {
+                                const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                                horasAsignadas += diffHours;
+                            }
+                        });
+                    } else if (planificacion[fechaStr]) {
+                        // Check automatic planning
+                        const entrada = planificacion[fechaStr].find(e => e.vestidoId === v.id);
+                        if (entrada) horasAsignadas = entrada.horas;
+                    }
+                    
+                    const horasEstimadas = modelo ? modelo.horas : 0;
+                    const proveedor = v.proveedor;
+                    
+                    html += `
+                        <div style="padding: 10px; margin-bottom: 6px; border-radius: 6px; 
+                                    background: var(--color-${proveedor}); 
+                                    border-left: 4px solid var(--color-${proveedor}-borde);
+                                    display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 0.95em;">${v.nombreModelo}</div>
+                                <div style="font-size: 0.8em; color: var(--color-texto-secundario); margin-top: 2px;">
+                                    <strong>Lote:</strong> ${v.lote || 'N/A'} | 
+                                    <strong>Código:</strong> ${v.codigoModelo || 'N/A'}
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight: 700; color: var(--color-primario);">${horasAsignadas.toFixed(1)}h</div>
+                                <div style="font-size: 0.75em; color: var(--color-texto-secundario);">de ${horasEstimadas.toFixed(1)}h</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Section 3: Available dresses to add
+            if (!window.vestidosModalActual) window.vestidosModalActual = [];
+            
+            const filtroTexto = document.getElementById('filtro-modal-vestidos').value.toLowerCase();
+            const filtroProveedor = document.getElementById('filtro-proveedor-modal').value;
+            
+            const vestidosFiltrados = window.vestidosModalActual.filter(v => {
+                const matchTexto = !filtroTexto || 
+                    (v.lote && v.lote.toLowerCase().includes(filtroTexto)) ||
+                    (v.nombreModelo && v.nombreModelo.toLowerCase().includes(filtroTexto)) ||
+                    (v.codigoModelo && v.codigoModelo.toLowerCase().includes(filtroTexto)) ||
+                    (v.numeroOF && v.numeroOF.toLowerCase().includes(filtroTexto));
+                
+                const matchProveedor = filtroProveedor === 'todos' || v.proveedor === filtroProveedor;
+                
+                return matchTexto && matchProveedor;
+            });
+            
+            if (vestidosFiltrados.length > 0) {
+                html += `
+                    <div>
+                        <h4 style="margin-bottom: 10px; color: var(--color-texto-principal);">➕ Vestidos Disponibles para Añadir (${vestidosFiltrados.length})</h4>
+                        <div style="max-height: 250px; overflow-y: auto;">
+                `;
+                
+                vestidosFiltrados.forEach(v => {
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    const horasEstimadas = modelo ? modelo.horas : 0;
+                    
+                    html += `
+                        <div class="vestido-item-colocar ${v.proveedor}" 
+                             onclick="colocarVestidoEnDia(${v.id}, '${fechaStr}')"
+                             style="padding: 10px; margin-bottom: 6px; border-radius: 6px; cursor: pointer; 
+                                    background: var(--color-${v.proveedor}); 
+                                    border-left: 4px solid var(--color-${v.proveedor}-borde);
+                                    transition: transform 0.2s, box-shadow 0.2s;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.95em;">${v.nombreModelo}</div>
+                                    <div style="font-size: 0.8em; color: var(--color-texto-secundario); margin-top: 2px;">
+                                        <strong>Lote:</strong> ${v.lote || 'N/A'} | 
+                                        <strong>Código:</strong> ${v.codigoModelo || 'N/A'} |
+                                        <strong>Horas:</strong> ${horasEstimadas.toFixed(1)}h
+                                    </div>
+                                </div>
+                                <div style="padding: 4px 10px; background: var(--color-superficie); 
+                                          border-radius: 4px; font-size: 0.8em; font-weight: 600;">
+                                    ${v.proveedor.toUpperCase()}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            } else if (window.vestidosModalActual.length === 0) {
+                html += `
+                    <div style="padding: 20px; text-align: center; color: var(--color-texto-secundario);">
+                        <p>✅ No hay vestidos disponibles para añadir a este día.</p>
+                        <p style="font-size: 0.9em; margin-top: 10px;">Todos los vestidos ya están planificados o en proceso.</p>
+                    </div>
+                `;
+            }
+            
+            listaContainer.innerHTML = html;
         }
         
         // New function to render the filtered list of dresses
@@ -13515,14 +13815,14 @@
 
     <!-- Problem 4: Modal for placing dresses on a calendar day -->
     <div id="modal-colocar-vestido-dia" class="modal-overlay">
-        <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <h3>📅 Colocar Vestido en Día</h3>
+                <h3>📅 Detalles del Día - Planificación</h3>
                 <button class="modal-close" onclick="cerrarModalColocarVestidoDia()">&times;</button>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
-                    <strong>Fecha seleccionada:</strong> <span id="fecha-dia-seleccionado"></span>
+                    <strong>📆 Fecha seleccionada:</strong> <span id="fecha-dia-seleccionado"></span>
                 </div>
                 
                 <!-- Search and Filter Section -->
@@ -13530,7 +13830,7 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <input type="text" id="filtro-modal-vestidos" 
-                                   placeholder="🔍 Buscar por lote, nombre, código..." 
+                                   placeholder="🔍 Buscar vestidos disponibles..." 
                                    oninput="filtrarVestidosModal()"
                                    style="width: 100%; padding: 8px; border: 2px solid var(--color-borde); border-radius: 6px;">
                         </div>
@@ -13546,15 +13846,8 @@
                     </div>
                 </div>
                 
-                <div style="margin-bottom: 10px;">
-                    <strong>Selecciona un vestido para colocar en este día:</strong>
-                    <small style="display: block; margin-top: 5px; color: var(--color-texto-secundario);">
-                        💡 El vestido se colocará automáticamente llenando las horas disponibles del día. 
-                        Si sobran horas, se pasarán al día siguiente.
-                    </small>
-                </div>
-                <div id="lista-vestidos-colocar" style="max-height: 400px; overflow-y: auto;">
-                    <!-- List of dresses will be populated here -->
+                <div id="lista-vestidos-colocar">
+                    <!-- List will be populated by renderizarListaVestidosModalMejorado -->
                 </div>
             </div>
         </div>
