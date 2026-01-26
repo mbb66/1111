@@ -5664,7 +5664,7 @@
                 ${esParcial && entrada.parte ? `<span class="partition-badge">${entrada.parte}</span>` : ''}
                 <strong>${vestido.nombreModelo}${vestido.proveedor === 'rosa_clara' && vestido.numeroSerie ? ` (Serie: ${vestido.numeroSerie})` : ''}</strong>
                 <div class="parte-info">${entrada.horas.toFixed(1)}h${esParcial ? ` / ${horasTotales.toFixed(1)}h total` : ''}</div>
-                <button class="btn-eliminar-vestido" onclick="eliminarPartePlanificada(${vestido.id}, '${fecha}', ${entrada.parte || 'null'}, event); event.stopPropagation();">×</button>
+                <button class="btn-eliminar-vestido" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${vestido.id}, '${fecha}', ${entrada.parte || 'null'}, e); }">×</button>
             </div>`;
         }
 
@@ -7614,7 +7614,7 @@
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
                             title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                            <button class="btn-eliminar-vestido-calendario" onclick="eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event); event.stopPropagation();">×</button>
+                            <button class="btn-eliminar-vestido-calendario" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, e); }">×</button>
                         </div>`;
                     }
                 });
@@ -7685,7 +7685,7 @@
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
                         title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                        <button class="btn-eliminar-vestido-calendario" onclick="eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event); event.stopPropagation();">×</button>
+                        <button class="btn-eliminar-vestido-calendario" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, e); }">×</button>
                     </div>`;
                 });
 
