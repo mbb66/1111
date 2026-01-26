@@ -632,9 +632,9 @@
         .dia-calendario.dia-completo {
             background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
             border: 2px solid var(--color-error);
-            cursor: not-allowed;
-            opacity: 0.6;
-            pointer-events: none;
+            cursor: pointer;
+            opacity: 0.8;
+            /* Allow interaction - users can click to see dress details */
         }
 
         .dia-calendario.dia-completo:hover {
@@ -2492,6 +2492,23 @@
             .grid-3,
             .grid-4 {
                 grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Laptop optimization - ensures calendar is well-sized for 13-15 inch screens */
+        @media (min-width: 1200px) and (max-width: 1600px) {
+            .dia-calendario {
+                min-height: 110px;
+                padding: 6px;
+            }
+
+            .calendario-grid-body {
+                gap: 3px;
+                padding: 3px;
+            }
+
+            .numero-dia {
+                font-size: 0.95em;
             }
         }
 
@@ -7768,10 +7785,10 @@
 
                 html += `
                     <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''} ${diaCompleto && !esFinDeSemana ? 'dia-completo' : ''}" 
-                         style="min-height: 120px; ${diaCompleto && !esFinDeSemana ? 'pointer-events: none;' : 'cursor: pointer;'}" 
-                         onclick="${diaCompleto && !esFinDeSemana ? '' : `verDetallesDiaCalendario('${fechaStr}')`}"
-                         ondrop="${diaCompleto && !esFinDeSemana ? '' : `onDropCalendario(event, '${fechaStr}')`}"
-                         ondragover="${diaCompleto && !esFinDeSemana ? '' : `onDragOverCalendario(event)`}"
+                         style="min-height: 120px; cursor: pointer;" 
+                         onclick="verDetallesDiaCalendario('${fechaStr}')"
+                         ondrop="${diaCompleto && !esFinDeSemana ? 'return false;' : `onDropCalendario(event, '${fechaStr}')`}"
+                         ondragover="${diaCompleto && !esFinDeSemana ? 'return false;' : `onDragOverCalendario(event)`}"
                          ondragleave="${diaCompleto && !esFinDeSemana ? '' : `onDragLeaveCalendario(event)`}"
                          data-fecha="${fechaStr}">
                         <div class="numero-dia">
