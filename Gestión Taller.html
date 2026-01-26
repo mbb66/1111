@@ -2842,6 +2842,7 @@
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('pdf')">📄 Exportar PDF</button>
                     <button class="btn btn-info" onclick="abrirModalVestidosEnviados()">📦 Vestidos Enviados</button>
+                    <button class="btn btn-success" onclick="exportarResumenMensual()">📊 Resumen Mensual Excel</button>
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
@@ -2937,6 +2938,37 @@
                         <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
                     </div>
                 </div>
+                
+                <!-- Calendar Filters -->
+                <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">🏢 Filtrar por Proveedor:</label>
+                            <select id="filtro-calendario-proveedor" onchange="aplicarFiltrosCalendario()" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
+                                <option value="todos">Todos los proveedores</option>
+                                <option value="pronovias">Pronovias</option>
+                                <option value="rosa_clara">Rosa Clará</option>
+                                <option value="traka">Traka</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">📊 Filtrar por Estado:</label>
+                            <select id="filtro-calendario-estado" onchange="aplicarFiltrosCalendario()" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
+                                <option value="todos">Todos los estados</option>
+                                <option value="en_proceso">En Proceso</option>
+                                <option value="en_taller">En Taller</option>
+                                <option value="enviado">Enviados</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: white; border-radius: 6px; border: 2px solid var(--color-borde);">
+                                <input type="checkbox" id="filtro-calendario-ocultar-enviados" onchange="aplicarFiltrosCalendario()" style="margin-right: 8px;">
+                                <span>Ocultar enviados en calendario</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
                 <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
                     <!-- Calendar grid will be generated here -->
                 </div>
@@ -7803,6 +7835,95 @@
 
             html += '</div>';
             container.innerHTML = html;
+            
+            // Apply active filters if any
+            aplicarFiltrosCalendario();
+        }
+        
+        // Global variable to store calendar filters
+        let filtrosCalendarioActivos = {
+            proveedor: 'todos',
+            estado: 'todos',
+            ocultarEnviados: false
+        };
+
+        function aplicarFiltrosCalendario() {
+            // Get filter values
+            const filtroProveedorEl = document.getElementById('filtro-calendario-proveedor');
+            const filtroEstadoEl = document.getElementById('filtro-calendario-estado');
+            const filtroOcultarEnviadosEl = document.getElementById('filtro-calendario-ocultar-enviados');
+            
+            if (!filtroProveedorEl || !filtroEstadoEl || !filtroOcultarEnviadosEl) {
+                return; // Filters not loaded yet
+            }
+            
+            filtrosCalendarioActivos.proveedor = filtroProveedorEl.value;
+            filtrosCalendarioActivos.estado = filtroEstadoEl.value;
+            filtrosCalendarioActivos.ocultarEnviados = filtroOcultarEnviadosEl.checked;
+            
+            // Get all dress cards in calendar
+            const container = document.getElementById('calendario-planificacion-grid');
+            if (!container) return;
+            
+            const dias = container.querySelectorAll('.dia-calendario');
+            
+            dias.forEach(diaEl => {
+                const fechaStr = diaEl.dataset.fecha;
+                if (!fechaStr) return;
+                
+                // Get all dress divs in this day (skip sent delivery cards)
+                const vestidoDivs = Array.from(diaEl.children).filter(el => 
+                    !el.classList.contains('numero-dia') && 
+                    !el.textContent.includes('Enviado')
+                );
+                
+                vestidoDivs.forEach(div => {
+                    let visible = true;
+                    
+                    // Try to identify the dress from the div
+                    // Check various attributes and content to determine dress details
+                    const isEnviado = div.textContent.includes('↗️');
+                    
+                    // Filter by sent status
+                    if (filtrosCalendarioActivos.ocultarEnviados && isEnviado) {
+                        visible = false;
+                    }
+                    
+                    // Filter by supplier (check background color or border)
+                    if (filtrosCalendarioActivos.proveedor !== 'todos') {
+                        const bgColor = div.style.background;
+                        const borderColor = div.style.borderLeftColor || div.style.borderLeft;
+                        
+                        const proveedorMatch = 
+                            (filtrosCalendarioActivos.proveedor === 'pronovias' && (bgColor.includes('pronovias') || borderColor.includes('pronovias'))) ||
+                            (filtrosCalendarioActivos.proveedor === 'rosa_clara' && (bgColor.includes('rosa_clara') || borderColor.includes('rosa_clara'))) ||
+                            (filtrosCalendarioActivos.proveedor === 'traka' && (bgColor.includes('traka') || borderColor.includes('traka')));
+                        
+                        if (!proveedorMatch) {
+                            visible = false;
+                        }
+                    }
+                    
+                    // Filter by status
+                    if (filtrosCalendarioActivos.estado !== 'todos') {
+                        const hasCheckmark = div.textContent.includes('✅');
+                        const hasRobot = div.textContent.includes('🤖');
+                        const hasCalendar = div.textContent.includes('📅');
+                        const hasHourglass = div.textContent.includes('⏳');
+                        
+                        if (filtrosCalendarioActivos.estado === 'en_proceso' && !hasCheckmark) {
+                            visible = false;
+                        } else if (filtrosCalendarioActivos.estado === 'en_taller' && hasCheckmark) {
+                            visible = false;
+                        } else if (filtrosCalendarioActivos.estado === 'enviado' && !isEnviado) {
+                            visible = false;
+                        }
+                    }
+                    
+                    // Apply visibility
+                    div.style.display = visible ? '' : 'none';
+                });
+            });
         }
 
         function obtenerVestidosParaFecha(fechaStr) {
@@ -8991,6 +9112,44 @@
             }
         }
 
+        // Enhanced function to validate interval overlaps
+        function validarSolapamientoIntervalos(intervalos) {
+            const overlaps = [];
+            
+            // Sort intervals by start time
+            const sortedIntervalos = intervalos
+                .filter(i => i.inicio && i.fin)
+                .map((interval, index) => ({
+                    ...interval,
+                    originalIndex: index,
+                    inicioDate: new Date(interval.inicio),
+                    finDate: new Date(interval.fin)
+                }))
+                .sort((a, b) => a.inicioDate - b.inicioDate);
+            
+            // Check for overlaps
+            for (let i = 0; i < sortedIntervalos.length - 1; i++) {
+                for (let j = i + 1; j < sortedIntervalos.length; j++) {
+                    const int1 = sortedIntervalos[i];
+                    const int2 = sortedIntervalos[j];
+                    
+                    // Check if intervals overlap
+                    if (int1.finDate > int2.inicioDate && int1.inicioDate < int2.finDate) {
+                        overlaps.push({
+                            interval1: i + 1,
+                            interval2: j + 1,
+                            start1: int1.inicioDate.toLocaleString('es-ES'),
+                            end1: int1.finDate.toLocaleString('es-ES'),
+                            start2: int2.inicioDate.toLocaleString('es-ES'),
+                            end2: int2.finDate.toLocaleString('es-ES')
+                        });
+                    }
+                }
+            }
+            
+            return overlaps;
+        }
+
         function guardarHorasConfeccion() {
             if (!currentEditingVestidoId) return;
 
@@ -9065,6 +9224,21 @@
             if (intervalos.length === 0) {
                 alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
                 return;
+            }
+
+            // Validate overlaps between intervals
+            const overlaps = validarSolapamientoIntervalos(intervalos);
+            if (overlaps.length > 0) {
+                let message = '⚠️ Se han detectado solapamientos entre intervalos:\n\n';
+                overlaps.forEach(overlap => {
+                    message += `Intervalo ${overlap.interval1}: ${overlap.start1} - ${overlap.end1}\n`;
+                    message += `Intervalo ${overlap.interval2}: ${overlap.start2} - ${overlap.end2}\n\n`;
+                });
+                message += '¿Deseas continuar de todos modos?';
+                
+                if (!confirm(message)) {
+                    return;
+                }
             }
 
             // Convert workers set to array
@@ -9286,6 +9460,126 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // Enhanced month-end export with real vs. estimated hours comparison
+        function exportarResumenMensual() {
+            const mesActual = new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            
+            // Generate comprehensive CSV with real vs estimated hours
+            let csv = `Resumen Mensual - ${mesActual}\n\n`;
+            csv += 'RESUMEN POR VESTIDO\n';
+            csv += 'Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Diferencia,% Variación,Trabajadoras,Estado\n';
+            
+            let totalEstimadas = 0;
+            let totalReales = 0;
+            const vestidosConHoras = [];
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horasReales = horas.horasTotales;
+                const diferencia = horasReales - horasEstimadas;
+                const porcentaje = horasEstimadas > 0 ? ((diferencia / horasEstimadas) * 100) : 0;
+                
+                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    return worker ? worker.nombre : 'Desconocida';
+                }).join('; ');
+
+                totalEstimadas += horasEstimadas;
+                totalReales += horasReales;
+                
+                vestidosConHoras.push({
+                    vestido,
+                    horasEstimadas,
+                    horasReales,
+                    diferencia,
+                    porcentaje,
+                    trabajadoras: nombresTrabajadoras
+                });
+
+                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${diferencia.toFixed(2)},${porcentaje.toFixed(1)}%,"${nombresTrabajadoras}","${vestido.estado}"\n`;
+            });
+
+            csv += `\nTOTAL,,,,${totalEstimadas.toFixed(2)},${totalReales.toFixed(2)},${(totalReales - totalEstimadas).toFixed(2)},${totalEstimadas > 0 ? ((totalReales - totalEstimadas) / totalEstimadas * 100).toFixed(1) : 0}%\n\n`;
+            
+            // Add worker summary
+            csv += '\nRESUMEN POR TRABAJADORA\n';
+            csv += 'Trabajadora,Total Horas,Vestidos Trabajados,Promedio horas/vestido\n';
+            
+            const trabajadoraStats = {};
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                horas.trabajadoras.forEach(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    const nombre = worker ? worker.nombre : 'Desconocida';
+                    if (!trabajadoraStats[nombre]) {
+                        trabajadoraStats[nombre] = { horas: 0, vestidos: 0 };
+                    }
+                    trabajadoraStats[nombre].horas += horas.horasTotales / horas.trabajadoras.length; // Distribute hours evenly
+                    trabajadoraStats[nombre].vestidos += 1;
+                });
+            });
+            
+            Object.keys(trabajadoraStats).forEach(nombre => {
+                const stats = trabajadoraStats[nombre];
+                const promedio = stats.vestidos > 0 ? stats.horas / stats.vestidos : 0;
+                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos},${promedio.toFixed(2)}\n`;
+            });
+            
+            // Add daily capacity summary
+            csv += '\n\nRESUMEN DE CAPACIDAD DIARIA\n';
+            csv += 'Fecha,Capacidad Total,Horas Utilizadas,Horas Libres,% Uso\n';
+            
+            // Get current month dates
+            const hoy = new Date();
+            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            
+            for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), dia);
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const capacidad = obtenerLimiteHoras(fechaStr);
+                
+                // Calculate used hours from intervals
+                let horasUtilizadas = 0;
+                Object.keys(horasConfeccion).forEach(vestidoId => {
+                    const horas = horasConfeccion[vestidoId];
+                    if (horas && horas.intervalos) {
+                        horas.intervalos.forEach(intervalo => {
+                            if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr && intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasUtilizadas += diffHours;
+                            }
+                        });
+                    }
+                });
+                
+                const horasLibres = capacidad - horasUtilizadas;
+                const porcentajeUso = capacidad > 0 ? (horasUtilizadas / capacidad * 100) : 0;
+                
+                csv += `${fechaStr},${capacidad.toFixed(2)},${horasUtilizadas.toFixed(2)},${horasLibres.toFixed(2)},${porcentajeUso.toFixed(1)}%\n`;
+            }
+
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `resumen_mensual_${mesActual.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ Resumen mensual exportado correctamente.\n\nTotal estimadas: ${totalEstimadas.toFixed(2)}h\nTotal reales: ${totalReales.toFixed(2)}h\nDiferencia: ${(totalReales - totalEstimadas).toFixed(2)}h`);
         }
 
         // ===============================================
