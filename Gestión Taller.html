@@ -7388,118 +7388,6 @@
         let mesActualCalendario = new Date().getMonth();
         let anioActualCalendario = new Date().getFullYear();
 
-        function eliminarParticionCalendario(vestidoId, fecha, event) {
-            event.stopPropagation();
-            const vestido = vestidos.find(v => v.id === vestidoId);
-            if (!vestido) return;
-            
-            // Check if this dress is in automatic planning (planificacion object)
-            const enPlanificacionAuto = planificacion[fecha] && planificacion[fecha].some(e => e.vestidoId === vestidoId);
-            
-            if (enPlanificacionAuto) {
-                // Handle automatic planning deletion using the existing eliminarPartePlanificada function
-                const entrada = planificacion[fecha].find(e => e.vestidoId === vestidoId);
-                eliminarPartePlanificada(vestidoId, fecha, entrada ? entrada.parte : null, event);
-                return;
-            }
-            
-            // Check if this is a suggested planning or actual work hours
-            if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados) {
-                const diasAsignados = vestido.planificacionSugerida.diasAsignados;
-                
-                if (diasAsignados.length === 1) {
-                    // Only one partition, delete entire planning
-                    if (confirm(`¿Eliminar la planificación de "${vestido.nombreModelo}"?`)) {
-                        delete vestido.planificacionSugerida;
-                        delete vestido.fechaInicioSugerida;
-                        guardarTodo();
-                        generarCalendarioPlanificacion();
-                        cargarPlanificacionNueva();
-                    }
-                } else {
-                    // Multiple partitions, ask if user wants to delete just this one or all
-                    const partitionIndex = diasAsignados.findIndex(d => d.fecha === fecha);
-                    if (partitionIndex >= 0) {
-                        const mensaje = `Este vestido está dividido en ${diasAsignados.length} partes.\n\n` +
-                            `¿Qué deseas eliminar?\n\n` +
-                            `OK = Solo esta parte (${partitionIndex + 1})\n` +
-                            `Cancelar = Todas las partes`;
-                        
-                        const soloEstaParte = confirm(mensaje);
-                        
-                        if (soloEstaParte) {
-                            // Delete only this partition
-                            diasAsignados.splice(partitionIndex, 1);
-                            if (diasAsignados.length === 0) {
-                                delete vestido.planificacionSugerida;
-                                delete vestido.fechaInicioSugerida;
-                            } else {
-                                // Update remaining hours
-                                vestido.planificacionSugerida.horasTotales = diasAsignados.reduce((sum, d) => sum + d.horas, 0);
-                            }
-                        } else {
-                            // Delete all partitions
-                            delete vestido.planificacionSugerida;
-                            delete vestido.fechaInicioSugerida;
-                        }
-                        guardarTodo();
-                        generarCalendarioPlanificacion();
-                        cargarPlanificacionNueva();
-                    }
-                }
-            } else if (horasConfeccion[vestidoId]) {
-                // This is actual work hours, need to delete intervals for this date
-                const horas = horasConfeccion[vestidoId];
-                const intervalosEnFecha = horas.intervalos.filter(i => i.inicio && i.inicio.split('T')[0] === fecha);
-                
-                if (intervalosEnFecha.length === 0) return;
-                
-                // Check total number of unique dates
-                const fechasUnicas = [...new Set(horas.intervalos.map(i => i.inicio ? i.inicio.split('T')[0] : null).filter(Boolean))];
-                
-                if (fechasUnicas.length === 1) {
-                    // Only one date, delete all work hours
-                    if (confirm(`¿Eliminar todas las horas de trabajo de "${vestido.nombreModelo}"?`)) {
-                        delete horasConfeccion[vestidoId];
-                        guardarTodo();
-                        generarCalendarioPlanificacion();
-                        cargarPlanificacionNueva();
-                    }
-                } else {
-                    // Multiple dates
-                    const partitionIndex = fechasUnicas.indexOf(fecha);
-                    const mensaje = `Este vestido tiene horas registradas en ${fechasUnicas.length} días.\n\n` +
-                        `¿Qué deseas eliminar?\n\n` +
-                        `OK = Solo las horas de este día (${partitionIndex + 1})\n` +
-                        `Cancelar = Todas las horas`;
-                    
-                    const soloEsteDia = confirm(mensaje);
-                    
-                    if (soloEsteDia) {
-                        // Delete only intervals for this date
-                        horas.intervalos = horas.intervalos.filter(i => !i.inicio || i.inicio.split('T')[0] !== fecha);
-                        if (horas.intervalos.length === 0) {
-                            delete horasConfeccion[vestidoId];
-                        } else {
-                            // Recalculate total hours
-                            horas.horasTotales = horas.intervalos.reduce((sum, i) => {
-                                if (i.inicio && i.fin) {
-                                    const diff = (new Date(i.fin) - new Date(i.inicio)) / (1000 * 60 * 60);
-                                    return sum + diff;
-                                }
-                                return sum;
-                            }, 0);
-                        }
-                    } else {
-                        // Delete all work hours
-                        delete horasConfeccion[vestidoId];
-                    }
-                    guardarTodo();
-                    generarCalendarioPlanificacion();
-                    cargarPlanificacionNueva();
-                }
-            }
-        }
 
         function generarCalendarioPlanificacion() {
             const container = document.getElementById('calendario-planificacion-grid');
@@ -7726,7 +7614,7 @@
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
                             title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                            <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
+                            <button class="btn-eliminar-vestido-calendario" onclick="eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event); event.stopPropagation();">×</button>
                         </div>`;
                     }
                 });
@@ -7797,7 +7685,7 @@
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
                         title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                        <button class="btn-eliminar-vestido-calendario" onclick="eliminarParticionCalendario(${v.id}, '${fechaStr}', event); event.stopPropagation();">×</button>
+                        <button class="btn-eliminar-vestido-calendario" onclick="eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event); event.stopPropagation();">×</button>
                     </div>`;
                 });
 
@@ -8138,9 +8026,7 @@
                     <div style="font-size: 0.9em; color: var(--color-texto-secundario);">
                         ${horasLibres > 0 ? 
                             `✅ <strong style="color: var(--color-exito);">${horasLibres.toFixed(1)}h libres</strong> disponibles para asignar` : 
-                            horasLibres < 0 ?
-                            `⚠️ <strong style="color: var(--color-error);">${Math.abs(horasLibres).toFixed(1)}h de exceso</strong> - considere redistribuir` :
-                            `⚠️ <strong style="color: var(--color-alerta);">Día completo</strong> - sin horas disponibles`
+                            `⚠️ <strong style="color: var(--color-error);">${Math.abs(horasLibres).toFixed(1)}h de exceso</strong> - considere redistribuir`
                         }
                     </div>
                 </div>
