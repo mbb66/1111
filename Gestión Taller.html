@@ -7787,9 +7787,9 @@
                     <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''} ${diaCompleto && !esFinDeSemana ? 'dia-completo' : ''}" 
                          style="min-height: 120px; cursor: pointer;" 
                          onclick="verDetallesDiaCalendario('${fechaStr}')"
-                         ondrop="${diaCompleto && !esFinDeSemana ? 'return false;' : `onDropCalendario(event, '${fechaStr}')`}"
-                         ondragover="${diaCompleto && !esFinDeSemana ? 'return false;' : `onDragOverCalendario(event)`}"
-                         ondragleave="${diaCompleto && !esFinDeSemana ? '' : `onDragLeaveCalendario(event)`}"
+                         ondrop="onDropCalendario(event, '${fechaStr}')"
+                         ondragover="onDragOverCalendario(event)"
+                         ondragleave="onDragLeaveCalendario(event)"
                          data-fecha="${fechaStr}">
                         <div class="numero-dia">
                             <span>${dia}</span>
