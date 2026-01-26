@@ -584,7 +584,7 @@
         .calendario-grid-body {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
+            gap: 4px;
             width: 100%;
             min-height: 600px;
             padding: 4px;
@@ -592,15 +592,15 @@
 
         .dia-calendario {
             background: var(--color-superficie);
-            padding: 10px;
-            min-height: 140px;
+            padding: 8px;
+            min-height: 120px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border-radius: 8px;
+            border-radius: 6px;
             border: 1px solid var(--color-borde);
         }
 
@@ -630,15 +630,16 @@
         }
 
         .dia-calendario.dia-completo {
-            background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+            background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
             border: 2px solid var(--color-error);
             cursor: not-allowed;
-            opacity: 0.85;
+            opacity: 0.6;
+            pointer-events: none;
         }
 
         .dia-calendario.dia-completo:hover {
             transform: none;
-            background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+            background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
         }
 
         .dia-calendario.dia-completo::after {
@@ -5932,16 +5933,20 @@
             if (!confirm('¿Estás segura de que quieres eliminar TODOS los vestidos planificados automáticamente? Esta acción no se puede deshacer.')) return;
             
             let eliminados = 0;
+            const fechasAfectadas = new Set();
+            
             // Iterate through all dates in planificacion
             Object.keys(planificacion).forEach(fecha => {
                 const vestidosOriginales = [...planificacion[fecha]];
-                // Remove all automatic entries
+                // Remove only automatic entries (those in vestidosPlanificadosAuto)
                 planificacion[fecha] = vestidosOriginales.filter(entrada => {
-                    // Keep only non-automatic entries (those without the flag or manually added)
-                    // Since we don't have a flag in the data, we need to check if the dress is in vestidosPlanificadosAuto
-                    // For now, we'll just remove all entries (since the data structure doesn't support the flag)
-                    eliminados++;
-                    return false;
+                    const esAutomatico = vestidosPlanificadosAuto.has(entrada.vestidoId);
+                    if (esAutomatico) {
+                        eliminados++;
+                        fechasAfectadas.add(fecha);
+                    }
+                    // Keep only non-automatic entries
+                    return !esAutomatico;
                 });
                 
                 // If the date has no more entries, delete it
@@ -5950,8 +5955,12 @@
                 }
             });
             
+            // Clear the tracking set
             vestidosPlanificadosAuto.clear();
+            
+            // Save and reload to update visual state and hours
             guardarYRecargarPlanificacion();
+            
             alert(`✅ Se eliminaron ${eliminados} asignaciones automáticas del calendario.`);
         }
 
@@ -7743,33 +7752,23 @@
                     </div>`;
                 });
 
-                // Requirement 2: Display sent dresses on delivery date with arrow emoji and red color
-                vestidosAlbaranDelDia.forEach(v => {
-                    const proveedor = v.proveedor;
-                    const colorBg = `var(--color-${proveedor})`;
-                    const colorBorde = `var(--color-${proveedor}-borde)`;
-                    const opacidad = 'opacity: 0.5;'; // 50% opacity for sent dresses
-                    
-                    // Display model name and lot in red
-                    let loteDisplay = v.lote || 'N/A';
-                    let tituloDisplay = `ALBARÁN: ${v.nombreModelo} - Lote: ${loteDisplay}`;
-                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
-                        loteDisplay += `(${v.numeroSerie})`;
-                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
-                    }
-                    tituloDisplay += ` - Albarán: ${v.numeroAlbaran || 'N/A'} - Clic para ver detalles`;
+                // Display sent dresses grouped in a dedicated card
+                if (vestidosAlbaranDelDia.length > 0) {
+                    const vestidosIds = vestidosAlbaranDelDia.map(v => v.id).join(',');
+                    const count = vestidosAlbaranDelDia.length;
+                    const tituloDisplay = `${count} vestido${count > 1 ? 's' : ''} enviado${count > 1 ? 's' : ''} - Clic para ver lista`;
                     
                     vestidosHtml += `<div 
                         draggable="false"
-                        onclick="event.stopPropagation(); mostrarDetallesVestido(${v.id});"
-                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="${tituloDisplay}">➡️ <span style="color: red; font-weight: 700;">${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]</span>
+                        onclick="event.stopPropagation(); mostrarModalVestidosEnviados('${fechaStr}', [${vestidosIds}]);"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 5px; background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%); border-left: 3px solid #DC2626; border-radius: 3px; cursor: pointer; font-weight: 600; text-align: center;" 
+                        title="${tituloDisplay}">📦 ${count} Enviado${count > 1 ? 's' : ''}
                     </div>`;
-                });
+                }
 
                 html += `
                     <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''} ${diaCompleto && !esFinDeSemana ? 'dia-completo' : ''}" 
-                         style="min-height: 140px; ${diaCompleto && !esFinDeSemana ? 'pointer-events: none;' : 'cursor: pointer;'}" 
+                         style="min-height: 120px; ${diaCompleto && !esFinDeSemana ? 'pointer-events: none;' : 'cursor: pointer;'}" 
                          onclick="${diaCompleto && !esFinDeSemana ? '' : `verDetallesDiaCalendario('${fechaStr}')`}"
                          ondrop="${diaCompleto && !esFinDeSemana ? '' : `onDropCalendario(event, '${fechaStr}')`}"
                          ondragover="${diaCompleto && !esFinDeSemana ? '' : `onDragOverCalendario(event)`}"
@@ -9316,6 +9315,75 @@
             modal.classList.remove('active');
             modal.style.display = 'none';
         }
+
+        function mostrarModalVestidosEnviados(fecha, vestidosIds) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('modal-vestidos-enviados-dia');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-vestidos-enviados-dia';
+                modal.className = 'modal';
+                modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;';
+                modal.innerHTML = `
+                    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 id="modal-enviados-titulo" style="margin: 0;">Vestidos Enviados</h3>
+                            <button onclick="cerrarModalVestidosEnviadosDia()" style="background: none; border: none; font-size: 1.5em; cursor: pointer;">×</button>
+                        </div>
+                        <div id="modal-enviados-lista"></div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+            }
+            
+            // Format date for display
+            const fechaObj = new Date(fecha + 'T00:00:00');
+            const fechaTexto = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('modal-enviados-titulo').textContent = `Vestidos Enviados - ${fechaTexto}`;
+            
+            // Get dresses and generate list
+            let listaHtml = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            vestidosIds.forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === vestidoId);
+                if (!vestido) return;
+                
+                const proveedor = vestido.proveedor;
+                const colorBg = `var(--color-${proveedor})`;
+                const colorBorde = `var(--color-${proveedor}-borde)`;
+                let loteDisplay = vestido.lote || 'N/A';
+                if (vestido.proveedor === 'rosa_clara' && vestido.numeroSerie) {
+                    loteDisplay += `(${vestido.numeroSerie})`;
+                }
+                
+                listaHtml += `
+                    <div onclick="mostrarDetallesVestido(${vestido.id}); cerrarModalVestidosEnviadosDia();" 
+                         style="padding: 10px; background: ${colorBg}; border-left: 4px solid ${colorBorde}; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                         onmouseover="this.style.transform='translateX(5px)'" 
+                         onmouseout="this.style.transform='translateX(0)'">
+                        <div style="font-weight: 600; margin-bottom: 5px;">📦 ${vestido.nombreModelo}</div>
+                        <div style="font-size: 0.85em; color: #666;">
+                            <div>Lote: ${loteDisplay}</div>
+                            ${vestido.numeroAlbaran ? `<div>Albarán: ${vestido.numeroAlbaran}</div>` : ''}
+                            ${vestido.proveedor ? `<div>Proveedor: ${vestido.proveedor.toUpperCase()}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            listaHtml += '</div>';
+            
+            document.getElementById('modal-enviados-lista').innerHTML = listaHtml;
+            
+            // Show modal
+            modal.style.display = 'flex';
+        }
+
+        function cerrarModalVestidosEnviadosDia() {
+            const modal = document.getElementById('modal-vestidos-enviados-dia');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
         
         function cargarVestidosEnviados() {
             const mesSeleccionado = document.getElementById('mes-enviados-select').value;
