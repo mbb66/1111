@@ -8077,6 +8077,35 @@
 
             // Track hours used per day
             const horasUsadasPorDia = {}; // { 'YYYY-MM-DD': horasUsadas }
+            
+            // BUGFIX: Initialize with hours already used by manually assigned dresses
+            // This prevents automatic planning from overbooking days that already have manual assignments
+            const gruposProcesados = new Set(); // Track processed groups to avoid counting hours multiple times
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    // If dress is in a group, only count hours once per group
+                    const grupoId = horas.grupoId;
+                    if (grupoId && gruposProcesados.has(grupoId)) {
+                        // Skip - already counted this group's hours
+                        return;
+                    }
+                    if (grupoId) {
+                        gruposProcesados.add(grupoId);
+                    }
+                    
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.fin) {
+                            const fechaStr = intervalo.inicio.split('T')[0];
+                            const inicioDate = new Date(intervalo.inicio);
+                            const finDate = new Date(intervalo.fin);
+                            const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                            horasUsadasPorDia[fechaStr] = (horasUsadasPorDia[fechaStr] || 0) + diffHours;
+                        }
+                    });
+                }
+            });
 
             // Helper function to get total available hours for a date
             function getHorasTotalesFecha(fecha) {
