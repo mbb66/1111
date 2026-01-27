@@ -5664,7 +5664,7 @@
                 ${esParcial && entrada.parte ? `<span class="partition-badge">${entrada.parte}</span>` : ''}
                 <strong>${vestido.nombreModelo}${vestido.proveedor === 'rosa_clara' && vestido.numeroSerie ? ` (Serie: ${vestido.numeroSerie})` : ''}</strong>
                 <div class="parte-info">${entrada.horas.toFixed(1)}h${esParcial ? ` / ${horasTotales.toFixed(1)}h total` : ''}</div>
-                <button class="btn-eliminar-vestido" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${vestido.id}, '${fecha}', ${entrada.parte || 'null'}, e); }">×</button>
+                <button class="btn-eliminar-vestido" onclick="eliminarPartePlanificada('${vestido.id}', '${fecha}', ${entrada.parte ?? 'null'}); event.stopPropagation();">✕</button>
             </div>`;
         }
 
@@ -5779,7 +5779,7 @@
         }
 
         function eliminarPartePlanificada(vestidoId, fecha, parte, event) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             
             // Check if there are multiple parts of this dress in the calendar
             let totalPartes = 0;
