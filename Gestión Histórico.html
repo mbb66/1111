@@ -1269,6 +1269,9 @@
             if (paginaActualInventario > totalPaginas && totalPaginas > 0) {
                 paginaActualInventario = totalPaginas;
             }
+            if (paginaActualInventario < 1) {
+                paginaActualInventario = 1;
+            }
 
             const inicio = (paginaActualInventario - 1) * vestidosPorPagina;
             const fin = inicio + vestidosPorPagina;
