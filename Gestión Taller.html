@@ -2925,17 +2925,11 @@
                         <div>
                             <label style="font-weight: 600; display: block; margin-bottom: 5px;">📊 Filtrar por Estado:</label>
                             <select id="filtro-calendario-estado" onchange="aplicarFiltrosCalendario()" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
-                                <option value="todos">Todos los estados</option>
+                                <option value="todos">Todos los estados (sin enviados)</option>
                                 <option value="en_proceso">En Proceso</option>
                                 <option value="en_taller">En Taller</option>
-                                <option value="enviado">Enviados</option>
+                                <option value="enviado">Mostrar Enviados (fecha envío)</option>
                             </select>
-                        </div>
-                        <div style="display: flex; align-items: flex-end;">
-                            <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: white; border-radius: 6px; border: 2px solid var(--color-borde);">
-                                <input type="checkbox" id="filtro-calendario-ocultar-enviados" onchange="aplicarFiltrosCalendario()" style="margin-right: 8px;">
-                                <span>Ocultar enviados en calendario</span>
-                            </label>
                         </div>
                     </div>
                 </div>
@@ -7512,13 +7506,24 @@
                             const colorBg = `var(--color-${proveedor})`;
                             const colorBorde = `var(--color-${proveedor}-borde)`;
                             
-                            // Problem 3 fix: Check if group has manual intervals - if so, not draggable
+                            // REQUIREMENT 3: Make all groups draggable, even with manual intervals
                             const tieneIntervalosManual = grupo.vestidosIds.some(vid => {
                                 const h = horasConfeccion[vid];
                                 return h && h.intervalos && h.intervalos.length > 0;
                             });
-                            const draggable = tieneIntervalosManual ? 'false' : 'true';
-                            const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
+                            const draggable = 'true'; // Always draggable now
+                            const cursorStyle = 'cursor: pointer;';
+                            
+                            // REQUIREMENT 3: Calculate total hours for the group
+                            let horasTotalesGrupo = 0;
+                            let horasEstimadasGrupo = 0;
+                            vestidosDelGrupoEnFecha.forEach(vg => {
+                                const modeloG = modelos.find(m => m.codigo === vg.codigoModelo);
+                                horasEstimadasGrupo += modeloG ? modeloG.horas : 0;
+                                const horasG = horasConfeccion[vg.id];
+                                horasTotalesGrupo += horasG ? horasG.horasTotales : 0;
+                            });
+                            const horasDisplayGrupo = horasTotalesGrupo > 0 ? `${horasTotalesGrupo.toFixed(1)}h real` : `${horasEstimadasGrupo.toFixed(1)}h est`;
                             
                             const tituloGrupo = vestidosDelGrupoEnFecha.map(v => {
                                 let info = `${v.nombreModelo} (Lote: ${v.lote || 'N/A'}`;
@@ -7545,7 +7550,7 @@
                                 ondragend="onDragEndCalendario(event)"
                                 onclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
                                 style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar">${emojiEnviado}🔗 ${nombreDisplay}</div>`;
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - ${horasDisplayGrupo} - Clic para gestionar">${emojiEnviado}🔗 ${nombreDisplay} <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplayGrupo}</span></div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
@@ -7553,10 +7558,17 @@
                         const opacidad = esEnviado ? 'opacity: 0.5;' : '';
                         const emojiEnviado = esEnviado ? '↗️ ' : '';
                         
-                        // Problem 3 fix: Check if has manual intervals - if so, not draggable
+                        // REQUIREMENT 3: Make all dresses draggable, even with manual intervals
+                        // Users can now drag and split dresses regardless of manual intervals
                         const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
-                        const draggable = tieneIntervalosManual ? 'false' : 'true';
-                        const cursorStyle = tieneIntervalosManual ? 'cursor: not-allowed;' : 'cursor: pointer;';
+                        const draggable = 'true'; // Always draggable now
+                        const cursorStyle = 'cursor: pointer;';
+                        
+                        // REQUIREMENT 3: Get estimated or real hours for display
+                        const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                        const horasEstimadas = modelo ? modelo.horas : 0;
+                        const horasReales = horas ? horas.horasTotales : 0;
+                        const horasDisplay = horasReales > 0 ? `${horasReales.toFixed(1)}h real` : `${horasEstimadas.toFixed(1)}h est`;
                         
                         // Get supplier color
                         const proveedor = v.proveedor;
@@ -7577,7 +7589,7 @@
                         
                         // Simplified display: dress name and lot number only
                         let loteDisplay = v.lote || 'N/A';
-                        let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                        let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay} - ${horasDisplay}`;
                         if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
                             loteDisplay += `(${v.numeroSerie})`;
                             tituloDisplay += `, Serie: ${v.numeroSerie}`;
@@ -7589,7 +7601,7 @@
                             ondragend="onDragEndCalendario(event)"
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
+                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplay}</span>
                             <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event);">×</button>
                         </div>`;
                     }
@@ -7600,6 +7612,12 @@
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const opacidad = esEnviado ? 'opacity: 0.5;' : '';
                     const draggable = 'true';
+                    
+                    // REQUIREMENT 3: Get estimated or real hours for display
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    const horasEstimadas = modelo ? modelo.horas : 0;
+                    const horasReales = v.horasReales || 0;
+                    const horasDisplay = horasReales > 0 ? `${horasReales.toFixed(1)}h real` : `${horasEstimadas.toFixed(1)}h est`;
                     
                     // Check if dress is in automatic planning for this date
                     const enPlanificacionAuto = planificacion[fechaStr] && planificacion[fechaStr].some(e => e.vestidoId === v.id);
@@ -7647,7 +7665,7 @@
                     
                     // Simplified display: dress name and lot number only
                     let loteDisplay = v.lote || 'N/A';
-                    let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay}`;
+                    let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay} - ${horasDisplay}`;
                     if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
                         loteDisplay += `(${v.numeroSerie})`;
                         tituloDisplay += `, Serie: ${v.numeroSerie}`;
@@ -7660,7 +7678,7 @@
                         ondragend="onDragEndCalendario(event)"
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
-                        title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
+                        title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplay}</span>
                         <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event);">×</button>
                     </div>`;
                 });
@@ -7707,87 +7725,23 @@
         // Global variable to store calendar filters
         let filtrosCalendarioActivos = {
             proveedor: 'todos',
-            estado: 'todos',
-            ocultarEnviados: false
+            estado: 'todos'
         };
 
         function aplicarFiltrosCalendario() {
             // Get filter values
             const filtroProveedorEl = document.getElementById('filtro-calendario-proveedor');
             const filtroEstadoEl = document.getElementById('filtro-calendario-estado');
-            const filtroOcultarEnviadosEl = document.getElementById('filtro-calendario-ocultar-enviados');
             
-            if (!filtroProveedorEl || !filtroEstadoEl || !filtroOcultarEnviadosEl) {
+            if (!filtroProveedorEl || !filtroEstadoEl) {
                 return; // Filters not loaded yet
             }
             
             filtrosCalendarioActivos.proveedor = filtroProveedorEl.value;
             filtrosCalendarioActivos.estado = filtroEstadoEl.value;
-            filtrosCalendarioActivos.ocultarEnviados = filtroOcultarEnviadosEl.checked;
             
-            // Get all dress cards in calendar
-            const container = document.getElementById('calendario-planificacion-grid');
-            if (!container) return;
-            
-            const dias = container.querySelectorAll('.dia-calendario');
-            
-            dias.forEach(diaEl => {
-                const fechaStr = diaEl.dataset.fecha;
-                if (!fechaStr) return;
-                
-                // Get all dress divs in this day (skip sent delivery cards)
-                const vestidoDivs = Array.from(diaEl.children).filter(el => 
-                    !el.classList.contains('numero-dia') && 
-                    !el.textContent.includes('Enviado')
-                );
-                
-                vestidoDivs.forEach(div => {
-                    let visible = true;
-                    
-                    // Try to identify the dress from the div
-                    // Check various attributes and content to determine dress details
-                    const isEnviado = div.textContent.includes('↗️');
-                    
-                    // Filter by sent status
-                    if (filtrosCalendarioActivos.ocultarEnviados && isEnviado) {
-                        visible = false;
-                    }
-                    
-                    // Filter by supplier (check background color or border)
-                    if (filtrosCalendarioActivos.proveedor !== 'todos') {
-                        const bgColor = div.style.background;
-                        const borderColor = div.style.borderLeftColor || div.style.borderLeft;
-                        
-                        const proveedorMatch = 
-                            (filtrosCalendarioActivos.proveedor === 'pronovias' && (bgColor.includes('pronovias') || borderColor.includes('pronovias'))) ||
-                            (filtrosCalendarioActivos.proveedor === 'rosa_clara' && (bgColor.includes('rosa_clara') || borderColor.includes('rosa_clara'))) ||
-                            (filtrosCalendarioActivos.proveedor === 'traka' && (bgColor.includes('traka') || borderColor.includes('traka')));
-                        
-                        if (!proveedorMatch) {
-                            visible = false;
-                        }
-                    }
-                    
-                    // Filter by status
-                    if (filtrosCalendarioActivos.estado !== 'todos') {
-                        const hasCheckmark = div.textContent.includes('✅');
-                        const hasRobot = div.textContent.includes('🤖');
-                        const hasCalendar = div.textContent.includes('📅');
-                        const hasHourglass = div.textContent.includes('⏳');
-                        
-                        if (filtrosCalendarioActivos.estado === 'en_proceso' && !hasCheckmark) {
-                            visible = false;
-                        } else if (filtrosCalendarioActivos.estado === 'en_taller' && hasCheckmark) {
-                            visible = false;
-                        } else if (filtrosCalendarioActivos.estado === 'enviado' && !isEnviado) {
-                            visible = false;
-                        }
-                    }
-                    
-                    // Apply visibility
-                    div.style.display = visible ? '' : 'none';
-                });
-            });
+            // Regenerate calendar with new filters
+            generarCalendarioPlanificacion();
         }
 
         function obtenerVestidosParaFecha(fechaStr) {
@@ -7829,15 +7783,22 @@
                 }
             });
 
-            // Requirement 2: Show sent dresses on their delivery date with arrow emoji
-            vestidos.forEach(vestido => {
-                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
-                if (esEnviado && vestido.fechaEnvio === fechaStr) {
-                    if (!resultado.find(v => v.id === vestido.id)) {
-                        resultado.push(vestido);
+            // REQUIREMENT 2 UPDATE: Only show sent dresses if explicitly requested via filter
+            // By default, permanently remove sent/paid dresses (vestidos con fecha fin) from calendar view
+            const filtroEstado = document.getElementById('filtro-calendario-estado');
+            const mostrarEnviados = filtroEstado && filtroEstado.value === 'enviado';
+            
+            if (mostrarEnviados) {
+                // Show sent dresses on their delivery date with arrow emoji
+                vestidos.forEach(vestido => {
+                    const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                    if (esEnviado && vestido.fechaEnvio === fechaStr) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // Get dresses with deadline on this date (pending dresses) - EXCLUDE sent dresses from future dates
             vestidos.forEach(vestido => {
@@ -7891,7 +7852,17 @@
                 }
             });
 
-            return resultado;
+            // REQUIREMENT 2: Apply active filters to results
+            let resultadoFiltrado = resultado;
+            
+            // Filter by supplier
+            if (filtrosCalendarioActivos.proveedor !== 'todos') {
+                resultadoFiltrado = resultadoFiltrado.filter(v => v.proveedor === filtrosCalendarioActivos.proveedor);
+            }
+            
+            // Filter by status is handled above in the logic for showing/hiding sent dresses
+            
+            return resultadoFiltrado;
         }
 
         function verDetallesDiaCalendario(fechaStr) {
@@ -9370,6 +9341,121 @@
             reporteHtml += `
                         </tbody>
                     </table>
+            `;
+
+            // NEW REQUIREMENT 1: Add summary by model section
+            reporteHtml += `
+                    <div class="page-break"></div>
+                    <h2>3. Resumen por Modelo</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th>Cantidad</th>
+                                <th>H. Est. Totales</th>
+                                <th>H. Reales Totales</th>
+                                <th>Variación (h)</th>
+                                <th>Precio Total</th>
+                                <th>Coste H. Total</th>
+                                <th>Beneficio/Pérdida</th>
+                                <th>Prom. H. Est.</th>
+                                <th>Prom. H. Reales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            // Aggregate data by model
+            const modeloStats = {};
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horasReales = horas.horasTotales;
+                const precioVestido = vestido.precioBase || 0;
+                const costeHoras = horasReales * precioHoraObjetivo;
+                const beneficio = precioVestido - costeHoras;
+
+                const modeloKey = vestido.nombreModelo;
+                if (!modeloStats[modeloKey]) {
+                    modeloStats[modeloKey] = {
+                        cantidad: 0,
+                        horasEstimadas: 0,
+                        horasReales: 0,
+                        precioTotal: 0,
+                        costeTotal: 0,
+                        beneficioTotal: 0
+                    };
+                }
+
+                modeloStats[modeloKey].cantidad++;
+                modeloStats[modeloKey].horasEstimadas += horasEstimadas;
+                modeloStats[modeloKey].horasReales += horasReales;
+                modeloStats[modeloKey].precioTotal += precioVestido;
+                modeloStats[modeloKey].costeTotal += costeHoras;
+                modeloStats[modeloKey].beneficioTotal += beneficio;
+            });
+
+            // Sort models by name
+            const modelosOrdenados = Object.keys(modeloStats).sort();
+            
+            modelosOrdenados.forEach(nombreModelo => {
+                const stats = modeloStats[nombreModelo];
+                const variacion = stats.horasReales - stats.horasEstimadas;
+                const beneficioClass = stats.beneficioTotal >= 0 ? 'profit' : 'loss';
+                const variacionSign = variacion >= 0 ? '+' : '';
+                const promedioEstimadas = stats.cantidad > 0 ? stats.horasEstimadas / stats.cantidad : 0;
+                const promedioReales = stats.cantidad > 0 ? stats.horasReales / stats.cantidad : 0;
+
+                reporteHtml += `
+                    <tr>
+                        <td><strong>${nombreModelo}</strong></td>
+                        <td>${stats.cantidad}</td>
+                        <td>${stats.horasEstimadas.toFixed(2)}h</td>
+                        <td>${stats.horasReales.toFixed(2)}h</td>
+                        <td>${variacionSign}${variacion.toFixed(2)}h</td>
+                        <td>${stats.precioTotal.toFixed(2)}€</td>
+                        <td>${stats.costeTotal.toFixed(2)}€</td>
+                        <td class="${beneficioClass}"><strong>${stats.beneficioTotal >= 0 ? '+' : ''}${stats.beneficioTotal.toFixed(2)}€</strong></td>
+                        <td>${promedioEstimadas.toFixed(2)}h</td>
+                        <td>${promedioReales.toFixed(2)}h</td>
+                    </tr>
+                `;
+            });
+
+            reporteHtml += `
+                        </tbody>
+                    </table>
+                    
+                    <div class="section-summary">
+                        <strong>💡 Análisis por Modelo:</strong><br>
+                        Total de modelos diferentes: ${modelosOrdenados.length}<br>
+                        Modelo más rentable: ${modelosOrdenados.length > 0 ? (() => {
+                            let maxBeneficio = -Infinity;
+                            let modeloMax = '';
+                            modelosOrdenados.forEach(m => {
+                                if (modeloStats[m].beneficioTotal > maxBeneficio) {
+                                    maxBeneficio = modeloStats[m].beneficioTotal;
+                                    modeloMax = m;
+                                }
+                            });
+                            return `${modeloMax} (+${maxBeneficio.toFixed(2)}€)`;
+                        })() : 'N/A'}<br>
+                        Modelo menos rentable: ${modelosOrdenados.length > 0 ? (() => {
+                            let minBeneficio = Infinity;
+                            let modeloMin = '';
+                            modelosOrdenados.forEach(m => {
+                                if (modeloStats[m].beneficioTotal < minBeneficio) {
+                                    minBeneficio = modeloStats[m].beneficioTotal;
+                                    modeloMin = m;
+                                }
+                            });
+                            return `${modeloMin} (${minBeneficio >= 0 ? '+' : ''}${minBeneficio.toFixed(2)}€)`;
+                        })() : 'N/A'}
+                    </div>
                 </body>
                 </html>
             `;
