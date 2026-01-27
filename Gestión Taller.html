@@ -3418,14 +3418,14 @@
         // Migrate existing dresses to have tuvoTara flag based on historialTaras
         vestidos = vestidos.map(v => {
             if (v.tuvoTara === undefined) {
-                v.tuvoTara = v.estado === 'con_tara' || (v.historialTaras && v.historialTaras.length > 0);
+                v.tuvoTara = v.estado === 'con_tara' || (Array.isArray(v.historialTaras) && v.historialTaras.length > 0);
             }
             return v;
         });
         
-        let numeroFactura = parseInt(localStorage.getItem('ultimaFactura')) || 58;
-        let numeroAlbaranPronovias = parseInt(localStorage.getItem('ultimoAlbaranPronovias')) || 112;
-        let numeroAlbaranOtros = parseInt(localStorage.getItem('ultimoAlbaranOtros')) || 29;
+        let numeroFactura = parseInt(localStorage.getItem('ultimaFactura') || '0', 10) || 58;
+        let numeroAlbaranPronovias = parseInt(localStorage.getItem('ultimoAlbaranPronovias') || '0', 10) || 112;
+        let numeroAlbaranOtros = parseInt(localStorage.getItem('ultimoAlbaranOtros') || '0', 10) || 29;
         let planificacion = JSON.parse(localStorage.getItem('planificacion')) || {};
         let ajustesCapacidad = JSON.parse(localStorage.getItem('ajustesCapacidad')) || {};
 
@@ -4574,6 +4574,7 @@
                 const fechaEnvio = prompt(`Introduce fecha de envío (DD/MM/AAAA):`, new Date().toLocaleDateString('es-ES'));
                 if (!fechaEnvio) return;
                 const [d, m, a] = fechaEnvio.split('/');
+                if (!d || !m || !a || a.length < 4) return alert('Formato de fecha inválido. Use DD/MM/AAAA.');
                 const fechaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
                 const esReenvio = vestido.estado === 'con_tara';
@@ -4594,9 +4595,9 @@
                 vestido.fechaEnvio = fechaISO;
 
                 if (vestido.proveedor === 'pronovias') {
-                    numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran) + 1);
+                    numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran, 10) + 1);
                 } else {
-                    numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran) + 1);
+                    numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran, 10) + 1);
                 }
 
                 vestido.estado = 'enviado'; // Lo marcamos como enviado
@@ -4719,6 +4720,7 @@
             if (!fechaEnvio) return;
 
             const [d, m, a] = fechaEnvio.split('/');
+            if (!d || !m || !a || a.length < 4) return alert('Formato de fecha inválido. Use DD/MM/AAAA.');
             const fechaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
             vestidosSeleccionados.forEach(vestido => {
@@ -4737,8 +4739,8 @@
                 vestido.estado = 'enviado';
             });
 
-            if (proveedor === 'pronovias') numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran) + 1);
-            else numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran) + 1);
+            if (proveedor === 'pronovias') numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran, 10) + 1);
+            else numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran, 10) + 1);
 
             guardarTodo();
             alert(`✅ Albarán ${numeroAlbaran} generado para ${vestidosSeleccionados.length} vestidos.`);
@@ -4765,6 +4767,7 @@
             if (!fechaFacturaInput) return;
 
             const [d, m, a] = fechaFacturaInput.split('/');
+            if (!d || !m || !a || a.length < 4) return alert('Formato de fecha inválido. Use DD/MM/AAAA.');
             const fechaFacturaISO = `${a}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 
             vestidosSeleccionados.forEach(vestido => {
@@ -4773,7 +4776,7 @@
                 vestido.fechaFactura = fechaFacturaISO;
             });
 
-            numeroFactura = Math.max(numeroFactura, parseInt(numeroFacturaInput) + 1);
+            numeroFactura = Math.max(numeroFactura, parseInt(numeroFacturaInput, 10) + 1);
 
             guardarTodo();
             alert(`✅ Factura ${numeroFacturaInput} generada para ${vestidosSeleccionados.length} vestidos.`);
@@ -5892,9 +5895,11 @@
             
             // Priority 2: Check for special tara cases
             if (vestido.estado === 'con_tara') {
-                const ultimaTara = vestido.historialTaras[vestido.historialTaras.length - 1];
-                if (ultimaTara && ultimaTara.tipo === 'tara_empresa' && ultimaTara.horasExtra > 0) {
-                    return ultimaTara.horasExtra;
+                if (Array.isArray(vestido.historialTaras) && vestido.historialTaras.length > 0) {
+                    const ultimaTara = vestido.historialTaras[vestido.historialTaras.length - 1];
+                    if (ultimaTara && ultimaTara.tipo === 'tara_empresa' && ultimaTara.horasExtra > 0) {
+                        return ultimaTara.horasExtra;
+                    }
                 }
                 return 3; // Horas fijas para tara del taller
             }
