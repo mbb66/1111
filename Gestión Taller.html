@@ -629,35 +629,6 @@
             box-shadow: none;
         }
 
-        .dia-calendario.dia-completo {
-            background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
-            border: 2px solid var(--color-error);
-            cursor: pointer;
-            opacity: 0.8;
-            /* Allow interaction - users can click to see dress details */
-        }
-
-        .dia-calendario.dia-completo:hover {
-            transform: none;
-            background: linear-gradient(135deg, #FEE2E2 0%, #FCA5A5 100%);
-        }
-
-        .dia-calendario.dia-completo::after {
-            content: "COMPLETO";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.7em;
-            font-weight: 700;
-            color: var(--color-error);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 4px 8px;
-            border-radius: 4px;
-            pointer-events: none;
-            z-index: 10;
-        }
-
         .dia-calendario.hoy {
             background: var(--color-alerta-fondo);
             border: 2px solid var(--color-alerta);
@@ -7614,7 +7585,7 @@
                             onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                             style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
                             title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${tieneIntervalosManual ? ' (NO SE PUEDE MOVER - Intervalos manuales)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                            <button class="btn-eliminar-vestido-calendario" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, e); }">×</button>
+                            <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event);">×</button>
                         </div>`;
                     }
                 });
@@ -7685,7 +7656,7 @@
                         onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
                         style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; ${opacidad}" 
                         title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} ${tooltipType} - Clic para gestionar horas">${partitionBadge}${icono} ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}]
-                        <button class="btn-eliminar-vestido-calendario" onclick="(e) => { e.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, e); }">×</button>
+                        <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event);">×</button>
                     </div>`;
                 });
 
@@ -7704,7 +7675,7 @@
                 }
 
                 html += `
-                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''} ${diaCompleto && !esFinDeSemana ? 'dia-completo' : ''}" 
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
                          style="min-height: 120px; cursor: pointer;" 
                          onclick="verDetallesDiaCalendario('${fechaStr}')"
                          ondrop="onDropCalendario(event, '${fechaStr}')"
