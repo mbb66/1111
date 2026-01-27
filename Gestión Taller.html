@@ -3418,14 +3418,14 @@
         // Migrate existing dresses to have tuvoTara flag based on historialTaras
         vestidos = vestidos.map(v => {
             if (v.tuvoTara === undefined) {
-                v.tuvoTara = v.estado === 'con_tara' || (v.historialTaras && v.historialTaras.length > 0);
+                v.tuvoTara = v.estado === 'con_tara' || (Array.isArray(v.historialTaras) && v.historialTaras.length > 0);
             }
             return v;
         });
         
-        let numeroFactura = parseInt(localStorage.getItem('ultimaFactura')) || 58;
-        let numeroAlbaranPronovias = parseInt(localStorage.getItem('ultimoAlbaranPronovias')) || 112;
-        let numeroAlbaranOtros = parseInt(localStorage.getItem('ultimoAlbaranOtros')) || 29;
+        let numeroFactura = parseInt(localStorage.getItem('ultimaFactura') || '0', 10) || 58;
+        let numeroAlbaranPronovias = parseInt(localStorage.getItem('ultimoAlbaranPronovias') || '0', 10) || 112;
+        let numeroAlbaranOtros = parseInt(localStorage.getItem('ultimoAlbaranOtros') || '0', 10) || 29;
         let planificacion = JSON.parse(localStorage.getItem('planificacion')) || {};
         let ajustesCapacidad = JSON.parse(localStorage.getItem('ajustesCapacidad')) || {};
 
@@ -4594,9 +4594,9 @@
                 vestido.fechaEnvio = fechaISO;
 
                 if (vestido.proveedor === 'pronovias') {
-                    numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran) + 1);
+                    numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran, 10) + 1);
                 } else {
-                    numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran) + 1);
+                    numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran, 10) + 1);
                 }
 
                 vestido.estado = 'enviado'; // Lo marcamos como enviado
@@ -4737,8 +4737,8 @@
                 vestido.estado = 'enviado';
             });
 
-            if (proveedor === 'pronovias') numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran) + 1);
-            else numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran) + 1);
+            if (proveedor === 'pronovias') numeroAlbaranPronovias = Math.max(numeroAlbaranPronovias, parseInt(numeroAlbaran, 10) + 1);
+            else numeroAlbaranOtros = Math.max(numeroAlbaranOtros, parseInt(numeroAlbaran, 10) + 1);
 
             guardarTodo();
             alert(`✅ Albarán ${numeroAlbaran} generado para ${vestidosSeleccionados.length} vestidos.`);
@@ -4773,7 +4773,7 @@
                 vestido.fechaFactura = fechaFacturaISO;
             });
 
-            numeroFactura = Math.max(numeroFactura, parseInt(numeroFacturaInput) + 1);
+            numeroFactura = Math.max(numeroFactura, parseInt(numeroFacturaInput, 10) + 1);
 
             guardarTodo();
             alert(`✅ Factura ${numeroFacturaInput} generada para ${vestidosSeleccionados.length} vestidos.`);
