@@ -9213,25 +9213,40 @@
         }
 
         function exportarReportePDF() {
-            // Generate a simple text report for PDF (browser will handle print to PDF)
+            // Get configuration for cost calculations
+            const config = obtenerConfiguracionTaller();
+            const precioHoraObjetivo = config.precioHoraObjetivo || 15;
+            
+            // Generate enhanced PDF report with profit/loss analysis
             let reporteHtml = `
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Reporte de Horas - ${new Date().toLocaleDateString('es-ES')}</title>
+                    <title>Reporte de Horas y Beneficios - ${new Date().toLocaleDateString('es-ES')}</title>
                     <style>
                         body { font-family: Arial, sans-serif; padding: 20px; }
                         h1 { color: #374151; border-bottom: 2px solid #374151; padding-bottom: 10px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                        h2 { color: #374151; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; page-break-inside: avoid; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 11px; }
                         th { background-color: #374151; color: white; }
                         tr:nth-child(even) { background-color: #f9fafb; }
                         .total { font-weight: bold; background-color: #e6f8f2; }
+                        .profit { color: #10b981; }
+                        .loss { color: #ef4444; }
+                        .section-summary { background: #f3f4f6; padding: 15px; margin: 20px 0; border-radius: 8px; }
+                        .worker-hours { background: #dbeafe; }
+                        @media print {
+                            .page-break { page-break-before: always; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <h1>📊 Reporte de Horas de Confección</h1>
+                    <h1>📊 Reporte Completo de Horas y Análisis de Beneficios</h1>
                     <p><strong>Fecha de generación:</strong> ${new Date().toLocaleString('es-ES')}</p>
+                    <p><strong>Precio/hora objetivo:</strong> ${precioHoraObjetivo}€</p>
+                    
+                    <h2>1. Resumen por Vestido</h2>
                     <table>
                         <thead>
                             <tr>
@@ -9239,26 +9254,57 @@
                                 <th>Código</th>
                                 <th>Lote</th>
                                 <th>Proveedor</th>
-                                <th>Trabajadoras</th>
-                                <th>Horas Totales</th>
-                                <th>Intervalos</th>
+                                <th>H. Est.</th>
+                                <th>H. Reales</th>
+                                <th>Variación</th>
+                                <th>Precio</th>
+                                <th>Coste H.</th>
+                                <th>Beneficio/Pérdida</th>
                             </tr>
                         </thead>
                         <tbody>
             `;
 
-            let totalHoras = 0;
+            let totalHorasEstimadas = 0;
+            let totalHorasReales = 0;
+            let totalPrecio = 0;
+            let totalCoste = 0;
+            let totalBeneficio = 0;
+            const trabajadoraStats = {};
+
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
                 if (!vestido) return;
 
                 const horas = horasConfeccion[vestidoId];
-                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
-                    const worker = workers.find(w => w.id === wId);
-                    return worker ? worker.nombre : 'Desconocida';
-                }).join(', ');
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horasReales = horas.horasTotales;
+                const variacion = horasReales - horasEstimadas;
+                const precioVestido = vestido.precioBase || 0;
+                const costeHoras = horasReales * precioHoraObjetivo;
+                const beneficio = precioVestido - costeHoras;
 
-                totalHoras += horas.horasTotales;
+                totalHorasEstimadas += horasEstimadas;
+                totalHorasReales += horasReales;
+                totalPrecio += precioVestido;
+                totalCoste += costeHoras;
+                totalBeneficio += beneficio;
+
+                // Track hours per worker
+                horas.trabajadoras.forEach(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    const nombre = worker ? worker.nombre : 'Desconocida';
+                    if (!trabajadoraStats[nombre]) {
+                        trabajadoraStats[nombre] = { horas: 0, vestidos: new Set() };
+                    }
+                    // Divide hours equally among workers
+                    trabajadoraStats[nombre].horas += horasReales / horas.trabajadoras.length;
+                    trabajadoraStats[nombre].vestidos.add(vestidoId);
+                });
+
+                const beneficioClass = beneficio >= 0 ? 'profit' : 'loss';
+                const variacionSign = variacion >= 0 ? '+' : '';
 
                 reporteHtml += `
                     <tr>
@@ -9266,18 +9312,72 @@
                         <td>${vestido.codigoModelo}</td>
                         <td>${vestido.lote || 'N/A'}</td>
                         <td>${vestido.proveedor}</td>
-                        <td>${nombresTrabajadoras}</td>
-                        <td>${horas.horasTotales.toFixed(2)}h</td>
-                        <td>${horas.intervalos.length}</td>
+                        <td>${horasEstimadas.toFixed(2)}h</td>
+                        <td>${horasReales.toFixed(2)}h</td>
+                        <td>${variacionSign}${variacion.toFixed(2)}h</td>
+                        <td>${precioVestido.toFixed(2)}€</td>
+                        <td>${costeHoras.toFixed(2)}€</td>
+                        <td class="${beneficioClass}"><strong>${beneficio >= 0 ? '+' : ''}${beneficio.toFixed(2)}€</strong></td>
+                    </tr>
+                `;
+            });
+
+            const totalBeneficioClass = totalBeneficio >= 0 ? 'profit' : 'loss';
+
+            reporteHtml += `
+                            <tr class="total">
+                                <td colspan="4"><strong>TOTAL</strong></td>
+                                <td><strong>${totalHorasEstimadas.toFixed(2)}h</strong></td>
+                                <td><strong>${totalHorasReales.toFixed(2)}h</strong></td>
+                                <td><strong>${(totalHorasReales - totalHorasEstimadas >= 0 ? '+' : '')}${(totalHorasReales - totalHorasEstimadas).toFixed(2)}h</strong></td>
+                                <td><strong>${totalPrecio.toFixed(2)}€</strong></td>
+                                <td><strong>${totalCoste.toFixed(2)}€</strong></td>
+                                <td class="${totalBeneficioClass}"><strong>${totalBeneficio >= 0 ? '+' : ''}${totalBeneficio.toFixed(2)}€</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="section-summary">
+                        <strong>💡 Resumen General:</strong><br>
+                        Variación en horas: ${totalHorasReales > totalHorasEstimadas ? 'Sobreestimación' : 'Infraestimación'} de ${Math.abs(totalHorasReales - totalHorasEstimadas).toFixed(2)} horas<br>
+                        ${totalBeneficio >= 0 ? 
+                            `✅ <span class="profit">Beneficio total: +${totalBeneficio.toFixed(2)}€</span>` : 
+                            `⚠️ <span class="loss">Pérdida total: ${totalBeneficio.toFixed(2)}€</span>`
+                        }
+                    </div>
+
+                    <div class="page-break"></div>
+                    <h2>2. Clasificación de Horas por Trabajadora</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trabajadora</th>
+                                <th>Total Horas</th>
+                                <th>Vestidos Trabajados</th>
+                                <th>Promedio h/vestido</th>
+                                <th>% del Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            Object.keys(trabajadoraStats).sort().forEach(nombre => {
+                const stats = trabajadoraStats[nombre];
+                const promedio = stats.vestidos.size > 0 ? stats.horas / stats.vestidos.size : 0;
+                const porcentaje = totalHorasReales > 0 ? (stats.horas / totalHorasReales * 100) : 0;
+
+                reporteHtml += `
+                    <tr class="worker-hours">
+                        <td><strong>${nombre}</strong></td>
+                        <td>${stats.horas.toFixed(2)}h</td>
+                        <td>${stats.vestidos.size}</td>
+                        <td>${promedio.toFixed(2)}h</td>
+                        <td>${porcentaje.toFixed(1)}%</td>
                     </tr>
                 `;
             });
 
             reporteHtml += `
-                            <tr class="total">
-                                <td colspan="5"><strong>TOTAL</strong></td>
-                                <td colspan="2"><strong>${totalHoras.toFixed(2)}h</strong></td>
-                            </tr>
                         </tbody>
                     </table>
                 </body>
@@ -9291,20 +9391,108 @@
         }
 
         function exportarReporteExcel() {
-            // Generate CSV format (Excel compatible)
-            let csv = 'Modelo,Código,Lote,Proveedor,Trabajadoras,Horas Totales,Intervalos\n';
+            // Get configuration for cost calculations
+            const config = obtenerConfiguracionTaller();
+            const precioHoraObjetivo = config.precioHoraObjetivo || 15;
+            
+            // Generate enhanced CSV format (Excel compatible)
+            let csv = `Reporte Completo de Horas y Beneficios\n`;
+            csv += `Fecha de generación: ${new Date().toLocaleString('es-ES')}\n`;
+            csv += `Precio por hora objetivo: ${precioHoraObjetivo}€\n\n`;
+            
+            // Section 1: Summary by dress
+            csv += 'RESUMEN POR VESTIDO\n';
+            csv += 'Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n';
+            
+            let totalHorasEstimadas = 0;
+            let totalHorasReales = 0;
+            let totalPrecio = 0;
+            let totalCoste = 0;
+            let totalBeneficio = 0;
+            const trabajadoraStats = {};
             
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
                 if (!vestido) return;
 
                 const horas = horasConfeccion[vestidoId];
-                const nombresTrabajadoras = horas.trabajadoras.map(wId => {
-                    const worker = workers.find(w => w.id === wId);
-                    return worker ? worker.nombre : 'Desconocida';
-                }).join('; ');
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horasReales = horas.horasTotales;
+                const variacion = horasReales - horasEstimadas;
+                const precioVestido = vestido.precioBase || 0;
+                const costeHoras = horasReales * precioHoraObjetivo;
+                const beneficio = precioVestido - costeHoras;
 
-                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}","${nombresTrabajadoras}",${horas.horasTotales.toFixed(2)},${horas.intervalos.length}\n`;
+                totalHorasEstimadas += horasEstimadas;
+                totalHorasReales += horasReales;
+                totalPrecio += precioVestido;
+                totalCoste += costeHoras;
+                totalBeneficio += beneficio;
+
+                // Track hours per worker
+                horas.trabajadoras.forEach(wId => {
+                    const worker = workers.find(w => w.id === wId);
+                    const nombre = worker ? worker.nombre : 'Desconocida';
+                    if (!trabajadoraStats[nombre]) {
+                        trabajadoraStats[nombre] = { horas: 0, vestidos: new Set() };
+                    }
+                    // Divide hours equally among workers
+                    trabajadoraStats[nombre].horas += horasReales / horas.trabajadoras.length;
+                    trabajadoraStats[nombre].vestidos.add(vestidoId);
+                });
+
+                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${variacion.toFixed(2)},${precioVestido.toFixed(2)},${costeHoras.toFixed(2)},${beneficio.toFixed(2)}\n`;
+            });
+
+            csv += `TOTAL,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n\n`;
+
+            // Section 2: Hours classification by worker
+            csv += 'CLASIFICACIÓN DE HORAS POR TRABAJADORA\n';
+            csv += 'Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n';
+            
+            Object.keys(trabajadoraStats).sort().forEach(nombre => {
+                const stats = trabajadoraStats[nombre];
+                const promedio = stats.vestidos.size > 0 ? stats.horas / stats.vestidos.size : 0;
+                const porcentaje = totalHorasReales > 0 ? (stats.horas / totalHorasReales * 100) : 0;
+                
+                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}%\n`;
+            });
+
+            csv += '\n';
+
+            // Section 3: Detailed intervals by worker
+            csv += 'DETALLE DE INTERVALOS POR TRABAJADORA\n';
+            csv += 'Trabajadora,Vestido,Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n';
+
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                horas.intervalos.forEach(intervalo => {
+                    if (!intervalo.inicio) return;
+                    
+                    const trabajadoraId = intervalo.trabajadoraId;
+                    const worker = workers.find(w => w.id === trabajadoraId);
+                    const nombreTrabajadora = worker ? worker.nombre : 'Sin asignar';
+                    
+                    const inicioDate = new Date(intervalo.inicio);
+                    const fecha = inicioDate.toLocaleDateString('es-ES');
+                    const horaInicio = inicioDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    
+                    let horaFin = 'En curso';
+                    let duracion = '-';
+                    
+                    if (intervalo.fin) {
+                        const finDate = new Date(intervalo.fin);
+                        horaFin = finDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                        const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                        duracion = diffHours.toFixed(2);
+                    }
+                    
+                    csv += `"${nombreTrabajadora}","${vestido.lote || 'N/A'}","${vestido.nombreModelo}","${fecha}","${horaInicio}","${horaFin}",${duracion}\n`;
+                });
             });
 
             // Download CSV
@@ -9312,11 +9500,13 @@
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
-            link.setAttribute('download', `reporte_horas_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `reporte_completo_horas_beneficios_${new Date().toISOString().split('T')[0]}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
+            alert(`✅ Reporte exportado correctamente.\n\nBeneficio/Pérdida Total: ${totalBeneficio >= 0 ? '+' : ''}${totalBeneficio.toFixed(2)}€\nHoras Estimadas: ${totalHorasEstimadas.toFixed(2)}h\nHoras Reales: ${totalHorasReales.toFixed(2)}h`);
         }
 
         // Enhanced month-end export with real vs. estimated hours comparison
