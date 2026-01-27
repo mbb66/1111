@@ -2910,27 +2910,43 @@
                     </div>
                 </div>
                 
-                <!-- Calendar Filters -->
+                <!-- Calendar Filters - Multi-select -->
                 <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
-                        <div>
-                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">🏢 Filtrar por Proveedor:</label>
-                            <select id="filtro-calendario-proveedor" onchange="aplicarFiltrosCalendario()" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
-                                <option value="todos">Todos los proveedores</option>
-                                <option value="pronovias">Pronovias</option>
-                                <option value="rosa_clara">Rosa Clará</option>
-                                <option value="traka">Traka</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">📊 Filtrar por Estado:</label>
-                            <select id="filtro-calendario-estado" onchange="aplicarFiltrosCalendario()" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
-                                <option value="todos">Todos los estados (sin enviados)</option>
-                                <option value="en_proceso">En Proceso</option>
-                                <option value="en_taller">En Taller</option>
-                                <option value="enviado">Mostrar Enviados (fecha envío)</option>
-                            </select>
-                        </div>
+                    <label style="font-weight: 600; display: block; margin-bottom: 10px;">📊 Filtrar Vestidos en Calendario:</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-todos" onchange="toggleFiltroTodos()" style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">✨ Todos</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-enviados" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">📦 Vestidos Enviados</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-albaranes" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">🚚 Albaranes (sin producción)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-fecha-fin" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">⏰ Fecha Fin</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-en-proceso" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">⚙️ En Proceso</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-ninguno" onchange="toggleFiltroNinguno()" style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">❌ Ninguno</span>
+                        </label>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">🏢 Filtrar por Proveedor:</label>
+                        <select id="filtro-calendario-proveedor" onchange="aplicarFiltrosCalendario()" style="width: 100%; max-width: 300px; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
+                            <option value="todos">Todos los proveedores</option>
+                            <option value="pronovias">Pronovias</option>
+                            <option value="rosa_clara">Rosa Clará</option>
+                            <option value="traka">Traka</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -5749,6 +5765,29 @@
         function eliminarPartePlanificada(vestidoId, fecha, parte, event) {
             if (event) event.stopPropagation();
             
+            // REQUIREMENT 2: Validate before deletion
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            if (!vestido) {
+                alert('❌ Error: No se encontró el vestido.');
+                return;
+            }
+            
+            // Check if dress is already sent
+            const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+            if (esEnviado) {
+                alert('❌ No se puede eliminar: El vestido ya está marcado como enviado.');
+                return;
+            }
+            
+            // Check if dress has assigned intervals (hours in horasConfeccion)
+            const horas = horasConfeccion[vestidoId];
+            const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+            
+            if (tieneIntervalos) {
+                alert('❌ No se puede eliminar: El vestido tiene intervalos de horas asignados.\n\nPrimero debe eliminar los intervalos desde la gestión de horas.');
+                return;
+            }
+            
             // Check if there are multiple parts of this dress in the calendar
             let totalPartes = 0;
             Object.keys(planificacion).forEach(f => {
@@ -7722,24 +7761,80 @@
         // Global variable to store calendar filters
         let filtrosCalendarioActivos = {
             proveedor: 'todos',
-            estado: 'todos'
+            mostrarEnviados: true,
+            mostrarAlbaranes: true,
+            mostrarFechaFin: true,
+            mostrarEnProceso: true
         };
 
         function aplicarFiltrosCalendario() {
-            // Get filter values
+            // Get filter values from checkboxes
             const filtroProveedorEl = document.getElementById('filtro-calendario-proveedor');
-            const filtroEstadoEl = document.getElementById('filtro-calendario-estado');
+            const filtroEnviadosEl = document.getElementById('filtro-enviados');
+            const filtroAlbaranesEl = document.getElementById('filtro-albaranes');
+            const filtroFechaFinEl = document.getElementById('filtro-fecha-fin');
+            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso');
             
-            if (!filtroProveedorEl || !filtroEstadoEl) {
+            if (!filtroProveedorEl) {
                 return; // Filters not loaded yet
             }
             
+            // Update active filters
             filtrosCalendarioActivos.proveedor = filtroProveedorEl.value;
-            filtrosCalendarioActivos.estado = filtroEstadoEl.value;
+            filtrosCalendarioActivos.mostrarEnviados = filtroEnviadosEl ? filtroEnviadosEl.checked : true;
+            filtrosCalendarioActivos.mostrarAlbaranes = filtroAlbaranesEl ? filtroAlbaranesEl.checked : true;
+            filtrosCalendarioActivos.mostrarFechaFin = filtroFechaFinEl ? filtroFechaFinEl.checked : true;
+            filtrosCalendarioActivos.mostrarEnProceso = filtroEnProcesoEl ? filtroEnProcesoEl.checked : true;
             
             // Regenerate calendar with new filters
             generarCalendarioPlanificacion();
         }
+        
+        function onIndividualFilterChange() {
+            // When an individual filter changes, uncheck "Todos" and "Ninguno"
+            const todoCheckbox = document.getElementById('filtro-todos');
+            const ningunoCheckbox = document.getElementById('filtro-ninguno');
+            if (todoCheckbox) todoCheckbox.checked = false;
+            if (ningunoCheckbox) ningunoCheckbox.checked = false;
+            
+            // Apply filters
+            aplicarFiltrosCalendario();
+        }
+        
+        function toggleFiltroTodos() {
+            const todoCheckbox = document.getElementById('filtro-todos');
+            const isChecked = todoCheckbox.checked;
+            
+            // Set all other checkboxes to true
+            document.getElementById('filtro-enviados').checked = isChecked;
+            document.getElementById('filtro-albaranes').checked = isChecked;
+            document.getElementById('filtro-fecha-fin').checked = isChecked;
+            document.getElementById('filtro-en-proceso').checked = isChecked;
+            
+            // Uncheck "Ninguno"
+            document.getElementById('filtro-ninguno').checked = false;
+            
+            // Apply filters
+            aplicarFiltrosCalendario();
+        }
+        
+        function toggleFiltroNinguno() {
+            const ningunoCheckbox = document.getElementById('filtro-ninguno');
+            const isChecked = ningunoCheckbox.checked;
+            
+            if (isChecked) {
+                // Uncheck all other checkboxes
+                document.getElementById('filtro-enviados').checked = false;
+                document.getElementById('filtro-albaranes').checked = false;
+                document.getElementById('filtro-fecha-fin').checked = false;
+                document.getElementById('filtro-en-proceso').checked = false;
+                document.getElementById('filtro-todos').checked = false;
+                
+                // Apply filters
+                aplicarFiltrosCalendario();
+            }
+        }
+
 
         function obtenerVestidosParaFecha(fechaStr) {
             const resultado = [];
@@ -7780,16 +7875,30 @@
                 }
             });
 
-            // REQUIREMENT 2 UPDATE: Only show sent dresses if explicitly requested via filter
-            // By default, permanently remove sent/paid dresses (vestidos con fecha fin) from calendar view
-            const filtroEstado = document.getElementById('filtro-calendario-estado');
-            const mostrarEnviados = filtroEstado && filtroEstado.value === 'enviado';
-            
-            if (mostrarEnviados) {
-                // Show sent dresses on their delivery date with arrow emoji
+            // REQUIREMENT 1 UPDATE: Show sent/delivery dresses if filters are active
+            // Add sent dresses (with production) if filter is enabled
+            if (filtrosCalendarioActivos.mostrarEnviados) {
                 vestidos.forEach(vestido => {
                     const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
-                    if (esEnviado && vestido.fechaEnvio === fechaStr) {
+                    const horas = horasConfeccion[vestido.id];
+                    const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                    
+                    if (esEnviado && vestido.fechaEnvio === fechaStr && tieneIntervalos) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
+                    }
+                });
+            }
+            
+            // Add delivery notes (albaranes - sent without production) if filter is enabled
+            if (filtrosCalendarioActivos.mostrarAlbaranes) {
+                vestidos.forEach(vestido => {
+                    const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                    const horas = horasConfeccion[vestido.id];
+                    const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                    
+                    if (esEnviado && vestido.fechaEnvio === fechaStr && !tieneIntervalos) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -7797,22 +7906,24 @@
                 });
             }
 
-            // Get dresses with deadline on this date (pending dresses) - EXCLUDE sent dresses from future dates
-            vestidos.forEach(vestido => {
-                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
-                const hoy = new Date().toISOString().split('T')[0];
-                // ISSUE FIX: Don't show finished dresses (with horasReales) in deadline-based display
-                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
-                
-                if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    // Don't show sent dresses on future dates AND don't show finished dresses
-                    if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
-                        if (!resultado.find(v => v.id === vestido.id)) {
-                            resultado.push(vestido);
+            // Get dresses with deadline on this date (pending dresses) - only if filter is active
+            if (filtrosCalendarioActivos.mostrarFechaFin) {
+                vestidos.forEach(vestido => {
+                    const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                    const hoy = new Date().toISOString().split('T')[0];
+                    // ISSUE FIX: Don't show finished dresses (with horasReales) in deadline-based display
+                    const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
+                    
+                    if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
+                        // Don't show sent dresses on future dates AND don't show finished dresses
+                        if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
+                            if (!resultado.find(v => v.id === vestido.id)) {
+                                resultado.push(vestido);
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
 
             // Get dresses with suggested start date on this date (from automatic planning) - EXCLUDE sent dresses from future dates
             vestidos.forEach(vestido => {
@@ -7849,15 +7960,61 @@
                 }
             });
 
-            // REQUIREMENT 2: Apply active filters to results
-            let resultadoFiltrado = resultado;
+            // REQUIREMENT 1: Apply new multi-select filters
+            // Apply active filters to results
+            let resultadoFiltrado = [];
+            
+            resultado.forEach(vestido => {
+                const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
+                const horas = horasConfeccion[vestido.id];
+                const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
+                
+                // Determine dress category
+                let categorias = [];
+                
+                // Category: Vestidos Enviados (sent dresses with production)
+                if (esEnviado && vestido.fechaEnvio === fechaStr && tieneIntervalos) {
+                    categorias.push('enviados');
+                }
+                
+                // Category: Albaranes (sent dresses WITHOUT production - delivery notes only)
+                if (esEnviado && vestido.fechaEnvio === fechaStr && !tieneIntervalos) {
+                    categorias.push('albaranes');
+                }
+                
+                // Category: Fecha Fin (dresses with deadline on this date)
+                if (vestido.fechaLimite === fechaStr && !esEnviado) {
+                    categorias.push('fecha_fin');
+                }
+                
+                // Category: En Proceso (dresses with assigned hours/intervals)
+                if (tieneIntervalos && !esEnviado) {
+                    categorias.push('en_proceso');
+                }
+                
+                // If dress is in automatic planning, also consider it "en_proceso"
+                if (planificacion[fechaStr] && planificacion[fechaStr].some(e => e.vestidoId === vestido.id)) {
+                    if (!categorias.includes('en_proceso')) {
+                        categorias.push('en_proceso');
+                    }
+                }
+                
+                // Check if dress matches any active filter
+                let mostrar = false;
+                if (categorias.includes('enviados') && filtrosCalendarioActivos.mostrarEnviados) mostrar = true;
+                if (categorias.includes('albaranes') && filtrosCalendarioActivos.mostrarAlbaranes) mostrar = true;
+                if (categorias.includes('fecha_fin') && filtrosCalendarioActivos.mostrarFechaFin) mostrar = true;
+                if (categorias.includes('en_proceso') && filtrosCalendarioActivos.mostrarEnProceso) mostrar = true;
+                
+                if (mostrar) {
+                    resultadoFiltrado.push(vestido);
+                }
+            });
             
             // Filter by supplier
             if (filtrosCalendarioActivos.proveedor !== 'todos') {
                 resultadoFiltrado = resultadoFiltrado.filter(v => v.proveedor === filtrosCalendarioActivos.proveedor);
             }
-            
-            // Filter by status is handled above in the logic for showing/hiding sent dresses
             
             return resultadoFiltrado;
         }
