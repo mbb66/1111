@@ -2919,19 +2919,19 @@
                             <span style="font-weight: 500;">✨ Todos</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-enviados" onchange="aplicarFiltrosCalendario()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-enviados" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">📦 Vestidos Enviados</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-albaranes" onchange="aplicarFiltrosCalendario()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-albaranes" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">🚚 Albaranes (sin producción)</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-fecha-fin" onchange="aplicarFiltrosCalendario()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-fecha-fin" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">⏰ Fecha Fin</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-en-proceso" onchange="aplicarFiltrosCalendario()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-en-proceso" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">⚙️ En Proceso</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
@@ -7786,14 +7786,19 @@
             filtrosCalendarioActivos.mostrarFechaFin = filtroFechaFinEl ? filtroFechaFinEl.checked : true;
             filtrosCalendarioActivos.mostrarEnProceso = filtroEnProcesoEl ? filtroEnProcesoEl.checked : true;
             
-            // Uncheck "Todos" and "Ninguno" when individual filters change
+            // Regenerate calendar with new filters
+            generarCalendarioPlanificacion();
+        }
+        
+        function onIndividualFilterChange() {
+            // When an individual filter changes, uncheck "Todos" and "Ninguno"
             const todoCheckbox = document.getElementById('filtro-todos');
             const ningunoCheckbox = document.getElementById('filtro-ninguno');
             if (todoCheckbox) todoCheckbox.checked = false;
             if (ningunoCheckbox) ningunoCheckbox.checked = false;
             
-            // Regenerate calendar with new filters
-            generarCalendarioPlanificacion();
+            // Apply filters
+            aplicarFiltrosCalendario();
         }
         
         function toggleFiltroTodos() {
@@ -7824,10 +7829,10 @@
                 document.getElementById('filtro-fecha-fin').checked = false;
                 document.getElementById('filtro-en-proceso').checked = false;
                 document.getElementById('filtro-todos').checked = false;
+                
+                // Apply filters
+                aplicarFiltrosCalendario();
             }
-            
-            // Apply filters
-            aplicarFiltrosCalendario();
         }
 
 
