@@ -2836,6 +2836,7 @@
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <span class="seccion-count" id="count-en-taller">0 vestidos</span>
                             <button class="btn btn-small btn-info" id="btn-agrupar-taller" onclick="toggleModoAgrupar('en_taller')">🔗 Agrupar</button>
+                            <button class="btn btn-small btn-success" onclick="abrirPanelIntervaloRapido()">⚡ Añadir Intervalo Rápido</button>
                         </div>
                     </div>
                     <div class="seccion-filtros">
@@ -2893,6 +2894,46 @@
                          ondragover="permitirSoltar(event)">
                         <!-- Vestidos con horas asignadas -->
                     </div>
+                </div>
+            </div>
+            
+            <!-- Quick Interval Addition Panel -->
+            <div id="panel-intervalo-rapido" style="display: none; margin-top: 20px; padding: 20px; background: var(--color-exito-fondo); border-radius: 12px; border: 2px solid var(--color-exito);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0;">⚡ Añadir Intervalo Manual Rápido</h3>
+                    <button class="btn btn-small" onclick="cerrarPanelIntervaloRapido()">✖ Cerrar</button>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto; gap: 10px; align-items: end;">
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Vestido:</label>
+                        <select id="select-vestido-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                            <option value="">Seleccionar vestido...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Fecha:</label>
+                        <input type="date" id="fecha-intervalo-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Inicio:</label>
+                        <input type="time" id="hora-inicio-rapido" value="07:00" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Fin:</label>
+                        <input type="time" id="hora-fin-rapido" value="15:00" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Trabajadora:</label>
+                        <select id="trabajadora-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                            <option value="">Seleccionar trabajadora...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-success" onclick="añadirIntervaloRapido()" style="padding: 8px 15px;">✅ Añadir</button>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
+                    <strong>💡 Tip:</strong> Los intervalos añadidos manualmente aparecerán marcados con <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> en el calendario y no serán ajustables por arrastre.
                 </div>
             </div>
 
@@ -2956,7 +2997,10 @@
                 <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
                         <div>
-                            <strong>✅ En Proceso:</strong> Vestidos con intervalos manuales asignados
+                            <strong>✅ En Proceso:</strong> Vestidos con intervalos asignados
+                        </div>
+                        <div>
+                            <strong>🔒 Manual:</strong> <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> Intervalos añadidos manualmente (no ajustables por arrastre)
                         </div>
                         <div>
                             <strong>📅 Planificados:</strong> Vestidos con planificación automática sugerida
@@ -2968,7 +3012,7 @@
                             <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
                         </div>
                         <div style="grid-column: span 2;">
-                            <strong>💡 Tip:</strong> Haz doble clic en un vestido para dividir/reasignar horas manualmente
+                            <strong>💡 Tip:</strong> Usa el botón "⚡ Añadir Intervalo Rápido" para añadir intervalos manuales directamente
                         </div>
                     </div>
                 </div>
@@ -6788,14 +6832,14 @@
         let draggedGrupoId = null;
         
         function onDragStartCalendario(event, vestidoId, fechaOrigen) {
-            // Problem 3 fix: Prevent dragging dresses with manually entered intervals
+            // NEW REQUIREMENT: Prevent dragging dresses with MANUALLY entered intervals
             const vestido = vestidos.find(v => v.id === vestidoId);
             const horas = horasConfeccion[vestidoId];
             
-            // If dress has manually entered intervals (in horasConfeccion), don't allow dragging
-            if (horas && horas.intervalos && horas.intervalos.length > 0) {
+            // If dress has MANUALLY entered intervals (marked as esManual), don't allow dragging
+            if (horas && horas.esManual === true) {
                 event.preventDefault();
-                alert('⚠️ No se pueden mover vestidos con intervalos de horas introducidos manualmente. Solo se pueden mover vestidos con planificación automática.');
+                alert('⚠️ No se pueden mover vestidos con intervalos MANUALES. Los intervalos añadidos manualmente no son ajustables por arrastre. Usa el modal de gestión de horas para modificarlos.');
                 return false;
             }
             
@@ -6808,22 +6852,22 @@
         }
         
         function onDragStartCalendarioGrupo(event, grupoId, fechaOrigen) {
-            // Problem 3 fix: Prevent dragging groups with manually entered intervals
+            // NEW REQUIREMENT: Prevent dragging groups with MANUALLY entered intervals
             const grupo = vestidosGrupos[grupoId];
             if (!grupo) {
                 event.preventDefault();
                 return false;
             }
             
-            // Check if any dress in the group has manually entered intervals
+            // Check if any dress in the group has MANUALLY entered intervals
             const tieneIntervalosManual = grupo.vestidosIds.some(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
-                return horas && horas.intervalos && horas.intervalos.length > 0;
+                return horas && horas.esManual === true;
             });
             
             if (tieneIntervalosManual) {
                 event.preventDefault();
-                alert('⚠️ No se pueden mover grupos con intervalos de horas introducidos manualmente. Solo se pueden mover grupos con planificación automática.');
+                alert('⚠️ No se pueden mover grupos con intervalos MANUALES. Los intervalos añadidos manualmente no son ajustables por arrastre. Usa el modal de gestión de horas para modificarlos.');
                 return false;
             }
             
@@ -7545,13 +7589,13 @@
                             const colorBg = `var(--color-${proveedor})`;
                             const colorBorde = `var(--color-${proveedor}-borde)`;
                             
-                            // REQUIREMENT 3: Make all groups draggable, even with manual intervals
+                            // NEW REQUIREMENT: Check if ANY dress in the group has manual intervals
                             const tieneIntervalosManual = grupo.vestidosIds.some(vid => {
                                 const h = horasConfeccion[vid];
-                                return h && h.intervalos && h.intervalos.length > 0;
+                                return h && h.esManual === true;
                             });
-                            const draggable = 'true'; // Always draggable now
-                            const cursorStyle = 'cursor: pointer;';
+                            const draggable = tieneIntervalosManual ? 'false' : 'true';
+                            const cursorStyle = tieneIntervalosManual ? 'cursor: default;' : 'cursor: pointer;';
                             
                             // REQUIREMENT 3: Calculate total hours for the group
                             let horasTotalesGrupo = 0;
@@ -7583,13 +7627,18 @@
                                 ? `${vestidosDelGrupoEnFecha[0].nombreModelo}S (${vestidosDelGrupoEnFecha.length}) [${lotesGrupo.substring(0, 12)}]` 
                                 : `${vestidosDelGrupoEnFecha[0].nombreModelo} [${vestidosDelGrupoEnFecha[0].lote || 'N/A'}${vestidosDelGrupoEnFecha[0].proveedor === 'rosa_clara' && vestidosDelGrupoEnFecha[0].numeroSerie ? '(' + vestidosDelGrupoEnFecha[0].numeroSerie + ')' : ''}]`;
                             
+                            // NEW REQUIREMENT: Add manual badge for groups with manual intervals
+                            const manualBadge = tieneIntervalosManual ? '<span style="background: var(--color-exito); color: white; padding: 1px 4px; border-radius: 3px; font-size: 0.75em; margin-left: 3px;">🔒 MANUAL</span>' : '';
+                            const manualTitle = tieneIntervalosManual ? ' [INTERVALO MANUAL - No ajustable por arrastre]' : ' - Clic para gestionar';
+                            const manualBorderStyle = tieneIntervalosManual ? 'border: 2px solid var(--color-exito); box-shadow: 0 0 6px var(--color-exito);' : '';
+                            
                             vestidosHtml += `<div 
                                 draggable="${draggable}" 
                                 ondragstart="onDragStartCalendarioGrupo(event, ${grupoId}, '${fechaStr}')"
                                 ondragend="onDragEndCalendario(event)"
                                 onclick="event.stopPropagation(); abrirModalDividirHorasGrupo(${grupoId}, '${fechaStr}');"
-                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - ${horasDisplayGrupo} - Clic para gestionar">${emojiEnviado}🔗 ${nombreDisplay} <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplayGrupo}</span></div>`;
+                                style="font-size: 0.7em; margin: 2px 0; padding: 3px; background: ${colorBg}; border-left: 3px solid ${colorBorde}; ${manualBorderStyle} border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
+                                title="GRUPO: ${tituloGrupo}${algunoEnviado ? ' (ALGUNOS ENVIADOS)' : ''} - ${horasDisplayGrupo}${manualTitle}">${emojiEnviado}🔗 ${nombreDisplay} <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplayGrupo}</span>${manualBadge}</div>`;
                         }
                     } else if (!grupoId) {
                         // Individual dress not in a group
@@ -7597,11 +7646,13 @@
                         const opacidad = esEnviado ? 'opacity: 0.5;' : '';
                         const emojiEnviado = esEnviado ? '↗️ ' : '';
                         
-                        // REQUIREMENT 3: Make all dresses draggable, even with manual intervals
-                        // Users can now drag and split dresses regardless of manual intervals
+                        // NEW REQUIREMENT: Check if dress has MANUAL intervals
+                        const esManual = horas && horas.esManual === true;
                         const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
-                        const draggable = 'true'; // Always draggable now
-                        const cursorStyle = 'cursor: pointer;';
+                        
+                        // NEW REQUIREMENT: Manual intervals are NOT draggable
+                        const draggable = esManual ? 'false' : 'true';
+                        const cursorStyle = esManual ? 'cursor: default;' : 'cursor: pointer;';
                         
                         // REQUIREMENT 3: Get estimated or real hours for display
                         const modelo = modelos.find(m => m.codigo === v.codigoModelo);
@@ -7634,13 +7685,18 @@
                             tituloDisplay += `, Serie: ${v.numeroSerie}`;
                         }
                         
+                        // NEW REQUIREMENT: Add manual badge
+                        const manualBadge = esManual ? '<span style="background: var(--color-exito); color: white; padding: 1px 4px; border-radius: 3px; font-size: 0.75em; margin-left: 3px;">🔒 MANUAL</span>' : '';
+                        const manualTitle = esManual ? ' [INTERVALO MANUAL - No ajustable por arrastre]' : ' - Clic para gestionar horas';
+                        const manualBorderStyle = esManual ? 'border: 2px solid var(--color-exito); box-shadow: 0 0 6px var(--color-exito);' : '';
+                        
                         vestidosHtml += `<div 
                             draggable="${draggable}"
                             ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
                             ondragend="onDragEndCalendario(event)"
-                            onclick="event.stopPropagation(); abrirModalDividirHoras(${v.id}, '${fechaStr}');"
-                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
-                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''} - Clic para gestionar horas">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplay}</span>
+                            onclick="event.stopPropagation(); ${esManual ? 'abrirModalHorasConfeccion(' + v.id + ')' : 'abrirModalDividirHoras(' + v.id + ', \'' + fechaStr + '\')'}"
+                            style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; background: ${colorBg}; border-left: 3px solid ${colorBorde}; ${manualBorderStyle} border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; ${cursorStyle} ${opacidad}" 
+                            title="${tituloDisplay}${esEnviado ? ' (ENVIADO)' : ''}${manualTitle}">${partitionBadge}${emojiEnviado}✅ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.8;">${horasDisplay}</span>${manualBadge}
                             <button class="btn-eliminar-vestido-calendario" onclick="event.stopPropagation(); eliminarPartePlanificada(${v.id}, '${fechaStr}', null, event);">×</button>
                         </div>`;
                     }
@@ -8460,6 +8516,145 @@
             mesActualCalendario = hoy.getMonth();
             anioActualCalendario = hoy.getFullYear();
             generarCalendarioPlanificacion();
+        }
+        
+        // ===============================================
+        // === QUICK INTERVAL ADDITION PANEL =============
+        // ===============================================
+        
+        function abrirPanelIntervaloRapido() {
+            const panel = document.getElementById('panel-intervalo-rapido');
+            panel.style.display = 'block';
+            
+            // Populate vestido dropdown with En Taller dresses
+            const selectVestido = document.getElementById('select-vestido-rapido');
+            const vestidosEnTaller = vestidos.filter(v => 
+                ['en_taller', 'con_tara'].includes(v.estado)
+            );
+            
+            let options = '<option value="">Seleccionar vestido...</option>';
+            vestidosEnTaller.forEach(v => {
+                const loteDisplay = v.proveedor === 'rosa_clara' && v.numeroSerie 
+                    ? `${v.lote}(${v.numeroSerie})`
+                    : v.lote || 'N/A';
+                options += `<option value="${v.id}">${v.nombreModelo} - Lote: ${loteDisplay} - ${v.proveedor}</option>`;
+            });
+            selectVestido.innerHTML = options;
+            
+            // Populate workers dropdown
+            const selectTrabajadora = document.getElementById('trabajadora-rapido');
+            let workerOptions = '<option value="">Seleccionar trabajadora...</option>';
+            workers.forEach(w => {
+                workerOptions += `<option value="${w.id}">${w.nombre} (${w.rol})</option>`;
+            });
+            selectTrabajadora.innerHTML = workerOptions;
+            
+            // Set default date to today
+            const hoy = new Date();
+            const fechaStr = hoy.toISOString().split('T')[0];
+            document.getElementById('fecha-intervalo-rapido').value = fechaStr;
+            
+            // Scroll to panel
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        function cerrarPanelIntervaloRapido() {
+            const panel = document.getElementById('panel-intervalo-rapido');
+            panel.style.display = 'none';
+        }
+        
+        function añadirIntervaloRapido() {
+            const vestidoId = parseInt(document.getElementById('select-vestido-rapido').value);
+            const fecha = document.getElementById('fecha-intervalo-rapido').value;
+            const horaInicio = document.getElementById('hora-inicio-rapido').value;
+            const horaFin = document.getElementById('hora-fin-rapido').value;
+            const trabajadoraId = parseInt(document.getElementById('trabajadora-rapido').value);
+            
+            // Validation
+            if (!vestidoId) {
+                alert('⚠️ Por favor selecciona un vestido.');
+                return;
+            }
+            if (!fecha) {
+                alert('⚠️ Por favor selecciona una fecha.');
+                return;
+            }
+            if (!horaInicio || !horaFin) {
+                alert('⚠️ Por favor selecciona hora de inicio y fin.');
+                return;
+            }
+            if (!trabajadoraId) {
+                alert('⚠️ Por favor selecciona una trabajadora.');
+                return;
+            }
+            
+            // Create interval
+            const inicioDateTime = `${fecha}T${horaInicio}:00`;
+            const finDateTime = `${fecha}T${horaFin}:00`;
+            
+            // Calculate hours
+            const inicioDate = new Date(inicioDateTime);
+            const finDate = new Date(finDateTime);
+            const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+            
+            if (diffHours <= 0) {
+                alert('⚠️ La hora de fin debe ser posterior a la hora de inicio.');
+                return;
+            }
+            
+            // Get or create horasConfeccion entry
+            if (!horasConfeccion[vestidoId]) {
+                horasConfeccion[vestidoId] = {
+                    trabajadoras: [],
+                    intervalos: [],
+                    horasTotales: 0,
+                    esManual: true // Mark as manually added
+                };
+            } else {
+                horasConfeccion[vestidoId].esManual = true;
+            }
+            
+            // Add interval
+            horasConfeccion[vestidoId].intervalos.push({
+                inicio: inicioDateTime,
+                fin: finDateTime,
+                trabajadoraId: trabajadoraId
+            });
+            
+            // Update total hours
+            let totalHoras = 0;
+            horasConfeccion[vestidoId].intervalos.forEach(intervalo => {
+                if (intervalo.inicio && intervalo.fin) {
+                    const inicio = new Date(intervalo.inicio);
+                    const fin = new Date(intervalo.fin);
+                    const diff = (fin - inicio) / (1000 * 60 * 60);
+                    if (diff > 0) totalHoras += diff;
+                }
+            });
+            horasConfeccion[vestidoId].horasTotales = totalHoras;
+            
+            // Add worker to trabajadoras list if not already there
+            if (!horasConfeccion[vestidoId].trabajadoras.includes(trabajadoraId)) {
+                horasConfeccion[vestidoId].trabajadoras.push(trabajadoraId);
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
+            
+            // Refresh views
+            cargarPlanificacionNueva();
+            generarCalendarioPlanificacion();
+            
+            // Success message
+            const vestido = vestidos.find(v => v.id === vestidoId);
+            const trabajadora = workers.find(w => w.id === trabajadoraId);
+            alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+            
+            // Reset form
+            document.getElementById('select-vestido-rapido').value = '';
+            document.getElementById('hora-inicio-rapido').value = '07:00';
+            document.getElementById('hora-fin-rapido').value = '15:00';
+            document.getElementById('trabajadora-rapido').value = '';
         }
 
         function planificacionAutomatica() {
