@@ -2976,6 +2976,10 @@
                             <span style="font-weight: 500;">⚙️ En Proceso</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
+                            <input type="checkbox" id="filtro-produccion" onchange="onIndividualFilterChange()" style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <span style="font-weight: 500;">👗 Todos en Producción</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
                             <input type="checkbox" id="filtro-ninguno" onchange="toggleFiltroNinguno()" style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">❌ Ninguno</span>
                         </label>
@@ -3010,6 +3014,9 @@
                         </div>
                         <div>
                             <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
+                        </div>
+                        <div>
+                            <strong>👗 En Producción:</strong> Todos los vestidos en taller (solo referencia, no movibles)
                         </div>
                         <div style="grid-column: span 2;">
                             <strong>💡 Tip:</strong> Usa el botón "⚡ Añadir Intervalo Rápido" para añadir intervalos manuales directamente
@@ -7481,7 +7488,7 @@
                 // Get dresses for this date
                 const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
                 
-                // Separate dresses by status: with hours (en proceso) vs without (pendientes) vs sent on delivery date
+                // Separate dresses by status: with hours (en proceso) vs without (pendientes) vs sent on delivery date vs production-only
                 const vestidosEnProceso = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
@@ -7490,11 +7497,28 @@
                 const vestidosPendientes = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
-                    return !horasConfeccion[v.id] && !esAlbaranDelDia;
+                    const esProduccionSolo = ['en_taller', 'con_tara'].includes(v.estado) && 
+                                            !horasConfeccion[v.id] && 
+                                            !v.fechaLimite && 
+                                            !v.fechaInicioSugerida &&
+                                            (!planificacion[fechaStr] || !planificacion[fechaStr].some(e => e.vestidoId === v.id)) &&
+                                            (!v.planificacionSugerida || !v.planificacionSugerida.diasAsignados);
+                    return !horasConfeccion[v.id] && !esAlbaranDelDia && !esProduccionSolo;
                 });
                 const vestidosAlbaranDelDia = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
                     return esEnviado && v.fechaEnvio === fechaStr;
+                });
+                // NEW: Production-only vestidos (read-only reference - no planning, no deadlines, just in production)
+                const vestidosProduccionSolo = vestidosEnFecha.filter(v => {
+                    const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
+                    return ['en_taller', 'con_tara'].includes(v.estado) && 
+                           !horasConfeccion[v.id] && 
+                           !v.fechaLimite && 
+                           !v.fechaInicioSugerida &&
+                           (!planificacion[fechaStr] || !planificacion[fechaStr].some(e => e.vestidoId === v.id)) &&
+                           (!v.planificacionSugerida || !v.planificacionSugerida.diasAsignados) &&
+                           !esEnviado;
                 });
                 
                 // Calculate total hours for the day
@@ -7791,6 +7815,35 @@
                         title="${tituloDisplay}">📦 ${count} Enviado${count > 1 ? 's' : ''}
                     </div>`;
                 }
+                
+                // NEW REQUIREMENT: Display production-only vestidos (read-only reference)
+                // These are vestidos in production without planning, deadlines, or assigned hours
+                vestidosProduccionSolo.forEach(v => {
+                    // Get estimated hours for display
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    const horasEstimadas = modelo ? modelo.horas : 0;
+                    const horasDisplay = `${horasEstimadas.toFixed(1)}h est`;
+                    
+                    // Get supplier color
+                    const proveedor = v.proveedor;
+                    const colorBg = `var(--color-${proveedor})`;
+                    const colorBorde = `var(--color-${proveedor}-borde)`;
+                    
+                    // Simplified display: dress name and lot number only
+                    let loteDisplay = v.lote || 'N/A';
+                    let tituloDisplay = `${v.nombreModelo} - Lote: ${loteDisplay} - ${horasDisplay} [REFERENCIA - Solo lectura]`;
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                        tituloDisplay += `, Serie: ${v.numeroSerie}`;
+                    }
+                    
+                    // Read-only styling: lighter background, no cursor pointer, not draggable
+                    vestidosHtml += `<div 
+                        draggable="false"
+                        style="font-size: 0.65em; margin: 2px 0; padding: 3px; background: linear-gradient(135deg, ${colorBg}, #F9FAFB); border-left: 2px dashed ${colorBorde}; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.6; cursor: default;" 
+                        title="${tituloDisplay}">👗 ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.7;">${horasDisplay}</span>
+                    </div>`;
+                });
 
                 html += `
                     <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
@@ -7820,7 +7873,8 @@
             mostrarEnviados: true,
             mostrarAlbaranes: true,
             mostrarFechaFin: true,
-            mostrarEnProceso: true
+            mostrarEnProceso: true,
+            mostrarProduccion: false // Show all vestidos in production (read-only reference)
         };
 
         function aplicarFiltrosCalendario() {
@@ -7830,6 +7884,7 @@
             const filtroAlbaranesEl = document.getElementById('filtro-albaranes');
             const filtroFechaFinEl = document.getElementById('filtro-fecha-fin');
             const filtroEnProcesoEl = document.getElementById('filtro-en-proceso');
+            const filtroProduccionEl = document.getElementById('filtro-produccion');
             
             if (!filtroProveedorEl) {
                 return; // Filters not loaded yet
@@ -7841,6 +7896,7 @@
             filtrosCalendarioActivos.mostrarAlbaranes = filtroAlbaranesEl ? filtroAlbaranesEl.checked : true;
             filtrosCalendarioActivos.mostrarFechaFin = filtroFechaFinEl ? filtroFechaFinEl.checked : true;
             filtrosCalendarioActivos.mostrarEnProceso = filtroEnProcesoEl ? filtroEnProcesoEl.checked : true;
+            filtrosCalendarioActivos.mostrarProduccion = filtroProduccionEl ? filtroProduccionEl.checked : false;
             
             // Regenerate calendar with new filters
             generarCalendarioPlanificacion();
@@ -7866,6 +7922,7 @@
             document.getElementById('filtro-albaranes').checked = isChecked;
             document.getElementById('filtro-fecha-fin').checked = isChecked;
             document.getElementById('filtro-en-proceso').checked = isChecked;
+            document.getElementById('filtro-produccion').checked = isChecked;
             
             // Uncheck "Ninguno"
             document.getElementById('filtro-ninguno').checked = false;
@@ -7884,6 +7941,7 @@
                 document.getElementById('filtro-albaranes').checked = false;
                 document.getElementById('filtro-fecha-fin').checked = false;
                 document.getElementById('filtro-en-proceso').checked = false;
+                document.getElementById('filtro-produccion').checked = false;
                 document.getElementById('filtro-todos').checked = false;
                 
                 // Apply filters
@@ -8016,6 +8074,20 @@
                 }
             });
 
+            // NEW REQUIREMENT: Add all vestidos currently in production (for reference only)
+            // This shows ALL vestidos with estado 'en_taller' or 'con_tara' regardless of planning/deadlines
+            if (filtrosCalendarioActivos.mostrarProduccion) {
+                vestidos.forEach(vestido => {
+                    // Only show vestidos that are actually in the workshop (not sent/paid)
+                    if (['en_taller', 'con_tara'].includes(vestido.estado)) {
+                        // Add if not already in results
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
+                    }
+                });
+            }
+
             // REQUIREMENT 1: Apply new multi-select filters
             // Apply active filters to results
             let resultadoFiltrado = [];
@@ -8055,12 +8127,19 @@
                     }
                 }
                 
+                // NEW REQUIREMENT: Category: Produccion (all dresses in production - read-only reference)
+                // This category shows ALL vestidos with estado 'en_taller' or 'con_tara'
+                if (['en_taller', 'con_tara'].includes(vestido.estado)) {
+                    categorias.push('produccion');
+                }
+                
                 // Check if dress matches any active filter
                 let mostrar = false;
                 if (categorias.includes('enviados') && filtrosCalendarioActivos.mostrarEnviados) mostrar = true;
                 if (categorias.includes('albaranes') && filtrosCalendarioActivos.mostrarAlbaranes) mostrar = true;
                 if (categorias.includes('fecha_fin') && filtrosCalendarioActivos.mostrarFechaFin) mostrar = true;
                 if (categorias.includes('en_proceso') && filtrosCalendarioActivos.mostrarEnProceso) mostrar = true;
+                if (categorias.includes('produccion') && filtrosCalendarioActivos.mostrarProduccion) mostrar = true;
                 
                 if (mostrar) {
                     resultadoFiltrado.push(vestido);
