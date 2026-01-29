@@ -2903,7 +2903,7 @@
                     <h3 style="margin: 0;">⚡ Añadir Intervalo Manual Rápido</h3>
                     <button class="btn btn-small" onclick="cerrarPanelIntervaloRapido()">✖ Cerrar</button>
                 </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto auto; gap: 10px; align-items: end;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1.5fr auto auto; gap: 10px; align-items: end;">
                     <div>
                         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Vestido:</label>
                         <select id="select-vestido-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
@@ -2926,6 +2926,14 @@
                         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Trabajadora:</label>
                         <select id="trabajadora-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
                             <option value="">Seleccionar trabajadora...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estado:</label>
+                        <select id="estado-tarea-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                            <option value="in_progress">⏳ En Proceso</option>
+                            <option value="completed">✅ Completado</option>
+                            <option value="pending">📋 Pendiente</option>
                         </select>
                     </div>
                     <div>
@@ -8650,6 +8658,7 @@
             const horaInicio = document.getElementById('hora-inicio-rapido').value;
             const horaFin = document.getElementById('hora-fin-rapido').value;
             const trabajadoraId = parseInt(document.getElementById('trabajadora-rapido').value);
+            const estadoTarea = document.getElementById('estado-tarea-rapido').value;
             
             // Validation
             if (!vestidoId) {
@@ -8701,11 +8710,12 @@
                 horasConfeccion[vestidoId].esManual = true;
             }
             
-            // Add interval
+            // Add interval with task status
             horasConfeccion[vestidoId].intervalos.push({
                 inicio: inicioDateTime,
                 fin: finDateTime,
-                trabajadoraId: trabajadoraId
+                trabajadoraId: trabajadoraId,
+                status: estadoTarea || 'in_progress' // Add task status field
             });
             
             // Update total hours
@@ -8735,10 +8745,11 @@
             // Success message
             const vestido = vestidos.find(v => v.id === vestidoId);
             const trabajadora = workers.find(w => w.id === trabajadoraId);
+            const estadoTexto = estadoTarea === 'completed' ? '✅ Completado' : estadoTarea === 'pending' ? '📋 Pendiente' : '⏳ En Proceso';
             if (enCurso) {
-                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\nEstado: ${estadoTexto}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
             } else {
-                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\nEstado: ${estadoTexto}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
             }
             
             // Reset form
@@ -8746,6 +8757,7 @@
             document.getElementById('hora-inicio-rapido').value = '07:00';
             document.getElementById('hora-fin-rapido').value = '15:00';
             document.getElementById('trabajadora-rapido').value = '';
+            document.getElementById('estado-tarea-rapido').value = 'in_progress';
         }
         
         function marcarInicioEnCurso() {
@@ -9234,12 +9246,22 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="intervalo-trabajadora">
-                            <label>👷 Trabajadora Asignada:</label>
-                            <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                <option value="">Seleccionar trabajadora...</option>
-                                ${workerOptions}
-                            </select>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div class="intervalo-trabajadora">
+                                <label>👷 Trabajadora Asignada:</label>
+                                <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                    <option value="">Seleccionar trabajadora...</option>
+                                    ${workerOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label>📋 Estado de la Tarea:</label>
+                                <select class="intervalo-status" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                    <option value="in_progress">⏳ En Proceso</option>
+                                    <option value="completed">✅ Completado</option>
+                                    <option value="pending">📋 Pendiente</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -9352,6 +9374,8 @@
                     horaFin = finDate.toTimeString().slice(0, 5); // HH:mm
                 }
                 
+                const intervaloStatus = intervalo.status || 'in_progress';
+                
                 return `
                     <div class="intervalo-tiempo collapsed" data-intervalo-index="${index}">
                         <div class="intervalo-tiempo-header" onclick="toggleIntervalo(this.parentElement)">
@@ -9380,23 +9404,40 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="intervalo-trabajadora">
-                                <label>👷 Trabajadora Asignada:</label>
-                                <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                    <option value="">Seleccionar trabajadora...</option>
-                                    ${workerOptions}
-                                </select>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div class="intervalo-trabajadora">
+                                    <label>👷 Trabajadora Asignada:</label>
+                                    <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                        <option value="">Seleccionar trabajadora...</option>
+                                        ${workerOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>📋 Estado de la Tarea:</label>
+                                    <select class="intervalo-status" data-selected="${intervaloStatus}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                        <option value="in_progress">⏳ En Proceso</option>
+                                        <option value="completed">✅ Completado</option>
+                                        <option value="pending">📋 Pendiente</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
             
-            // Set selected workers and update summaries after rendering
+            // Set selected workers and status, and update summaries after rendering
             container.querySelectorAll('.intervalo-worker').forEach(select => {
                 const selectedId = select.dataset.selected;
                 if (selectedId) {
                     select.value = selectedId;
+                }
+            });
+            
+            container.querySelectorAll('.intervalo-status').forEach(select => {
+                const selectedStatus = select.dataset.selected;
+                if (selectedStatus) {
+                    select.value = selectedStatus;
                 }
             });
             
@@ -9515,6 +9556,8 @@
                 const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
                 
                 const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
+                const statusInput = intervaloEl.querySelector('.intervalo-status');
+                const status = statusInput ? statusInput.value : 'in_progress';
                 
                 let inicio = null;
                 let fin = null;
@@ -9539,7 +9582,8 @@
                             intervalos.push({ 
                                 inicio, 
                                 fin, 
-                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
+                                status: status
                             });
                             totalHoras += diffHours;
                             if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
@@ -9549,7 +9593,8 @@
                         intervalos.push({ 
                             inicio, 
                             fin: null, 
-                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
+                            status: status
                         });
                         if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                     }
