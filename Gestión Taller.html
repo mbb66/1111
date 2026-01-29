@@ -2903,7 +2903,7 @@
                     <h3 style="margin: 0;">⚡ Añadir Intervalo Manual Rápido</h3>
                     <button class="btn btn-small" onclick="cerrarPanelIntervaloRapido()">✖ Cerrar</button>
                 </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto; gap: 10px; align-items: end;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto auto; gap: 10px; align-items: end;">
                     <div>
                         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Vestido:</label>
                         <select id="select-vestido-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
@@ -2929,11 +2929,14 @@
                         </select>
                     </div>
                     <div>
+                        <button class="btn btn-info btn-small" onclick="marcarInicioEnCurso()" style="padding: 8px 12px;" title="Capturar hora actual como inicio">⏳ En Curso</button>
+                    </div>
+                    <div>
                         <button class="btn btn-success" onclick="añadirIntervaloRapido()" style="padding: 8px 15px;">✅ Añadir</button>
                     </div>
                 </div>
                 <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
-                    <strong>💡 Tip:</strong> Los intervalos añadidos manualmente aparecerán marcados con <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> en el calendario y no serán ajustables por arrastre.
+                    <strong>💡 Tip:</strong> Usa el botón <strong>⏳ En Curso</strong> para capturar la hora actual como inicio y dejar el fin vacío (añade el fin más tarde). Los intervalos añadidos manualmente aparecerán marcados con <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> en el calendario y no serán ajustables por arrastre.
                 </div>
             </div>
 
@@ -6757,10 +6760,12 @@
             
             // Create group
             const grupoId = Date.now();
+            const grupoSizeOriginal = vestidosArray.length;
             vestidosGrupos[grupoId] = {
                 vestidosIds: vestidosArray,
                 codigoModelo: codigoModelo,
-                nombre: `Grupo ${Object.keys(vestidosGrupos).length + 1} - ${vestidosObjs[0].nombreModelo}`
+                nombre: `Grupo ${Object.keys(vestidosGrupos).length + 1} - ${vestidosObjs[0].nombreModelo}`,
+                sizeOriginal: grupoSizeOriginal  // Store original size for hour division
             };
             
             // Mark dresses as grouped in horasConfeccion
@@ -6773,6 +6778,7 @@
                     };
                 }
                 horasConfeccion[vestidoId].grupoId = grupoId;
+                horasConfeccion[vestidoId].grupoSizeOriginal = grupoSizeOriginal;  // Store original size for each dress
             });
             
             // Save to localStorage
@@ -8654,8 +8660,8 @@
                 alert('⚠️ Por favor selecciona una fecha.');
                 return;
             }
-            if (!horaInicio || !horaFin) {
-                alert('⚠️ Por favor selecciona hora de inicio y fin.');
+            if (!horaInicio) {
+                alert('⚠️ Por favor selecciona hora de inicio.');
                 return;
             }
             if (!trabajadoraId) {
@@ -8663,18 +8669,24 @@
                 return;
             }
             
+            // Allow empty end time for "in progress" intervals
+            const enCurso = !horaFin || horaFin === '';
+            
             // Create interval
             const inicioDateTime = `${fecha}T${horaInicio}:00`;
-            const finDateTime = `${fecha}T${horaFin}:00`;
+            const finDateTime = enCurso ? null : `${fecha}T${horaFin}:00`;
             
-            // Calculate hours
-            const inicioDate = new Date(inicioDateTime);
-            const finDate = new Date(finDateTime);
-            const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
-            
-            if (diffHours <= 0) {
-                alert('⚠️ La hora de fin debe ser posterior a la hora de inicio.');
-                return;
+            // Calculate hours (only if interval is complete)
+            let diffHours = 0;
+            if (!enCurso) {
+                const inicioDate = new Date(inicioDateTime);
+                const finDate = new Date(finDateTime);
+                diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                
+                if (diffHours <= 0) {
+                    alert('⚠️ La hora de fin debe ser posterior a la hora de inicio.');
+                    return;
+                }
             }
             
             // Get or create horasConfeccion entry
@@ -8723,13 +8735,32 @@
             // Success message
             const vestido = vestidos.find(v => v.id === vestidoId);
             const trabajadora = workers.find(w => w.id === trabajadoraId);
-            alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+            if (enCurso) {
+                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+            } else {
+                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+            }
             
             // Reset form
             document.getElementById('select-vestido-rapido').value = '';
             document.getElementById('hora-inicio-rapido').value = '07:00';
             document.getElementById('hora-fin-rapido').value = '15:00';
             document.getElementById('trabajadora-rapido').value = '';
+        }
+        
+        function marcarInicioEnCurso() {
+            // Capture current time and set as start time, leave end empty
+            const ahora = new Date();
+            const hoy = ahora.toISOString().split('T')[0];
+            const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+            
+            // Set current date and time
+            document.getElementById('fecha-intervalo-rapido').value = hoy;
+            document.getElementById('hora-inicio-rapido').value = horaActual;
+            document.getElementById('hora-fin-rapido').value = ''; // Leave end empty for "in progress"
+            
+            // Show feedback
+            alert(`⏳ Intervalo iniciado a las ${horaActual}.\n\nSe ha capturado la hora actual como inicio.\nDeja el campo "Fin" vacío para marcar como "en curso" o añade la hora de fin cuando termines el trabajo.`);
         }
 
         function planificacionAutomatica() {
@@ -8991,10 +9022,16 @@
             
             // Update info about hour division for groups
             const infoDivision = document.getElementById('info-division-horas');
-            if (grupo && grupo.vestidosIds.length > 1) {
+            if (grupo) {
+                const grupoSizeOriginal = grupo.sizeOriginal || currentHoras.grupoSizeOriginal || grupo.vestidosIds.length;
+                const vestidosActivos = grupo.vestidosIds.filter(id => {
+                    const v = vestidos.find(vestido => vestido.id === id);
+                    return v && v.estado !== 'enviado' && v.estado !== 'pagado';
+                }).length;
                 const totalHoras = currentHoras.horasTotales || 0;
-                const horasPorVestido = totalHoras / grupo.vestidosIds.length;
-                infoDivision.innerHTML = `💡 Las horas se dividirán entre ${grupo.vestidosIds.length} vestidos: ${horasPorVestido.toFixed(2)}h por vestido`;
+                const horasPorVestido = totalHoras / grupoSizeOriginal;
+                infoDivision.innerHTML = `💡 Las horas se dividirán entre ${grupoSizeOriginal} vestidos (tamaño original del grupo).<br>` +
+                                        `Vestidos activos: ${vestidosActivos} | Horas por vestido: ${horasPorVestido.toFixed(2)}h`;
             } else {
                 infoDivision.innerHTML = '';
             }
@@ -9049,13 +9086,23 @@
             let horasPorVestido = totalHoras;
             let confirmMsg = `¿Marcar este vestido como finalizado?\n\nSe registrarán ${totalHoras.toFixed(2)} horas reales trabajadas.`;
             
-            // If dress is in a group, divide hours among all dresses in the group
-            if (grupo && grupo.vestidosIds.length > 1) {
-                horasPorVestido = totalHoras / grupo.vestidosIds.length;
-                confirmMsg = `¿Marcar este grupo de ${grupo.vestidosIds.length} vestidos como finalizado?\n\n` +
-                           `Horas totales trabajadas: ${totalHoras.toFixed(2)}h\n` +
-                           `Horas por vestido: ${horasPorVestido.toFixed(2)}h\n\n` +
-                           `Los ${grupo.vestidosIds.length} vestidos del grupo se marcarán como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.`;
+            // If dress is in a group, divide hours using ORIGINAL group size
+            // This ensures that hours are divided correctly even if some dresses have been sent
+            if (grupo) {
+                const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
+                if (grupoSizeOriginal > 1) {
+                    horasPorVestido = totalHoras / grupoSizeOriginal;
+                    const vestidosActivos = grupo.vestidosIds.filter(id => {
+                        const v = vestidos.find(vestido => vestido.id === id);
+                        return v && v.estado !== 'enviado' && v.estado !== 'pagado';
+                    }).length;
+                    confirmMsg = `¿Marcar este grupo como finalizado?\n\n` +
+                               `Tamaño original del grupo: ${grupoSizeOriginal} vestidos\n` +
+                               `Vestidos activos restantes: ${vestidosActivos}\n` +
+                               `Horas totales trabajadas: ${totalHoras.toFixed(2)}h\n` +
+                               `Horas por vestido (divididas entre ${grupoSizeOriginal}): ${horasPorVestido.toFixed(2)}h\n\n` +
+                               `${vestidosActivos > 0 ? `Los ${vestidosActivos} vestidos activos` : 'Este vestido'} se marcarán como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.`;
+                }
             }
 
             // Confirm action
@@ -9066,19 +9113,30 @@
             guardarHorasConfeccion();
             
             // Update dress(es) with real hours
-            if (grupo && grupo.vestidosIds.length > 1) {
-                // Update all dresses in the group with divided hours
-                grupo.vestidosIds.forEach(vestidoId => {
-                    const v = vestidos.find(vestido => vestido.id === vestidoId);
-                    if (v) {
-                        v.horasReales = horasPorVestido;
-                    }
-                });
-                
-                // Save to localStorage
-                localStorage.setItem('vestidos', JSON.stringify(vestidos));
-                
-                alert(`✅ Grupo finalizado.\n\n${grupo.vestidosIds.length} vestidos marcados como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.\n(Total: ${totalHoras.toFixed(2)}h)`);
+            if (grupo) {
+                const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
+                if (grupoSizeOriginal > 1) {
+                    // Update all ACTIVE (not sent) dresses in the group with divided hours
+                    let vestidosActualizados = 0;
+                    grupo.vestidosIds.forEach(vestidoId => {
+                        const v = vestidos.find(vestido => vestido.id === vestidoId);
+                        // Only update dresses that are still active (not sent or paid)
+                        if (v && v.estado !== 'enviado' && v.estado !== 'pagado') {
+                            v.horasReales = horasPorVestido;
+                            vestidosActualizados++;
+                        }
+                    });
+                    
+                    // Save to localStorage
+                    localStorage.setItem('vestidos', JSON.stringify(vestidos));
+                    
+                    alert(`✅ Grupo finalizado.\n\n${vestidosActualizados} vestidos activos marcados como finalizados con ${horasPorVestido.toFixed(2)}h cada uno.\n(Total trabajado: ${totalHoras.toFixed(2)}h, dividido entre ${grupoSizeOriginal} vestidos originales)`);
+                } else {
+                    // Single dress in group (shouldn't happen, but handle it)
+                    vestido.horasReales = totalHoras;
+                    localStorage.setItem('vestidos', JSON.stringify(vestidos));
+                    alert(`✅ Vestido finalizado con ${totalHoras.toFixed(2)} horas reales trabajadas.`);
+                }
             } else {
                 // Update single dress
                 vestido.horasReales = totalHoras;
@@ -9915,6 +9973,99 @@
                             return `${modeloMin} (${minBeneficio >= 0 ? '+' : ''}${minBeneficio.toFixed(2)}€)`;
                         })() : 'N/A'}
                     </div>
+                    
+                    <div class="page-break"></div>
+                    <h2>4. Resumen por Grupos de Vestidos</h2>
+            `;
+            
+            // Group summary section
+            const gruposActivos = Object.keys(vestidosGrupos).filter(gId => {
+                const grupo = vestidosGrupos[gId];
+                // Check if any dress in the group has hours tracked
+                return grupo.vestidosIds.some(vId => horasConfeccion[vId]);
+            });
+            
+            if (gruposActivos.length > 0) {
+                reporteHtml += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Grupo</th>
+                                <th>Tamaño Original</th>
+                                <th>Vestidos Activos</th>
+                                <th>Vestidos Enviados</th>
+                                <th>H. Totales Trabajadas</th>
+                                <th>H. por Vestido (dividido)</th>
+                                <th>Precio Total</th>
+                                <th>Coste Total</th>
+                                <th>Beneficio/Pérdida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                gruposActivos.forEach(grupoId => {
+                    const grupo = vestidosGrupos[grupoId];
+                    const grupoSizeOriginal = grupo.sizeOriginal || grupo.vestidosIds.length;
+                    
+                    let horasTotales = 0;
+                    let precioTotal = 0;
+                    let vestidosActivos = 0;
+                    let vestidosEnviados = 0;
+                    
+                    // Get representative hours from first dress in group
+                    const primerVestidoId = grupo.vestidosIds[0];
+                    const horasPrimerVestido = horasConfeccion[primerVestidoId];
+                    if (horasPrimerVestido) {
+                        horasTotales = horasPrimerVestido.horasTotales;
+                    }
+                    
+                    grupo.vestidosIds.forEach(vestidoId => {
+                        const vestido = vestidos.find(v => v.id === vestidoId);
+                        if (vestido) {
+                            precioTotal += vestido.precioBase || 0;
+                            if (vestido.estado === 'enviado' || vestido.estado === 'pagado') {
+                                vestidosEnviados++;
+                            } else {
+                                vestidosActivos++;
+                            }
+                        }
+                    });
+                    
+                    const horasPorVestido = horasTotales / grupoSizeOriginal;
+                    const costeTotal = horasPorVestido * grupoSizeOriginal * precioHoraObjetivo;
+                    const beneficioTotal = precioTotal - costeTotal;
+                    const beneficioClass = beneficioTotal >= 0 ? 'profit' : 'loss';
+                    
+                    reporteHtml += `
+                        <tr>
+                            <td><strong>${grupo.nombre}</strong></td>
+                            <td>${grupoSizeOriginal}</td>
+                            <td>${vestidosActivos}</td>
+                            <td>${vestidosEnviados}</td>
+                            <td>${horasTotales.toFixed(2)}h</td>
+                            <td>${horasPorVestido.toFixed(2)}h</td>
+                            <td>${precioTotal.toFixed(2)}€</td>
+                            <td>${costeTotal.toFixed(2)}€</td>
+                            <td class="${beneficioClass}"><strong>${beneficioTotal >= 0 ? '+' : ''}${beneficioTotal.toFixed(2)}€</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                reporteHtml += `
+                        </tbody>
+                    </table>
+                    <div class="section-summary">
+                        <strong>💡 Análisis de Grupos:</strong><br>
+                        Total de grupos activos: ${gruposActivos.length}<br>
+                        Las horas se dividen entre el tamaño original del grupo, incluso si algunos vestidos han sido enviados.
+                    </div>
+                `;
+            } else {
+                reporteHtml += `<p>No hay grupos de vestidos registrados con horas trabajadas.</p>`;
+            }
+            
+            reporteHtml += `
                 </body>
                 </html>
             `;
