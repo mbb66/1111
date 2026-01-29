@@ -472,18 +472,19 @@
         };
         
         // Sample data structures (in real app, these would be loaded from localStorage)
-        let planificacion = {}; // { dateStr: [{ vestidoId, horas, parte }] }
-        let horasConfeccion = {}; // { vestidoId: { intervalos: [...], horasTotales, grupoId, esManual } }
-        let vestidosGrupos = {}; // { grupoId: { vestidosIds: [...], nombre } }
+        // Note: These variables are kept for compatibility with the original calendar code
+        let planificacion = {}; // { dateStr: [{ vestidoId, horas, parte }] } - Not used in demo but kept for future integration
+        let horasConfeccion = {}; // { vestidoId: { intervalos: [...], horasTotales, grupoId, esManual } } - Not used in demo
+        let vestidosGrupos = {}; // { grupoId: { vestidosIds: [...], nombre } } - Not used in demo but kept for future integration
         let vestidos = []; // Array of dress objects
         let modelos = []; // Array of model objects
         let trabajadores = []; // Array of worker objects
-        let workers = []; // Alias for workers
         
         // Drag state
+        // Note: draggedGrupoId is kept for compatibility with the original code but not used in this demo
         let draggedVestidoId = null;
         let draggedVestidoFechaOrigen = null;
-        let draggedGrupoId = null;
+        let draggedGrupoId = null; // Not used in demo version
 
         // ===================================== //
         // === INITIALIZATION === //
@@ -515,7 +516,6 @@
                 { id: 1, nombre: 'María', horasDiarias: 8 },
                 { id: 2, nombre: 'Ana', horasDiarias: 8 }
             ];
-            workers = trabajadores;
         }
 
         // ===================================== //
@@ -627,7 +627,9 @@
         }
 
         function obtenerLimiteHoras(fecha) {
-            // Default: 8 hours per worker per day
+            // Helper function for capacity calculation
+            // Returns available work hours per day (8 hours per worker)
+            // Note: In the full system, this would check for holidays and custom capacity settings
             return trabajadores.length * 8;
         }
 
@@ -691,7 +693,15 @@
             const vestido = vestidos.find(v => v.id === draggedVestidoId);
             if (vestido) {
                 vestido.fechaLimite = fechaDestino;
-                alert(`✅ Vestido ${vestido.nombreModelo} movido a ${fechaDestino}`);
+                
+                // Format date for user-friendly display
+                const fechaObj = new Date(fechaDestino + 'T12:00:00');
+                const fechaFormateada = fechaObj.toLocaleDateString('es-ES', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                });
+                alert(`✅ Vestido ${vestido.nombreModelo} movido a ${fechaFormateada}`);
             }
             
             // Regenerate calendar
