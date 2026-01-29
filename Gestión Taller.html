@@ -9973,6 +9973,99 @@
                             return `${modeloMin} (${minBeneficio >= 0 ? '+' : ''}${minBeneficio.toFixed(2)}€)`;
                         })() : 'N/A'}
                     </div>
+                    
+                    <div class="page-break"></div>
+                    <h2>4. Resumen por Grupos de Vestidos</h2>
+            `;
+            
+            // Group summary section
+            const gruposActivos = Object.keys(vestidosGrupos).filter(gId => {
+                const grupo = vestidosGrupos[gId];
+                // Check if any dress in the group has hours tracked
+                return grupo.vestidosIds.some(vId => horasConfeccion[vId]);
+            });
+            
+            if (gruposActivos.length > 0) {
+                reporteHtml += `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Grupo</th>
+                                <th>Tamaño Original</th>
+                                <th>Vestidos Activos</th>
+                                <th>Vestidos Enviados</th>
+                                <th>H. Totales Trabajadas</th>
+                                <th>H. por Vestido (dividido)</th>
+                                <th>Precio Total</th>
+                                <th>Coste Total</th>
+                                <th>Beneficio/Pérdida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                gruposActivos.forEach(grupoId => {
+                    const grupo = vestidosGrupos[grupoId];
+                    const grupoSizeOriginal = grupo.sizeOriginal || grupo.vestidosIds.length;
+                    
+                    let horasTotales = 0;
+                    let precioTotal = 0;
+                    let vestidosActivos = 0;
+                    let vestidosEnviados = 0;
+                    
+                    // Get representative hours from first dress in group
+                    const primerVestidoId = grupo.vestidosIds[0];
+                    const horasPrimerVestido = horasConfeccion[primerVestidoId];
+                    if (horasPrimerVestido) {
+                        horasTotales = horasPrimerVestido.horasTotales;
+                    }
+                    
+                    grupo.vestidosIds.forEach(vestidoId => {
+                        const vestido = vestidos.find(v => v.id === vestidoId);
+                        if (vestido) {
+                            precioTotal += vestido.precioBase || 0;
+                            if (vestido.estado === 'enviado' || vestido.estado === 'pagado') {
+                                vestidosEnviados++;
+                            } else {
+                                vestidosActivos++;
+                            }
+                        }
+                    });
+                    
+                    const horasPorVestido = horasTotales / grupoSizeOriginal;
+                    const costeTotal = horasPorVestido * grupoSizeOriginal * precioHoraObjetivo;
+                    const beneficioTotal = precioTotal - costeTotal;
+                    const beneficioClass = beneficioTotal >= 0 ? 'profit' : 'loss';
+                    
+                    reporteHtml += `
+                        <tr>
+                            <td><strong>${grupo.nombre}</strong></td>
+                            <td>${grupoSizeOriginal}</td>
+                            <td>${vestidosActivos}</td>
+                            <td>${vestidosEnviados}</td>
+                            <td>${horasTotales.toFixed(2)}h</td>
+                            <td>${horasPorVestido.toFixed(2)}h</td>
+                            <td>${precioTotal.toFixed(2)}€</td>
+                            <td>${costeTotal.toFixed(2)}€</td>
+                            <td class="${beneficioClass}"><strong>${beneficioTotal >= 0 ? '+' : ''}${beneficioTotal.toFixed(2)}€</strong></td>
+                        </tr>
+                    `;
+                });
+                
+                reporteHtml += `
+                        </tbody>
+                    </table>
+                    <div class="section-summary">
+                        <strong>💡 Análisis de Grupos:</strong><br>
+                        Total de grupos activos: ${gruposActivos.length}<br>
+                        Las horas se dividen entre el tamaño original del grupo, incluso si algunos vestidos han sido enviados.
+                    </div>
+                `;
+            } else {
+                reporteHtml += `<p>No hay grupos de vestidos registrados con horas trabajadas.</p>`;
+            }
+            
+            reporteHtml += `
                 </body>
                 </html>
             `;
