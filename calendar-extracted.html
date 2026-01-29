@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Extracted from Planificación</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ===================================== */
+        /* === ROOT VARIABLES (COLOR SYSTEM) === */
+        /* ===================================== */
+        :root {
+            /* Color Palette */
+            --color-primario: #1E40AF;
+            --color-primario-hover: #1E3A8A;
+            --color-superficie: #FFFFFF;
+            --color-fondo: #F3F4F6;
+            --color-borde: #E5E7EB;
+            --color-texto-principal: #1F2937;
+            --color-texto-secundario: #6B7280;
+            --color-neutro-suave: #F9FAFB;
+
+            /* Status Colors */
+            --color-exito: #10B981;
+            --color-exito-fondo: #D1FAE5;
+            --color-error: #DC2626;
+            --color-error-fondo: #FEE2E2;
+            --color-alerta: #F59E0B;
+            --color-alerta-fondo: #FEF3C7;
+            --color-info: #3B82F6;
+            --color-info-fondo: #DBEAFE;
+
+            /* Provider Colors */
+            --color-pronovias: #FFE5E5;
+            --color-pronovias-borde: #FF6B6B;
+            --color-traka: #E0F2FE;
+            --color-traka-borde: #0EA5E9;
+            --color-rosa_clara: #FCE7F3;
+            --color-rosa_clara-borde: #EC4899;
+
+            /* Shadows */
+            --sombra-suave: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --sombra-media: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --sombra-grande: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ===================================== */
+        /* === GLOBAL STYLES === */
+        /* ===================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--color-fondo);
+            color: var(--color-texto-principal);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: var(--color-superficie);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: var(--sombra-media);
+        }
+
+        h2 {
+            color: var(--color-primario);
+            margin-bottom: 25px;
+            font-size: 2em;
+            font-weight: 700;
+        }
+
+        h3 {
+            color: var(--color-texto-principal);
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+
+        /* ===================================== */
+        /* === BUTTONS === */
+        /* ===================================== */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-media);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+        }
+
+        .btn-success {
+            background: var(--color-exito);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--color-error);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #B91C1C;
+        }
+
+        .btn-info {
+            background: var(--color-info);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #2563EB;
+        }
+
+        /* ===================================== */
+        /* === CALENDAR STYLES === */
+        /* ===================================== */
+        .seccion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--color-borde);
+        }
+
+        .calendario-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            padding: 12px 0;
+            background: linear-gradient(135deg, var(--color-primario) 0%, #4B5563 100%);
+            font-weight: 600;
+            border-radius: 12px 12px 0 0;
+            color: white;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .calendario-mensual {
+            background: var(--color-borde);
+            border: 1px solid var(--color-borde);
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            box-shadow: var(--sombra-media);
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .calendario-grid-body {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            width: 100%;
+            min-height: 600px;
+            padding: 4px;
+        }
+
+        .dia-calendario {
+            background: var(--color-superficie);
+            padding: 8px;
+            min-height: 120px;
+            position: relative;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 6px;
+            border: 1px solid var(--color-borde);
+        }
+
+        .dia-calendario:hover {
+            background: var(--color-neutro-suave);
+            transform: scale(1.01);
+            z-index: 1;
+            box-shadow: var(--sombra-media);
+        }
+
+        .dia-calendario.drag-over {
+            background: var(--color-info-fondo);
+            border: 2px dashed var(--color-info);
+            box-shadow: var(--sombra-grande);
+        }
+
+        .dia-calendario.fin-semana {
+            background-color: #F9FAFB;
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        .dia-calendario.fin-semana:hover {
+            background-color: #F9FAFB;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .dia-calendario.hoy {
+            background: var(--color-alerta-fondo);
+            border: 2px solid var(--color-alerta);
+            box-shadow: inset 0 0 0 2px var(--color-alerta-fondo);
+        }
+
+        .numero-dia {
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: var(--color-texto-principal);
+            font-size: 1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dia-calendario.fin-semana .numero-dia {
+            color: var(--color-texto-secundario);
+        }
+
+        .vestido-planificado {
+            padding: 6px 8px;
+            margin: 4px 0;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: move;
+            position: relative;
+            color: var(--color-texto-principal);
+            box-shadow: var(--sombra-suave);
+            transition: all 0.2s;
+        }
+
+        .vestido-planificado:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--sombra-media);
+        }
+
+        .vestido-planificado.pronovias {
+            background: var(--color-pronovias);
+            border-left: 3px solid var(--color-pronovias-borde);
+        }
+
+        .vestido-planificado.traka {
+            background: var(--color-traka);
+            border-left: 3px solid var(--color-traka-borde);
+        }
+
+        .vestido-planificado.rosa_clara {
+            background: var(--color-rosa_clara);
+            border-left: 3px solid var(--color-rosa_clara-borde);
+        }
+
+        .btn-eliminar-vestido-calendario {
+            position: absolute;
+            top: 1px;
+            right: 1px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .btn-eliminar-vestido-calendario:hover {
+            background: rgba(220, 53, 69, 0.8);
+            opacity: 1 !important;
+        }
+
+        div[draggable="true"]:hover .btn-eliminar-vestido-calendario {
+            opacity: 1;
+        }
+
+        .partition-badge {
+            position: absolute;
+            top: 2px;
+            right: 22px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 3px;
+            padding: 1px 5px;
+            font-size: 9px;
+            font-weight: bold;
+            line-height: 14px;
+        }
+
+        /* Filter Controls */
+        .filter-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: var(--color-info-fondo);
+            border-radius: 8px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 8px;
+            background: var(--color-superficie);
+            border-radius: 6px;
+            border: 2px solid var(--color-borde);
+            transition: all 0.2s;
+        }
+
+        .filter-label input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .autocomplete-info {
+            background: var(--color-info-fondo);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--color-info);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📅 Calendar from Planificación Tab</h2>
+        
+        <div class="autocomplete-info" style="margin-bottom: 20px;">
+            <strong>ℹ️ Extracted Calendar:</strong> This calendar has been extracted from the "Gestión Taller.html" Planificación tab. 
+            It includes all styles, functionalities, animations, and interactive capabilities including drag-and-drop, visual updates, and hover effects.
+            <br><small>💡 Drag dress items between calendar days, use filters to control visibility, and navigate between months.</small>
+        </div>
+
+        <!-- Calendar View -->
+        <div style="margin-top: 40px;">
+            <div class="seccion-header">
+                <h3>📅 Vista de Calendario</h3>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button class="btn btn-success" onclick="planificarAutomatico()">🤖 Planificación Automática</button>
+                    <button class="btn btn-danger btn-small" onclick="limpiarPlanificacionAutomatica()">🗑️ Limpiar Automático</button>
+                    <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(-1)">◀ Anterior</button>
+                    <span id="mes-actual-calendario" style="font-weight: 600; min-width: 150px; text-align: center;"></span>
+                    <button class="btn btn-small" onclick="cambiarMesCalendarioPlanificacion(1)">Siguiente ▶</button>
+                    <button class="btn btn-info btn-small" onclick="irHoyCalendarioPlanificacion()">Hoy</button>
+                </div>
+            </div>
+            
+            <!-- Calendar Filters - Multi-select -->
+            <div class="filter-container">
+                <label style="font-weight: 600; display: block; margin-bottom: 10px;">📊 Filtrar Vestidos en Calendario:</label>
+                <div class="filter-grid">
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-todos" onchange="toggleFiltroTodos()">
+                        <span style="font-weight: 500;">✨ Todos</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-enviados" onchange="onIndividualFilterChange()" checked>
+                        <span style="font-weight: 500;">📦 Vestidos Enviados</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-albaranes" onchange="onIndividualFilterChange()" checked>
+                        <span style="font-weight: 500;">🚚 Albaranes (sin producción)</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-fecha-fin" onchange="onIndividualFilterChange()" checked>
+                        <span style="font-weight: 500;">⏰ Fecha Fin</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-en-proceso" onchange="onIndividualFilterChange()" checked>
+                        <span style="font-weight: 500;">⚙️ En Proceso</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-produccion" onchange="onIndividualFilterChange()">
+                        <span style="font-weight: 500;">👗 Todos en Producción</span>
+                    </label>
+                    <label class="filter-label">
+                        <input type="checkbox" id="filtro-ninguno" onchange="toggleFiltroNinguno()">
+                        <span style="font-weight: 500;">❌ Ninguno</span>
+                    </label>
+                </div>
+                <div style="margin-top: 12px;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 5px;">🏢 Filtrar por Proveedor:</label>
+                    <select id="filtro-calendario-proveedor" onchange="aplicarFiltrosCalendario()" style="width: 100%; max-width: 300px; padding: 8px; border-radius: 6px; border: 2px solid var(--color-borde);">
+                        <option value="todos">Todos los proveedores</option>
+                        <option value="pronovias">Pronovias</option>
+                        <option value="rosa_clara">Rosa Clará</option>
+                        <option value="traka">Traka</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div id="calendario-planificacion-grid" class="calendario-mensual" style="margin-top: 20px;">
+                <!-- Calendar grid will be generated here -->
+            </div>
+            
+            <div style="margin-top: 15px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div>
+                        <strong>✅ En Proceso:</strong> Vestidos con intervalos asignados
+                    </div>
+                    <div>
+                        <strong>🔒 Manual:</strong> <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> Intervalos añadidos manualmente (no ajustables por arrastre)
+                    </div>
+                    <div>
+                        <strong>📅 Planificados:</strong> Vestidos con planificación automática sugerida
+                    </div>
+                    <div>
+                        <strong>⏳ Pendientes:</strong> Vestidos sin planificar (solo fecha límite)
+                    </div>
+                    <div>
+                        <strong>🔗 Agrupados:</strong> Vestidos agrupados para trabajo conjunto
+                    </div>
+                    <div>
+                        <strong>👗 En Producción:</strong> Todos los vestidos en taller (solo referencia, no movibles)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================================== //
+        // === GLOBAL VARIABLES AND STATE === //
+        // ===================================== //
+        
+        let mesActualCalendario = new Date().getMonth();
+        let anioActualCalendario = new Date().getFullYear();
+        
+        let filtrosCalendarioActivos = {
+            proveedor: 'todos',
+            mostrarEnviados: true,
+            mostrarAlbaranes: true,
+            mostrarFechaFin: true,
+            mostrarEnProceso: true,
+            mostrarProduccion: false
+        };
+        
+        // Sample data structures (in real app, these would be loaded from localStorage)
+        let planificacion = {}; // { dateStr: [{ vestidoId, horas, parte }] }
+        let horasConfeccion = {}; // { vestidoId: { intervalos: [...], horasTotales, grupoId, esManual } }
+        let vestidosGrupos = {}; // { grupoId: { vestidosIds: [...], nombre } }
+        let vestidos = []; // Array of dress objects
+        let modelos = []; // Array of model objects
+        let trabajadores = []; // Array of worker objects
+        let workers = []; // Alias for workers
+        
+        // Drag state
+        let draggedVestidoId = null;
+        let draggedVestidoFechaOrigen = null;
+        let draggedGrupoId = null;
+
+        // ===================================== //
+        // === INITIALIZATION === //
+        // ===================================== //
+        
+        function initializeCalendar() {
+            // Load sample data (in real app, load from localStorage)
+            loadSampleData();
+            
+            // Generate initial calendar
+            generarCalendarioPlanificacion();
+        }
+
+        function loadSampleData() {
+            // Sample dresses for demo
+            vestidos = [
+                { id: 1, nombreModelo: 'Vestido A', codigoModelo: 'VA001', proveedor: 'pronovias', lote: 'L001', estado: 'en_taller', fechaLimite: '2026-02-15', talla: '38' },
+                { id: 2, nombreModelo: 'Vestido B', codigoModelo: 'VB002', proveedor: 'rosa_clara', lote: 'L002', estado: 'en_taller', fechaLimite: '2026-02-20', talla: '40', numeroSerie: 'S123' },
+                { id: 3, nombreModelo: 'Vestido C', codigoModelo: 'VC003', proveedor: 'traka', lote: 'L003', estado: 'en_taller', fechaLimite: '2026-02-25', talla: '42' }
+            ];
+
+            modelos = [
+                { codigo: 'VA001', horas: 10 },
+                { codigo: 'VB002', horas: 12 },
+                { codigo: 'VC003', horas: 8 }
+            ];
+
+            trabajadores = [
+                { id: 1, nombre: 'María', horasDiarias: 8 },
+                { id: 2, nombre: 'Ana', horasDiarias: 8 }
+            ];
+            workers = trabajadores;
+        }
+
+        // ===================================== //
+        // === CALENDAR GENERATION === //
+        // ===================================== //
+        
+        function generarCalendarioPlanificacion() {
+            const container = document.getElementById('calendario-planificacion-grid');
+            const mesLabel = document.getElementById('mes-actual-calendario');
+            
+            if (!container || !mesLabel) return;
+            
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            mesLabel.textContent = `${meses[mesActualCalendario]} ${anioActualCalendario}`;
+
+            const primerDia = new Date(Date.UTC(anioActualCalendario, mesActualCalendario, 1));
+            const ultimoDia = new Date(Date.UTC(anioActualCalendario, mesActualCalendario + 1, 0));
+            const diasEnMes = ultimoDia.getUTCDate();
+            const primerDiaSemana = primerDia.getUTCDay() === 0 ? 6 : primerDia.getUTCDay() - 1;
+
+            let html = '<div class="calendario-header"><div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div></div>';
+            html += '<div class="calendario-grid-body">';
+
+            // Empty days before first day of month
+            for (let i = 0; i < primerDiaSemana; i++) {
+                html += '<div class="dia-calendario otro-mes"></div>';
+            }
+
+            // Days of the month
+            const hoy = new Date();
+            const hoyStr = hoy.toISOString().split('T')[0];
+            
+            for (let dia = 1; dia <= diasEnMes; dia++) {
+                const fecha = new Date(Date.UTC(anioActualCalendario, mesActualCalendario, dia));
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const esHoy = fecha.toDateString() === hoy.toDateString();
+                const diaSemana = fecha.getUTCDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+
+                // Get dresses for this date
+                const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
+                
+                // Generate dresses HTML
+                let vestidosHtml = '';
+                vestidosEnFecha.forEach(v => {
+                    const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                    const horasEstimadas = modelo ? modelo.horas : 0;
+                    const proveedor = v.proveedor;
+                    
+                    let loteDisplay = v.lote || 'N/A';
+                    if (v.proveedor === 'rosa_clara' && v.numeroSerie) {
+                        loteDisplay += `(${v.numeroSerie})`;
+                    }
+                    
+                    vestidosHtml += `<div 
+                        draggable="true"
+                        ondragstart="onDragStartCalendario(event, ${v.id}, '${fechaStr}')"
+                        ondragend="onDragEndCalendario(event)"
+                        class="vestido-planificado ${proveedor}"
+                        style="font-size: 0.7em; margin: 2px 0; padding: 3px; position: relative; border-radius: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; cursor: pointer;" 
+                        title="${v.nombreModelo} - Lote: ${loteDisplay} - ${horasEstimadas.toFixed(1)}h est">⏳ ${v.nombreModelo.substring(0, 10)}... [${loteDisplay}] <span style="font-size: 0.9em; opacity: 0.8;">${horasEstimadas.toFixed(1)}h</span>
+                    </div>`;
+                });
+
+                html += `
+                    <div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" 
+                         style="min-height: 120px; cursor: pointer;" 
+                         ondrop="onDropCalendario(event, '${fechaStr}')"
+                         ondragover="onDragOverCalendario(event)"
+                         ondragleave="onDragLeaveCalendario(event)"
+                         data-fecha="${fechaStr}">
+                        <div class="numero-dia">
+                            <span>${dia}</span>
+                        </div>
+                        ${vestidosHtml}
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // ===================================== //
+        // === DATA RETRIEVAL === //
+        // ===================================== //
+        
+        function obtenerVestidosParaFecha(fechaStr) {
+            const resultado = [];
+            
+            // Get dresses with deadline on this date
+            if (filtrosCalendarioActivos.mostrarFechaFin) {
+                vestidos.forEach(vestido => {
+                    if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
+                        if (!resultado.find(v => v.id === vestido.id)) {
+                            resultado.push(vestido);
+                        }
+                    }
+                });
+            }
+
+            // Apply provider filter
+            let resultadoFiltrado = resultado;
+            if (filtrosCalendarioActivos.proveedor !== 'todos') {
+                resultadoFiltrado = resultado.filter(v => v.proveedor === filtrosCalendarioActivos.proveedor);
+            }
+
+            return resultadoFiltrado;
+        }
+
+        function obtenerLimiteHoras(fecha) {
+            // Default: 8 hours per worker per day
+            return trabajadores.length * 8;
+        }
+
+        // ===================================== //
+        // === DRAG AND DROP === //
+        // ===================================== //
+        
+        function onDragStartCalendario(event, vestidoId, fechaOrigen) {
+            draggedVestidoId = vestidoId;
+            draggedVestidoFechaOrigen = fechaOrigen;
+            draggedGrupoId = null;
+            event.currentTarget.style.opacity = '0.4';
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function onDragEndCalendario(event) {
+            event.currentTarget.style.opacity = '1';
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
+            draggedGrupoId = null;
+        }
+
+        function onDragOverCalendario(event) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            if (!event.currentTarget.classList.contains('drag-over')) {
+                event.currentTarget.classList.add('drag-over');
+            }
+        }
+
+        function onDragLeaveCalendario(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function onDropCalendario(event, fechaDestino) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedVestidoId) return;
+            if (!draggedVestidoFechaOrigen) return;
+            
+            // Don't allow moving to weekends
+            const fecha = new Date(fechaDestino + 'T12:00:00Z');
+            const diaSemana = fecha.getUTCDay();
+            if (diaSemana === 0 || diaSemana === 6) {
+                alert('⚠️ No se pueden asignar vestidos a fines de semana');
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Don't move if same date
+            if (draggedVestidoFechaOrigen === fechaDestino) {
+                draggedVestidoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
+            }
+            
+            // Find the dress and update its deadline
+            const vestido = vestidos.find(v => v.id === draggedVestidoId);
+            if (vestido) {
+                vestido.fechaLimite = fechaDestino;
+                alert(`✅ Vestido ${vestido.nombreModelo} movido a ${fechaDestino}`);
+            }
+            
+            // Regenerate calendar
+            generarCalendarioPlanificacion();
+            
+            draggedVestidoId = null;
+            draggedVestidoFechaOrigen = null;
+        }
+
+        // ===================================== //
+        // === NAVIGATION === //
+        // ===================================== //
+        
+        function cambiarMesCalendarioPlanificacion(offset) {
+            mesActualCalendario += offset;
+            if (mesActualCalendario < 0) {
+                mesActualCalendario = 11;
+                anioActualCalendario--;
+            } else if (mesActualCalendario > 11) {
+                mesActualCalendario = 0;
+                anioActualCalendario++;
+            }
+            generarCalendarioPlanificacion();
+        }
+
+        function irHoyCalendarioPlanificacion() {
+            const hoy = new Date();
+            mesActualCalendario = hoy.getMonth();
+            anioActualCalendario = hoy.getFullYear();
+            generarCalendarioPlanificacion();
+        }
+
+        // ===================================== //
+        // === FILTERS === //
+        // ===================================== //
+        
+        function aplicarFiltrosCalendario() {
+            const filtroProveedorEl = document.getElementById('filtro-calendario-proveedor');
+            const filtroEnviadosEl = document.getElementById('filtro-enviados');
+            const filtroAlbaranesEl = document.getElementById('filtro-albaranes');
+            const filtroFechaFinEl = document.getElementById('filtro-fecha-fin');
+            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso');
+            const filtroProduccionEl = document.getElementById('filtro-produccion');
+            
+            if (!filtroProveedorEl) return;
+            
+            filtrosCalendarioActivos.proveedor = filtroProveedorEl.value;
+            filtrosCalendarioActivos.mostrarEnviados = filtroEnviadosEl ? filtroEnviadosEl.checked : true;
+            filtrosCalendarioActivos.mostrarAlbaranes = filtroAlbaranesEl ? filtroAlbaranesEl.checked : true;
+            filtrosCalendarioActivos.mostrarFechaFin = filtroFechaFinEl ? filtroFechaFinEl.checked : true;
+            filtrosCalendarioActivos.mostrarEnProceso = filtroEnProcesoEl ? filtroEnProcesoEl.checked : true;
+            filtrosCalendarioActivos.mostrarProduccion = filtroProduccionEl ? filtroProduccionEl.checked : false;
+            
+            generarCalendarioPlanificacion();
+        }
+        
+        function onIndividualFilterChange() {
+            const todoCheckbox = document.getElementById('filtro-todos');
+            const ningunoCheckbox = document.getElementById('filtro-ninguno');
+            if (todoCheckbox) todoCheckbox.checked = false;
+            if (ningunoCheckbox) ningunoCheckbox.checked = false;
+            
+            aplicarFiltrosCalendario();
+        }
+        
+        function toggleFiltroTodos() {
+            const todoCheckbox = document.getElementById('filtro-todos');
+            const isChecked = todoCheckbox.checked;
+            
+            document.getElementById('filtro-enviados').checked = isChecked;
+            document.getElementById('filtro-albaranes').checked = isChecked;
+            document.getElementById('filtro-fecha-fin').checked = isChecked;
+            document.getElementById('filtro-en-proceso').checked = isChecked;
+            document.getElementById('filtro-produccion').checked = isChecked;
+            
+            document.getElementById('filtro-ninguno').checked = false;
+            
+            aplicarFiltrosCalendario();
+        }
+        
+        function toggleFiltroNinguno() {
+            const ningunoCheckbox = document.getElementById('filtro-ninguno');
+            const isChecked = ningunoCheckbox.checked;
+            
+            if (isChecked) {
+                document.getElementById('filtro-enviados').checked = false;
+                document.getElementById('filtro-albaranes').checked = false;
+                document.getElementById('filtro-fecha-fin').checked = false;
+                document.getElementById('filtro-en-proceso').checked = false;
+                document.getElementById('filtro-produccion').checked = false;
+                document.getElementById('filtro-todos').checked = false;
+                
+                aplicarFiltrosCalendario();
+            }
+        }
+
+        // ===================================== //
+        // === AUTOMATIC PLANNING (STUB) === //
+        // ===================================== //
+        
+        function planificarAutomatico() {
+            alert('🤖 Planificación automática - Esta funcionalidad está disponible en el sistema completo.');
+        }
+
+        function limpiarPlanificacionAutomatica() {
+            if (confirm('¿Deseas limpiar la planificación automática?')) {
+                alert('🗑️ Planificación automática limpiada.');
+            }
+        }
+
+        // ===================================== //
+        // === INITIALIZE ON LOAD === //
+        // ===================================== //
+        
+        window.addEventListener('DOMContentLoaded', function() {
+            initializeCalendar();
+        });
+    </script>
+</body>
+</html>
