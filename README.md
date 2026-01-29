@@ -17,6 +17,11 @@ Aplicación dedicada para visualizar datos históricos de años anteriores o res
 
 Aplicación dedicada para visualizar y analizar respaldos JSON del sistema principal.
 
+### calendar-extracted.html
+**Calendario Extraído de Planificación - Standalone**
+
+Calendario completo extraído de la pestaña "Planificación" de Gestión Taller.html. Incluye todas las funcionalidades, estilos, animaciones e interacciones del calendario original.
+
 ## Cómo usar Gestión Histórico
 
 ### Características Principales
@@ -230,3 +235,144 @@ Probado en:
 ## Licencia
 
 Software propietario para uso interno del taller.
+
+## Cómo usar el Calendario Extraído (calendar-extracted.html)
+
+### Descripción General
+
+El archivo `calendar-extracted.html` es una **extracción completa y funcional** del calendario de la pestaña "Planificación" de Gestión Taller.html. Este calendario standalone incluye:
+
+- ✅ Todas las funcionalidades del calendario original
+- ✅ Todos los estilos y animaciones CSS
+- ✅ Drag-and-drop completo para mover vestidos entre días
+- ✅ Efectos visuales y hover effects
+- ✅ Sistema de filtros multi-selección
+- ✅ Navegación entre meses
+- ✅ Resaltado del día actual
+- ✅ Colores diferenciados por proveedor
+
+### Características Principales
+
+1. **Navegación del Calendario**
+   - **◀ Anterior / Siguiente ▶**: Navega entre meses del año
+   - **Hoy**: Salta rápidamente al mes actual
+   - **Indicador de Mes/Año**: Muestra claramente el período visualizado
+   - **Resaltado del Día Actual**: El día de hoy se marca con borde amarillo
+
+2. **Sistema de Filtros Avanzado**
+   - **✨ Todos**: Activa todos los filtros simultáneamente
+   - **📦 Vestidos Enviados**: Muestra vestidos enviados con producción
+   - **🚚 Albaranes**: Muestra envíos sin producción (solo albarán)
+   - **⏰ Fecha Fin**: Muestra vestidos según su fecha límite
+   - **⚙️ En Proceso**: Muestra vestidos con intervalos de trabajo asignados
+   - **👗 Todos en Producción**: Vista general de todos los vestidos en taller
+   - **❌ Ninguno**: Desactiva todos los filtros
+   - **🏢 Filtro por Proveedor**: Filtra por Pronovias, Rosa Clará, Traka o todos
+
+3. **Drag-and-Drop Interactivo**
+   - **Arrastrar vestidos**: Mueve vestidos entre días del calendario
+   - **Validación de fines de semana**: Previene asignación en sábados/domingos
+   - **Feedback visual**: Resaltado de zonas de drop válidas
+   - **Animaciones suaves**: Transiciones visuales al mover elementos
+
+4. **Visualización de Vestidos**
+   - **Codificación por colores**: 
+     - Rosa claro: Pronovias
+     - Azul claro: Traka
+     - Rosa intenso: Rosa Clará
+   - **Información condensada**: Nombre, lote, horas estimadas
+   - **Iconos descriptivos**:
+     - ⏳ Pendientes (solo fecha límite)
+     - ✅ En proceso (con horas asignadas)
+     - 🔒 Manual (intervalos manuales no modificables)
+     - 🤖 Planificación automática
+     - 📅 Planificación sugerida
+
+5. **Efectos Visuales**
+   - **Hover en días**: Efecto de escala y sombra al pasar el mouse
+   - **Hover en vestidos**: Elevación y sombra en tarjetas de vestido
+   - **Drag-over highlight**: Borde punteado azul al arrastrar sobre un día
+   - **Días de fin de semana**: Opacidad reducida y cursor por defecto
+
+### Instrucciones de Uso
+
+1. **Abrir el Calendario**
+   - Opción 1: Abrir directamente `calendar-extracted.html` en tu navegador web
+   - Opción 2: Usar servidor local (recomendado para testing)
+     ```bash
+     python3 -m http.server 8080
+     # Luego abre: http://localhost:8080/calendar-extracted.html
+     ```
+
+2. **Navegar por el Calendario**
+   - Usa los botones **Anterior** y **Siguiente** para moverte entre meses
+   - Haz clic en **Hoy** para volver al mes actual
+   - El día actual está resaltado con un borde amarillo
+
+3. **Usar Filtros**
+   - Marca/desmarca checkboxes individuales para controlar qué vestidos ver
+   - Usa **Todos** para seleccionar todos los filtros a la vez
+   - Usa **Ninguno** para ocultar todos los vestidos
+   - Selecciona un proveedor específico en el dropdown inferior
+
+4. **Drag and Drop (Funcionalidad Demostrada)**
+   - Haz clic y mantén presionado sobre un vestido
+   - Arrastra el vestido a otro día del calendario
+   - Suéltalo sobre un día laboral (lunes-viernes)
+   - El sistema validará automáticamente la operación
+
+5. **Datos de Ejemplo**
+   - El calendario incluye 3 vestidos de muestra para demostrar la funcionalidad:
+     - Vestido A (Pronovias) - Fecha límite: 15 de febrero
+     - Vestido B (Rosa Clará) - Fecha límite: 20 de febrero
+     - Vestido C (Traka) - Fecha límite: 25 de febrero
+
+### Características Técnicas
+
+- **100% Standalone**: Archivo HTML único y auto-contenido
+- **Sin Dependencias Externas**: Funciona completamente offline (excepto Google Fonts)
+- **Responsive Design**: Se adapta a diferentes tamaños de pantalla
+- **CSS Variables**: Sistema de colores centralizado y consistente
+- **Vanilla JavaScript**: Sin frameworks, máxima compatibilidad
+
+### Funcionalidades Implementadas
+
+| Funcionalidad | Estado | Descripción |
+|---------------|--------|-------------|
+| Generación de calendario | ✅ | Grid mensual con días de la semana |
+| Navegación entre meses | ✅ | Botones anterior/siguiente/hoy |
+| Drag & drop | ✅ | Mover vestidos entre días |
+| Validación de drops | ✅ | Previene drops en fines de semana |
+| Filtros multi-selección | ✅ | Control granular de visibilidad |
+| Hover effects | ✅ | Animaciones en días y vestidos |
+| Colores por proveedor | ✅ | Pronovias, Traka, Rosa Clará |
+| Resaltado día actual | ✅ | Borde amarillo en el día de hoy |
+| Datos de ejemplo | ✅ | 3 vestidos para demostración |
+
+### Limitaciones del Calendario Standalone
+
+Como este es un calendario **extraído** y standalone:
+- Los datos se cargan desde variables JavaScript en memoria (no desde localStorage)
+- Las funciones de planificación automática muestran alertas informativas
+- No persiste cambios entre sesiones (es para demostración)
+- Para funcionalidad completa, usar Gestión Taller.html original
+
+### Integración con Sistema Principal
+
+Este calendario es una **extracción exacta** del calendario en Gestión Taller.html:
+- Mismo código HTML
+- Mismos estilos CSS
+- Mismas funciones JavaScript
+- Mismas animaciones e interacciones
+
+Para usar el calendario con datos reales, consulta la pestaña "Planificación" en Gestión Taller.html.
+
+### Compatibilidad
+
+- **Navegadores Modernos**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **Tecnologías Requeridas**:
+  - HTML5
+  - CSS3 (Grid, Flexbox, Variables)
+  - JavaScript ES6+ (Arrow functions, Template literals, Destructuring)
+  - Drag and Drop API
+
