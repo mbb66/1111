@@ -7616,7 +7616,7 @@
                         if (vestidosDelGrupoEnFecha.length > 0) {
                             // Check if any dress in the group is sent
                             const algunoEnviado = vestidosDelGrupoEnFecha.some(v => v.estado === 'enviado' || v.estado === 'pagado');
-                            const opacidad = algunoEnviado ? 'opacity: 0.5;' : '';
+                            const opacidad = ''; // Sent dresses should remain opaque (fully visible)
                             const emojiEnviado = algunoEnviado ? '↗️ ' : '';
                             
                             // Get primary supplier color (from first dress in group)
@@ -7678,7 +7678,7 @@
                     } else if (!grupoId) {
                         // Individual dress not in a group
                         const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                        const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                        const opacidad = ''; // Sent dresses should remain opaque (fully visible)
                         const emojiEnviado = esEnviado ? '↗️ ' : '';
                         
                         // NEW REQUIREMENT: Check if dress has MANUAL intervals
@@ -7740,7 +7740,7 @@
                 // Then, show pending dresses (lower priority) - these ARE draggable
                 vestidosPendientes.forEach(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const opacidad = esEnviado ? 'opacity: 0.5;' : '';
+                    const opacidad = ''; // Sent dresses should remain opaque (fully visible)
                     const draggable = 'true';
                     
                     // REQUIREMENT 3: Get estimated or real hours for display
