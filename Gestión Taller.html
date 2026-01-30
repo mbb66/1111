@@ -7402,7 +7402,119 @@
             const grupo = vestidosGrupos[grupoId];
             if (!grupo) return;
             
-            alert('Para dividir horas de un grupo, deshaz el grupo primero o edita individualmente cada vestido.');
+            // Get all dresses in the group (active and sent)
+            const vestidosDelGrupo = grupo.vestidosIds
+                .map(id => vestidos.find(v => v.id === id))
+                .filter(v => v);
+            
+            if (vestidosDelGrupo.length === 0) {
+                alert('⚠️ No se encontraron vestidos en este grupo.');
+                return;
+            }
+            
+            // Get the first dress (all share the same hours)
+            const primerVestido = vestidosDelGrupo[0];
+            const horas = horasConfeccion[primerVestido.id];
+            
+            if (!horas || !horas.intervalos || horas.intervalos.length === 0) {
+                alert('⚠️ Este grupo no tiene horas asignadas.');
+                return;
+            }
+            
+            // Check if group has manual intervals
+            if (horas.esManual) {
+                alert('ℹ️ Este grupo tiene intervalos manuales.\n\nPuede gestionar las horas de confección del grupo directamente desde el modal de horas.\n\nNOTA: Todos los vestidos del grupo comparten los mismos intervalos.');
+                abrirModalHorasConfeccion(primerVestido.id);
+                return;
+            }
+            
+            // Calculate hours on this date for the group
+            let horasEnFecha = 0;
+            horas.intervalos.forEach(intervalo => {
+                if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaActual) {
+                    if (intervalo.fin) {
+                        const inicioDate = new Date(intervalo.inicio);
+                        const finDate = new Date(intervalo.fin);
+                        horasEnFecha += (finDate - inicioDate) / (1000 * 60 * 60);
+                    }
+                }
+            });
+            
+            if (horasEnFecha === 0) {
+                alert('⚠️ Este grupo no tiene horas asignadas en esta fecha.');
+                return;
+            }
+            
+            // Open the same modal as individual dresses, but with group context
+            const modal = document.getElementById('modal-gestionar-horas-calendario');
+            const infoContainer = document.getElementById('modal-calendario-info');
+            const horasInput = document.getElementById('horas-a-mover');
+            
+            const fechaFormateada = new Date(fechaActual + 'T00:00:00').toLocaleDateString('es-ES', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            
+            // Count active vs sent dresses
+            const vestidosActivos = vestidosDelGrupo.filter(v => v.estado !== 'enviado' && v.estado !== 'pagado');
+            const vestidosEnviados = vestidosDelGrupo.filter(v => v.estado === 'enviado' || v.estado === 'pagado');
+            
+            // Calculate estimated hours based on original group size
+            const modelo = modelos.find(m => m.codigo === primerVestido.codigoModelo);
+            const horasEstimadasPorVestido = modelo ? modelo.horas : 0;
+            const grupoSizeOriginal = grupo.sizeOriginal || grupo.vestidosIds.length;
+            const horasEstimadasGrupo = horasEstimadasPorVestido * grupoSizeOriginal;
+            
+            infoContainer.innerHTML = `
+                <div style="padding: 15px; background: var(--color-info-fondo); border-radius: 8px; border: 2px solid var(--color-info); margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: var(--color-info);">🔗 GRUPO: ${grupo.nombre || 'Grupo ' + grupoId}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                        <div><strong>📦 Modelo:</strong> ${primerVestido.nombreModelo}</div>
+                        <div><strong>🏭 Proveedor:</strong> ${primerVestido.proveedor.toUpperCase()}</div>
+                        <div><strong>👗 Total vestidos:</strong> ${grupoSizeOriginal}</div>
+                        <div><strong>✅ Activos:</strong> ${vestidosActivos.length} | <strong>📦 Enviados:</strong> ${vestidosEnviados.length}</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>📅 Fecha:</strong> ${fechaFormateada}<br>
+                        ${primerVestido.fechaLimite ? `<strong>⏰ Fecha Límite:</strong> ${new Date(primerVestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}` : ''}
+                    </div>
+                    <div>
+                        <strong>Vestidos del grupo:</strong><br>
+                        ${vestidosDelGrupo.map(v => {
+                            const icono = (v.estado === 'enviado' || v.estado === 'pagado') ? '📦' : '👗';
+                            return `${icono} Lote: ${v.lote || 'N/A'}`;
+                        }).join('<br>')}
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: var(--color-alerta-fondo); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><strong>⏱️ Horas del grupo en esta fecha:</strong></span>
+                        <span style="font-size: 1.2em; font-weight: 700; color: var(--color-primario);">${horasEnFecha.toFixed(2)}h</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span><strong>📊 Horas totales estimadas (grupo):</strong></span>
+                        <span style="font-weight: 600;">${horasEstimadasGrupo.toFixed(2)}h</span>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-borde); font-size: 0.85em; color: var(--color-texto-secundario);">
+                        ℹ️ Las horas del grupo se calculan basándose en <strong>${grupoSizeOriginal} vestidos</strong> (tamaño original del grupo)
+                    </div>
+                </div>
+            `;
+            
+            // Set default value for hours to move
+            horasInput.value = horasEnFecha.toFixed(2);
+            horasInput.max = horasEnFecha;
+            
+            // Store context for later use - store first dress ID as representative
+            modal.dataset.vestidoId = primerVestido.id;
+            modal.dataset.fechaActual = fechaActual;
+            modal.dataset.horasEnFecha = horasEnFecha;
+            modal.dataset.esGrupo = 'true';
+            modal.dataset.grupoId = grupoId;
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
         }
 
         // ===============================================
