@@ -8085,20 +8085,6 @@
                 }
             });
 
-            // NEW REQUIREMENT: Add all vestidos currently in production (for reference only)
-            // This shows ALL vestidos with estado 'en_taller' or 'con_tara' regardless of planning/deadlines
-            if (filtrosCalendarioActivos.mostrarProduccion) {
-                vestidos.forEach(vestido => {
-                    // Only show vestidos that are actually in the workshop (not sent/paid)
-                    if (['en_taller', 'con_tara'].includes(vestido.estado)) {
-                        // Add if not already in results
-                        if (!resultado.find(v => v.id === vestido.id)) {
-                            resultado.push(vestido);
-                        }
-                    }
-                });
-            }
-
             // REQUIREMENT 1: Apply new multi-select filters
             // Apply active filters to results
             let resultadoFiltrado = [];
