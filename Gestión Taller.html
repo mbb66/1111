@@ -6090,8 +6090,7 @@
             
             // Get hours for each dress (from model or confection hours)
             vestidosEnTaller = vestidosEnTaller.map(v => {
-                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
-                const horasEstimadas = modelo ? modelo.horas : 0;
+                const horasEstimadas = obtenerHorasPlanificacion(v);
                 const horas = horasConfeccion[v.id];
                 const tieneIntervalosManual = horas && horas.intervalos && horas.intervalos.length > 0;
                 const esEnviado = ['enviado', 'pagado'].includes(v.estado);
@@ -8031,11 +8030,9 @@
                     // Don't show sent dresses in automatic planning on future dates
                     const esEnviado = vestido && (vestido.estado === 'enviado' || vestido.estado === 'pagado');
                     const hoy = new Date().toISOString().split('T')[0];
-                    // ISSUE FIX: Don't show finished dresses (with horasReales) in automatic planning
-                    const estaFinalizado = vestido && vestido.horasReales && vestido.horasReales > 0;
                     if (vestido && !resultado.find(v => v.id === vestido.id)) {
-                        // Only add if not sent OR if the date is in the past, AND not finished
-                        if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
+                        // Only add if not sent OR if the date is in the past
+                        if (!esEnviado || fechaStr <= hoy) {
                             resultado.push(vestido);
                         }
                     }
@@ -8096,12 +8093,10 @@
                 vestidos.forEach(vestido => {
                     const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                     const hoy = new Date().toISOString().split('T')[0];
-                    // ISSUE FIX: Don't show finished dresses (with horasReales) in deadline-based display
-                    const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                     
                     if (vestido.fechaLimite === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                        // Don't show sent dresses on future dates AND don't show finished dresses
-                        if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
+                        // Don't show sent dresses on future dates
+                        if (!esEnviado || fechaStr <= hoy) {
                             if (!resultado.find(v => v.id === vestido.id)) {
                                 resultado.push(vestido);
                             }
@@ -8114,12 +8109,10 @@
             vestidos.forEach(vestido => {
                 const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                 const hoy = new Date().toISOString().split('T')[0];
-                // ISSUE FIX: Don't show finished dresses (with horasReales) in suggested planning
-                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                 
                 if (vestido.fechaInicioSugerida === fechaStr && ['en_taller', 'con_tara'].includes(vestido.estado)) {
-                    // Don't show sent dresses on future dates AND don't show finished dresses
-                    if ((!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
+                    // Don't show sent dresses on future dates
+                    if (!esEnviado || fechaStr <= hoy) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -8131,13 +8124,11 @@
             vestidos.forEach(vestido => {
                 const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                 const hoy = new Date().toISOString().split('T')[0];
-                // ISSUE FIX: Don't show finished dresses (with horasReales) in suggested planning
-                const estaFinalizado = vestido.horasReales && vestido.horasReales > 0;
                 
                 if (vestido.planificacionSugerida && vestido.planificacionSugerida.diasAsignados && ['en_taller', 'con_tara'].includes(vestido.estado)) {
                     const tieneFechaAsignada = vestido.planificacionSugerida.diasAsignados.some(dia => dia.fecha === fechaStr);
-                    // Don't show sent dresses on future dates AND don't show finished dresses
-                    if (tieneFechaAsignada && (!esEnviado || fechaStr <= hoy) && !estaFinalizado) {
+                    // Don't show sent dresses on future dates
+                    if (tieneFechaAsignada && (!esEnviado || fechaStr <= hoy)) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
