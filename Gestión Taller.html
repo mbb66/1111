@@ -2837,7 +2837,6 @@
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <span class="seccion-count" id="count-en-taller">0 vestidos</span>
                             <button class="btn btn-small btn-info" id="btn-agrupar-taller" onclick="toggleModoAgrupar('en_taller')">🔗 Agrupar</button>
-                            <button class="btn btn-small btn-success" onclick="abrirPanelIntervaloRapido()">⚡ Añadir Intervalo Rápido</button>
                         </div>
                     </div>
                     <div class="seccion-filtros">
@@ -2899,55 +2898,7 @@
             </div>
             
             <!-- Quick Interval Addition Panel -->
-            <div id="panel-intervalo-rapido" style="display: none; margin-top: 20px; padding: 20px; background: var(--color-exito-fondo); border-radius: 12px; border: 2px solid var(--color-exito);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h3 style="margin: 0;">⚡ Añadir Intervalo Manual Rápido</h3>
-                    <button class="btn btn-small" onclick="cerrarPanelIntervaloRapido()">✖ Cerrar</button>
-                </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1.5fr auto auto; gap: 10px; align-items: end;">
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Vestido:</label>
-                        <select id="select-vestido-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                            <option value="">Seleccionar vestido...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Fecha:</label>
-                        <input type="date" id="fecha-intervalo-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Inicio:</label>
-                        <input type="time" id="hora-inicio-rapido" value="07:00" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Fin:</label>
-                        <input type="time" id="hora-fin-rapido" value="15:00" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Trabajadora:</label>
-                        <select id="trabajadora-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                            <option value="">Seleccionar trabajadora...</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estado:</label>
-                        <select id="estado-tarea-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
-                            <option value="in_progress">⏳ En Proceso</option>
-                            <option value="completed">✅ Completado</option>
-                            <option value="pending">📋 Pendiente</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button class="btn btn-info btn-small" onclick="marcarInicioEnCurso()" style="padding: 8px 12px;" title="Capturar hora actual como inicio">⏳ En Curso</button>
-                    </div>
-                    <div>
-                        <button class="btn btn-success" onclick="añadirIntervaloRapido()" style="padding: 8px 15px;">✅ Añadir</button>
-                    </div>
-                </div>
-                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 6px;">
-                    <strong>💡 Tip:</strong> Usa el botón <strong>⏳ En Curso</strong> para capturar la hora actual como inicio y dejar el fin vacío (añade el fin más tarde). Los intervalos añadidos manualmente aparecerán marcados con <span style="background: var(--color-exito); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.9em;">🔒 MANUAL</span> en el calendario y no serán ajustables por arrastre.
-                </div>
-            </div>
+
 
             <!-- Interactive Calendar View -->
             <div style="margin-top: 40px;">
@@ -3029,9 +2980,6 @@
                         </div>
                         <div>
                             <strong>👗 En Producción:</strong> Todos los vestidos en taller (solo referencia, no movibles)
-                        </div>
-                        <div style="grid-column: span 2;">
-                            <strong>💡 Tip:</strong> Usa el botón "⚡ Añadir Intervalo Rápido" para añadir intervalos manuales directamente
                         </div>
                     </div>
                 </div>
@@ -7454,7 +7402,119 @@
             const grupo = vestidosGrupos[grupoId];
             if (!grupo) return;
             
-            alert('Para dividir horas de un grupo, deshaz el grupo primero o edita individualmente cada vestido.');
+            // Get all dresses in the group (active and sent)
+            const vestidosDelGrupo = grupo.vestidosIds
+                .map(id => vestidos.find(v => v.id === id))
+                .filter(v => v);
+            
+            if (vestidosDelGrupo.length === 0) {
+                alert('⚠️ No se encontraron vestidos en este grupo.');
+                return;
+            }
+            
+            // Get the first dress (all share the same hours)
+            const primerVestido = vestidosDelGrupo[0];
+            const horas = horasConfeccion[primerVestido.id];
+            
+            if (!horas || !horas.intervalos || horas.intervalos.length === 0) {
+                alert('⚠️ Este grupo no tiene horas asignadas.');
+                return;
+            }
+            
+            // Check if group has manual intervals
+            if (horas.esManual) {
+                alert('ℹ️ Este grupo tiene intervalos manuales.\n\nPuede gestionar las horas de confección del grupo directamente desde el modal de horas.\n\nNOTA: Todos los vestidos del grupo comparten los mismos intervalos.');
+                abrirModalHorasConfeccion(primerVestido.id);
+                return;
+            }
+            
+            // Calculate hours on this date for the group
+            let horasEnFecha = 0;
+            horas.intervalos.forEach(intervalo => {
+                if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaActual) {
+                    if (intervalo.fin) {
+                        const inicioDate = new Date(intervalo.inicio);
+                        const finDate = new Date(intervalo.fin);
+                        horasEnFecha += (finDate - inicioDate) / (1000 * 60 * 60);
+                    }
+                }
+            });
+            
+            if (horasEnFecha === 0) {
+                alert('⚠️ Este grupo no tiene horas asignadas en esta fecha.');
+                return;
+            }
+            
+            // Open the same modal as individual dresses, but with group context
+            const modal = document.getElementById('modal-gestionar-horas-calendario');
+            const infoContainer = document.getElementById('modal-calendario-info');
+            const horasInput = document.getElementById('horas-a-mover');
+            
+            const fechaFormateada = new Date(fechaActual + 'T00:00:00').toLocaleDateString('es-ES', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+            
+            // Count active vs sent dresses
+            const vestidosActivos = vestidosDelGrupo.filter(v => v.estado !== 'enviado' && v.estado !== 'pagado');
+            const vestidosEnviados = vestidosDelGrupo.filter(v => v.estado === 'enviado' || v.estado === 'pagado');
+            
+            // Calculate estimated hours based on original group size
+            const modelo = modelos.find(m => m.codigo === primerVestido.codigoModelo);
+            const horasEstimadasPorVestido = modelo ? modelo.horas : 0;
+            const grupoSizeOriginal = grupo.sizeOriginal || grupo.vestidosIds.length;
+            const horasEstimadasGrupo = horasEstimadasPorVestido * grupoSizeOriginal;
+            
+            infoContainer.innerHTML = `
+                <div style="padding: 15px; background: var(--color-info-fondo); border-radius: 8px; border: 2px solid var(--color-info); margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: var(--color-info);">🔗 GRUPO: ${grupo.nombre || 'Grupo ' + grupoId}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                        <div><strong>📦 Modelo:</strong> ${primerVestido.nombreModelo}</div>
+                        <div><strong>🏭 Proveedor:</strong> ${primerVestido.proveedor.toUpperCase()}</div>
+                        <div><strong>👗 Total vestidos:</strong> ${grupoSizeOriginal}</div>
+                        <div><strong>✅ Activos:</strong> ${vestidosActivos.length} | <strong>📦 Enviados:</strong> ${vestidosEnviados.length}</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>📅 Fecha:</strong> ${fechaFormateada}<br>
+                        ${primerVestido.fechaLimite ? `<strong>⏰ Fecha Límite:</strong> ${new Date(primerVestido.fechaLimite + 'T00:00:00').toLocaleDateString('es-ES')}` : ''}
+                    </div>
+                    <div>
+                        <strong>Vestidos del grupo:</strong><br>
+                        ${vestidosDelGrupo.map(v => {
+                            const icono = (v.estado === 'enviado' || v.estado === 'pagado') ? '📦' : '👗';
+                            return `${icono} Lote: ${v.lote || 'N/A'}`;
+                        }).join('<br>')}
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: var(--color-alerta-fondo); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span><strong>⏱️ Horas del grupo en esta fecha:</strong></span>
+                        <span style="font-size: 1.2em; font-weight: 700; color: var(--color-primario);">${horasEnFecha.toFixed(2)}h</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                        <span><strong>📊 Horas totales estimadas (grupo):</strong></span>
+                        <span style="font-weight: 600;">${horasEstimadasGrupo.toFixed(2)}h</span>
+                    </div>
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--color-borde); font-size: 0.85em; color: var(--color-texto-secundario);">
+                        ℹ️ Las horas del grupo se calculan basándose en <strong>${grupoSizeOriginal} vestidos</strong> (tamaño original del grupo)
+                    </div>
+                </div>
+            `;
+            
+            // Set default value for hours to move
+            horasInput.value = horasEnFecha.toFixed(2);
+            horasInput.max = horasEnFecha;
+            
+            // Store context for later use - store first dress ID as representative
+            modal.dataset.vestidoId = primerVestido.id;
+            modal.dataset.fechaActual = fechaActual;
+            modal.dataset.horasEnFecha = horasEnFecha;
+            modal.dataset.esGrupo = 'true';
+            modal.dataset.grupoId = grupoId;
+            
+            modal.classList.add('active');
+            modal.style.display = 'flex';
         }
 
         // ===============================================
@@ -8675,169 +8735,6 @@
         // === QUICK INTERVAL ADDITION PANEL =============
         // ===============================================
         
-        function abrirPanelIntervaloRapido() {
-            const panel = document.getElementById('panel-intervalo-rapido');
-            panel.style.display = 'block';
-            
-            // Populate vestido dropdown with En Taller dresses
-            const selectVestido = document.getElementById('select-vestido-rapido');
-            const vestidosEnTaller = vestidos.filter(v => 
-                ['en_taller', 'con_tara'].includes(v.estado)
-            );
-            
-            let options = '<option value="">Seleccionar vestido...</option>';
-            vestidosEnTaller.forEach(v => {
-                const loteDisplay = v.proveedor === 'rosa_clara' && v.numeroSerie 
-                    ? `${v.lote}(${v.numeroSerie})`
-                    : v.lote || 'N/A';
-                options += `<option value="${v.id}">${v.nombreModelo} - Lote: ${loteDisplay} - ${v.proveedor}</option>`;
-            });
-            selectVestido.innerHTML = options;
-            
-            // Populate workers dropdown
-            const selectTrabajadora = document.getElementById('trabajadora-rapido');
-            let workerOptions = '<option value="">Seleccionar trabajadora...</option>';
-            workers.forEach(w => {
-                workerOptions += `<option value="${w.id}">${w.nombre} (${w.rol})</option>`;
-            });
-            selectTrabajadora.innerHTML = workerOptions;
-            
-            // Set default date to today
-            const hoy = new Date();
-            const fechaStr = hoy.toISOString().split('T')[0];
-            document.getElementById('fecha-intervalo-rapido').value = fechaStr;
-            
-            // Scroll to panel
-            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-        
-        function cerrarPanelIntervaloRapido() {
-            const panel = document.getElementById('panel-intervalo-rapido');
-            panel.style.display = 'none';
-        }
-        
-        function añadirIntervaloRapido() {
-            const vestidoId = parseInt(document.getElementById('select-vestido-rapido').value);
-            const fecha = document.getElementById('fecha-intervalo-rapido').value;
-            const horaInicio = document.getElementById('hora-inicio-rapido').value;
-            const horaFin = document.getElementById('hora-fin-rapido').value;
-            const trabajadoraId = parseInt(document.getElementById('trabajadora-rapido').value);
-            const estadoTarea = document.getElementById('estado-tarea-rapido').value;
-            
-            // Validation
-            if (!vestidoId) {
-                alert('⚠️ Por favor selecciona un vestido.');
-                return;
-            }
-            if (!fecha) {
-                alert('⚠️ Por favor selecciona una fecha.');
-                return;
-            }
-            if (!horaInicio) {
-                alert('⚠️ Por favor selecciona hora de inicio.');
-                return;
-            }
-            if (!trabajadoraId) {
-                alert('⚠️ Por favor selecciona una trabajadora.');
-                return;
-            }
-            
-            // Allow empty end time for "in progress" intervals
-            const enCurso = !horaFin || horaFin === '';
-            
-            // Create interval
-            const inicioDateTime = `${fecha}T${horaInicio}:00`;
-            const finDateTime = enCurso ? null : `${fecha}T${horaFin}:00`;
-            
-            // Calculate hours (only if interval is complete)
-            let diffHours = 0;
-            if (!enCurso) {
-                const inicioDate = new Date(inicioDateTime);
-                const finDate = new Date(finDateTime);
-                diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
-                
-                if (diffHours <= 0) {
-                    alert('⚠️ La hora de fin debe ser posterior a la hora de inicio.');
-                    return;
-                }
-            }
-            
-            // Get or create horasConfeccion entry
-            if (!horasConfeccion[vestidoId]) {
-                horasConfeccion[vestidoId] = {
-                    trabajadoras: [],
-                    intervalos: [],
-                    horasTotales: 0,
-                    esManual: true // Mark as manually added
-                };
-            } else {
-                horasConfeccion[vestidoId].esManual = true;
-            }
-            
-            // Add interval with task status
-            horasConfeccion[vestidoId].intervalos.push({
-                inicio: inicioDateTime,
-                fin: finDateTime,
-                trabajadoraId: trabajadoraId,
-                status: estadoTarea || 'in_progress' // Add task status field
-            });
-            
-            // Update total hours
-            let totalHoras = 0;
-            horasConfeccion[vestidoId].intervalos.forEach(intervalo => {
-                if (intervalo.inicio && intervalo.fin) {
-                    const inicio = new Date(intervalo.inicio);
-                    const fin = new Date(intervalo.fin);
-                    const diff = (fin - inicio) / (1000 * 60 * 60);
-                    if (diff > 0) totalHoras += diff;
-                }
-            });
-            horasConfeccion[vestidoId].horasTotales = totalHoras;
-            
-            // Add worker to trabajadoras list if not already there
-            if (!horasConfeccion[vestidoId].trabajadoras.includes(trabajadoraId)) {
-                horasConfeccion[vestidoId].trabajadoras.push(trabajadoraId);
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
-            
-            // Refresh views
-            cargarPlanificacionNueva();
-            generarCalendarioPlanificacion();
-            
-            // Success message
-            const vestido = vestidos.find(v => v.id === vestidoId);
-            const trabajadora = workers.find(w => w.id === trabajadoraId);
-            const estadoTexto = estadoTarea === 'completed' ? '✅ Completado' : estadoTarea === 'pending' ? '📋 Pendiente' : '⏳ En Proceso';
-            if (enCurso) {
-                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\nEstado: ${estadoTexto}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
-            } else {
-                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\nEstado: ${estadoTexto}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
-            }
-            
-            // Reset form
-            document.getElementById('select-vestido-rapido').value = '';
-            document.getElementById('hora-inicio-rapido').value = '07:00';
-            document.getElementById('hora-fin-rapido').value = '15:00';
-            document.getElementById('trabajadora-rapido').value = '';
-            document.getElementById('estado-tarea-rapido').value = 'in_progress';
-        }
-        
-        function marcarInicioEnCurso() {
-            // Capture current time and set as start time, leave end empty
-            const ahora = new Date();
-            const hoy = ahora.toISOString().split('T')[0];
-            const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
-            
-            // Set current date and time
-            document.getElementById('fecha-intervalo-rapido').value = hoy;
-            document.getElementById('hora-inicio-rapido').value = horaActual;
-            document.getElementById('hora-fin-rapido').value = ''; // Leave end empty for "in progress"
-            
-            // Show feedback
-            alert(`⏳ Intervalo iniciado a las ${horaActual}.\n\nSe ha capturado la hora actual como inicio.\nDeja el campo "Fin" vacío para marcar como "en curso" o añade la hora de fin cuando termines el trabajo.`);
-        }
 
         function planificacionAutomatica() {
             // Get dresses without hours assigned (pending dresses)
@@ -9310,20 +9207,12 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <div style="margin-bottom: 10px;">
                             <div class="intervalo-trabajadora">
                                 <label>👷 Trabajadora Asignada:</label>
                                 <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                                     <option value="">Seleccionar trabajadora...</option>
                                     ${workerOptions}
-                                </select>
-                            </div>
-                            <div>
-                                <label>📋 Estado de la Tarea:</label>
-                                <select class="intervalo-status" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                    <option value="in_progress">⏳ En Proceso</option>
-                                    <option value="completed">✅ Completado</option>
-                                    <option value="pending">📋 Pendiente</option>
                                 </select>
                             </div>
                         </div>
@@ -9468,20 +9357,12 @@
                                     </div>
                                 </div>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div style="margin-bottom: 10px;">
                                 <div class="intervalo-trabajadora">
                                     <label>👷 Trabajadora Asignada:</label>
                                     <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
                                         <option value="">Seleccionar trabajadora...</option>
                                         ${workerOptions}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label>📋 Estado de la Tarea:</label>
-                                    <select class="intervalo-status" data-selected="${intervaloStatus}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                        <option value="in_progress">⏳ En Proceso</option>
-                                        <option value="completed">✅ Completado</option>
-                                        <option value="pending">📋 Pendiente</option>
                                     </select>
                                 </div>
                             </div>
@@ -10190,14 +10071,20 @@
             const config = obtenerConfiguracionTaller();
             const precioHoraObjetivo = config.precioHoraObjetivo || 15;
             
-            // Generate enhanced CSV format (Excel compatible)
-            let csv = `Reporte Completo de Horas y Beneficios\n`;
-            csv += `Fecha de generación: ${new Date().toLocaleString('es-ES')}\n`;
-            csv += `Precio por hora objetivo: ${precioHoraObjetivo}€\n\n`;
+            // Generate enhanced CSV format (Excel compatible) with BOM for proper UTF-8 encoding
+            let csv = '\uFEFF'; // UTF-8 BOM for Excel compatibility
             
-            // Section 1: Summary by dress
-            csv += 'RESUMEN POR VESTIDO\n';
-            csv += 'Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n';
+            // Header section with clear formatting
+            csv += `REPORTE COMPLETO DE HORAS Y BENEFICIOS\n`;
+            csv += `Fecha de generación:,${new Date().toLocaleString('es-ES')}\n`;
+            csv += `Precio por hora objetivo:,${precioHoraObjetivo.toFixed(2)} €\n`;
+            csv += `\n`;
+            
+            // Section 1: Summary by dress with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 1: RESUMEN POR VESTIDO\n`;
+            csv += `==================================================\n`;
+            csv += `Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n`;
             
             let totalHorasEstimadas = 0;
             let totalHorasReales = 0;
@@ -10240,26 +10127,34 @@
                 csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${variacion.toFixed(2)},${precioVestido.toFixed(2)},${costeHoras.toFixed(2)},${beneficio.toFixed(2)}\n`;
             });
 
-            csv += `TOTAL,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n\n`;
+            csv += `\n`;
+            csv += `TOTALES:,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n`;
+            csv += `\n\n`;
 
-            // Section 2: Hours classification by worker
-            csv += 'CLASIFICACIÓN DE HORAS POR TRABAJADORA\n';
-            csv += 'Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n';
+            // Section 2: Hours classification by worker with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 2: CLASIFICACIÓN DE HORAS POR TRABAJADORA\n`;
+            csv += `==================================================\n`;
+            csv += `Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n`;
             
             Object.keys(trabajadoraStats).sort().forEach(nombre => {
                 const stats = trabajadoraStats[nombre];
                 const promedio = stats.vestidos.size > 0 ? stats.horas / stats.vestidos.size : 0;
                 const porcentaje = totalHorasReales > 0 ? (stats.horas / totalHorasReales * 100) : 0;
                 
-                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}%\n`;
+                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}\n`;
             });
 
-            csv += '\n';
+            csv += `\n\n`;
 
-            // Section 3: Detailed intervals by worker
-            csv += 'DETALLE DE INTERVALOS POR TRABAJADORA\n';
-            csv += 'Trabajadora,Vestido,Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n';
+            // Section 3: Detailed intervals by worker with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 3: DETALLE DE INTERVALOS POR TRABAJADORA\n`;
+            csv += `==================================================\n`;
+            csv += `Trabajadora,Vestido (Lote),Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n`;
 
+            // Sort intervals by date for better readability
+            const intervalosConDatos = [];
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
                 if (!vestido) return;
@@ -10277,7 +10172,7 @@
                     const horaInicio = inicioDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                     
                     let horaFin = 'En curso';
-                    let duracion = '-';
+                    let duracion = '0.00';
                     
                     if (intervalo.fin) {
                         const finDate = new Date(intervalo.fin);
@@ -10286,11 +10181,27 @@
                         duracion = diffHours.toFixed(2);
                     }
                     
-                    csv += `"${nombreTrabajadora}","${vestido.lote || 'N/A'}","${vestido.nombreModelo}","${fecha}","${horaInicio}","${horaFin}",${duracion}\n`;
+                    intervalosConDatos.push({
+                        fecha: intervalo.inicio,
+                        trabajadora: nombreTrabajadora,
+                        lote: vestido.lote || 'N/A',
+                        modelo: vestido.nombreModelo,
+                        fechaStr: fecha,
+                        horaInicio: horaInicio,
+                        horaFin: horaFin,
+                        duracion: duracion
+                    });
                 });
             });
 
-            // Download CSV
+            // Sort by date
+            intervalosConDatos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            intervalosConDatos.forEach(intervalo => {
+                csv += `"${intervalo.trabajadora}","${intervalo.lote}","${intervalo.modelo}","${intervalo.fechaStr}","${intervalo.horaInicio}","${intervalo.horaFin}",${intervalo.duracion}\n`;
+            });
+
+            // Download CSV with UTF-8 BOM for proper Excel encoding
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
