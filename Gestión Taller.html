@@ -9959,14 +9959,20 @@
             const config = obtenerConfiguracionTaller();
             const precioHoraObjetivo = config.precioHoraObjetivo || 15;
             
-            // Generate enhanced CSV format (Excel compatible)
-            let csv = `Reporte Completo de Horas y Beneficios\n`;
-            csv += `Fecha de generación: ${new Date().toLocaleString('es-ES')}\n`;
-            csv += `Precio por hora objetivo: ${precioHoraObjetivo}€\n\n`;
+            // Generate enhanced CSV format (Excel compatible) with BOM for proper UTF-8 encoding
+            let csv = '\uFEFF'; // UTF-8 BOM for Excel compatibility
             
-            // Section 1: Summary by dress
-            csv += 'RESUMEN POR VESTIDO\n';
-            csv += 'Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n';
+            // Header section with clear formatting
+            csv += `REPORTE COMPLETO DE HORAS Y BENEFICIOS\n`;
+            csv += `Fecha de generación:,${new Date().toLocaleString('es-ES')}\n`;
+            csv += `Precio por hora objetivo:,${precioHoraObjetivo.toFixed(2)} €\n`;
+            csv += `\n`;
+            
+            // Section 1: Summary by dress with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 1: RESUMEN POR VESTIDO\n`;
+            csv += `==================================================\n`;
+            csv += `Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n`;
             
             let totalHorasEstimadas = 0;
             let totalHorasReales = 0;
@@ -10009,26 +10015,34 @@
                 csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${variacion.toFixed(2)},${precioVestido.toFixed(2)},${costeHoras.toFixed(2)},${beneficio.toFixed(2)}\n`;
             });
 
-            csv += `TOTAL,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n\n`;
+            csv += `\n`;
+            csv += `TOTALES:,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n`;
+            csv += `\n\n`;
 
-            // Section 2: Hours classification by worker
-            csv += 'CLASIFICACIÓN DE HORAS POR TRABAJADORA\n';
-            csv += 'Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n';
+            // Section 2: Hours classification by worker with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 2: CLASIFICACIÓN DE HORAS POR TRABAJADORA\n`;
+            csv += `==================================================\n`;
+            csv += `Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n`;
             
             Object.keys(trabajadoraStats).sort().forEach(nombre => {
                 const stats = trabajadoraStats[nombre];
                 const promedio = stats.vestidos.size > 0 ? stats.horas / stats.vestidos.size : 0;
                 const porcentaje = totalHorasReales > 0 ? (stats.horas / totalHorasReales * 100) : 0;
                 
-                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}%\n`;
+                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}\n`;
             });
 
-            csv += '\n';
+            csv += `\n\n`;
 
-            // Section 3: Detailed intervals by worker
-            csv += 'DETALLE DE INTERVALOS POR TRABAJADORA\n';
-            csv += 'Trabajadora,Vestido,Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n';
+            // Section 3: Detailed intervals by worker with improved formatting
+            csv += `==================================================\n`;
+            csv += `SECCIÓN 3: DETALLE DE INTERVALOS POR TRABAJADORA\n`;
+            csv += `==================================================\n`;
+            csv += `Trabajadora,Vestido (Lote),Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n`;
 
+            // Sort intervals by date for better readability
+            const intervalosConDatos = [];
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
                 if (!vestido) return;
@@ -10046,7 +10060,7 @@
                     const horaInicio = inicioDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
                     
                     let horaFin = 'En curso';
-                    let duracion = '-';
+                    let duracion = '0.00';
                     
                     if (intervalo.fin) {
                         const finDate = new Date(intervalo.fin);
@@ -10055,11 +10069,27 @@
                         duracion = diffHours.toFixed(2);
                     }
                     
-                    csv += `"${nombreTrabajadora}","${vestido.lote || 'N/A'}","${vestido.nombreModelo}","${fecha}","${horaInicio}","${horaFin}",${duracion}\n`;
+                    intervalosConDatos.push({
+                        fecha: intervalo.inicio,
+                        trabajadora: nombreTrabajadora,
+                        lote: vestido.lote || 'N/A',
+                        modelo: vestido.nombreModelo,
+                        fechaStr: fecha,
+                        horaInicio: horaInicio,
+                        horaFin: horaFin,
+                        duracion: duracion
+                    });
                 });
             });
 
-            // Download CSV
+            // Sort by date
+            intervalosConDatos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            intervalosConDatos.forEach(intervalo => {
+                csv += `"${intervalo.trabajadora}","${intervalo.lote}","${intervalo.modelo}","${intervalo.fechaStr}","${intervalo.horaInicio}","${intervalo.horaFin}",${intervalo.duracion}\n`;
+            });
+
+            // Download CSV with UTF-8 BOM for proper Excel encoding
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
