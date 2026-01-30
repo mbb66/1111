@@ -8058,14 +8058,13 @@
             });
 
             // REQUIREMENT 1 UPDATE: Show sent/delivery dresses if filters are active
-            // Add sent dresses (with production) if filter is enabled
+            // Add sent dresses (with or without production) if filter is enabled
             if (filtrosCalendarioActivos.mostrarEnviados) {
                 vestidos.forEach(vestido => {
                     const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
-                    const horas = horasConfeccion[vestido.id];
-                    const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
                     
-                    if (esEnviado && vestido.fechaEnvio === fechaStr && tieneIntervalos) {
+                    // Show sent dresses on their delivery date, regardless of whether they have intervals
+                    if (esEnviado && vestido.fechaEnvio === fechaStr) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -8148,14 +8147,15 @@
                 // Determine dress category
                 let categorias = [];
                 
-                // Category: Vestidos Enviados (sent dresses with production)
-                if (esEnviado && vestido.fechaEnvio === fechaStr && tieneIntervalos) {
+                // Category: Vestidos Enviados (ALL sent dresses on their delivery date)
+                // This includes both dresses with and without production intervals
+                if (esEnviado && vestido.fechaEnvio === fechaStr) {
                     categorias.push('enviados');
-                }
-                
-                // Category: Albaranes (sent dresses WITHOUT production - delivery notes only)
-                if (esEnviado && vestido.fechaEnvio === fechaStr && !tieneIntervalos) {
-                    categorias.push('albaranes');
+                    
+                    // Also categorize as 'albaranes' if they don't have production intervals
+                    if (!tieneIntervalos) {
+                        categorias.push('albaranes');
+                    }
                 }
                 
                 // Category: Fecha Fin (dresses with deadline on this date)
