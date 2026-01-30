@@ -2817,6 +2817,7 @@
                 </div>
                 <div>
                     <button class="btn btn-success" onclick="exportarReporteHoras('excel')">📊 Exportar Excel</button>
+                    <button class="btn btn-info" onclick="generarReporteIntervalosDetallado()">📈 Reporte Intervalos Detallado</button>
                 </div>
             </div>
 
@@ -2903,7 +2904,7 @@
                     <h3 style="margin: 0;">⚡ Añadir Intervalo Manual Rápido</h3>
                     <button class="btn btn-small" onclick="cerrarPanelIntervaloRapido()">✖ Cerrar</button>
                 </div>
-                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr auto auto; gap: 10px; align-items: end;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr 1.5fr auto auto; gap: 10px; align-items: end;">
                     <div>
                         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Vestido:</label>
                         <select id="select-vestido-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
@@ -2926,6 +2927,14 @@
                         <label style="font-weight: 600; display: block; margin-bottom: 5px;">Trabajadora:</label>
                         <select id="trabajadora-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
                             <option value="">Seleccionar trabajadora...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Estado:</label>
+                        <select id="estado-tarea-rapido" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--color-borde);">
+                            <option value="in_progress">⏳ En Proceso</option>
+                            <option value="completed">✅ Completado</option>
+                            <option value="pending">📋 Pendiente</option>
                         </select>
                     </div>
                     <div>
@@ -8270,6 +8279,83 @@
                 </div>
             `;
             
+            // NEW: Section 1.5: Interval statistics by worker and status
+            const intervalosPorTrabajadora = {};
+            const estadosIntervalos = { pending: 0, in_progress: 0, completed: 0 };
+            
+            vestidosEnFecha.forEach(v => {
+                const horas = horasConfeccion[v.id];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
+                            const trabajadoraId = intervalo.trabajadoraId;
+                            const status = intervalo.status || 'in_progress';
+                            const trabajadora = workers.find(w => w.id === trabajadoraId);
+                            const nombreTrabajadora = trabajadora ? trabajadora.nombre : 'Sin asignar';
+                            
+                            // Count by worker
+                            if (!intervalosPorTrabajadora[nombreTrabajadora]) {
+                                intervalosPorTrabajadora[nombreTrabajadora] = { horas: 0, intervalos: 0 };
+                            }
+                            
+                            if (intervalo.fin) {
+                                const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                                intervalosPorTrabajadora[nombreTrabajadora].horas += diffHours;
+                            }
+                            intervalosPorTrabajadora[nombreTrabajadora].intervalos += 1;
+                            
+                            // Count by status
+                            estadosIntervalos[status] = (estadosIntervalos[status] || 0) + 1;
+                        }
+                    });
+                }
+            });
+            
+            // Show worker and status statistics
+            if (Object.keys(intervalosPorTrabajadora).length > 0) {
+                html += `
+                    <div style="margin-bottom: 20px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <strong style="font-size: 1em; color: var(--color-texto-principal); display: block; margin-bottom: 8px;">👷 Distribución por Trabajadora</strong>
+                                <div style="font-size: 0.85em;">
+                `;
+                
+                Object.keys(intervalosPorTrabajadora).forEach(nombre => {
+                    const data = intervalosPorTrabajadora[nombre];
+                    html += `
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                            <span>${nombre}</span>
+                            <span style="font-weight: 600;">${data.horas.toFixed(1)}h (${data.intervalos} intervalos)</span>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                                </div>
+                            </div>
+                            <div>
+                                <strong style="font-size: 1em; color: var(--color-texto-principal); display: block; margin-bottom: 8px;">📋 Estado de Tareas</strong>
+                                <div style="font-size: 0.85em;">
+                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                                        <span>⏳ En Proceso</span>
+                                        <span style="font-weight: 600;">${estadosIntervalos.in_progress || 0}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                                        <span>✅ Completado</span>
+                                        <span style="font-weight: 600;">${estadosIntervalos.completed || 0}</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                                        <span>📋 Pendiente</span>
+                                        <span style="font-weight: 600;">${estadosIntervalos.pending || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Section 2: Dresses planned for this day
             if (vestidosEnFecha.length > 0) {
                 html += `
@@ -8650,6 +8736,7 @@
             const horaInicio = document.getElementById('hora-inicio-rapido').value;
             const horaFin = document.getElementById('hora-fin-rapido').value;
             const trabajadoraId = parseInt(document.getElementById('trabajadora-rapido').value);
+            const estadoTarea = document.getElementById('estado-tarea-rapido').value;
             
             // Validation
             if (!vestidoId) {
@@ -8701,11 +8788,12 @@
                 horasConfeccion[vestidoId].esManual = true;
             }
             
-            // Add interval
+            // Add interval with task status
             horasConfeccion[vestidoId].intervalos.push({
                 inicio: inicioDateTime,
                 fin: finDateTime,
-                trabajadoraId: trabajadoraId
+                trabajadoraId: trabajadoraId,
+                status: estadoTarea || 'in_progress' // Add task status field
             });
             
             // Update total hours
@@ -8735,10 +8823,11 @@
             // Success message
             const vestido = vestidos.find(v => v.id === vestidoId);
             const trabajadora = workers.find(w => w.id === trabajadoraId);
+            const estadoTexto = estadoTarea === 'completed' ? '✅ Completado' : estadoTarea === 'pending' ? '📋 Pendiente' : '⏳ En Proceso';
             if (enCurso) {
-                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+                alert(`⏳ Intervalo EN CURSO iniciado:\n\n${vestido.nombreModelo}\nTrabajadora: ${trabajadora.nombre}\nInicio: ${fecha} ${horaInicio}\nEstado: ${estadoTexto}\n\nEste intervalo está marcado como "en curso". Edítalo más tarde para añadir la hora de fin.\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
             } else {
-                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
+                alert(`✅ Intervalo añadido:\n\n${vestido.nombreModelo}\n${diffHours.toFixed(2)}h - ${trabajadora.nombre}\n${fecha} ${horaInicio} - ${horaFin}\nEstado: ${estadoTexto}\n\nEste vestido está marcado como MANUAL y no será ajustable por arrastre en el calendario.`);
             }
             
             // Reset form
@@ -8746,6 +8835,7 @@
             document.getElementById('hora-inicio-rapido').value = '07:00';
             document.getElementById('hora-fin-rapido').value = '15:00';
             document.getElementById('trabajadora-rapido').value = '';
+            document.getElementById('estado-tarea-rapido').value = 'in_progress';
         }
         
         function marcarInicioEnCurso() {
@@ -9234,12 +9324,22 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="intervalo-trabajadora">
-                            <label>👷 Trabajadora Asignada:</label>
-                            <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                <option value="">Seleccionar trabajadora...</option>
-                                ${workerOptions}
-                            </select>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div class="intervalo-trabajadora">
+                                <label>👷 Trabajadora Asignada:</label>
+                                <select class="intervalo-worker" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                    <option value="">Seleccionar trabajadora...</option>
+                                    ${workerOptions}
+                                </select>
+                            </div>
+                            <div>
+                                <label>📋 Estado de la Tarea:</label>
+                                <select class="intervalo-status" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                    <option value="in_progress">⏳ En Proceso</option>
+                                    <option value="completed">✅ Completado</option>
+                                    <option value="pending">📋 Pendiente</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -9352,6 +9452,8 @@
                     horaFin = finDate.toTimeString().slice(0, 5); // HH:mm
                 }
                 
+                const intervaloStatus = intervalo.status || 'in_progress';
+                
                 return `
                     <div class="intervalo-tiempo collapsed" data-intervalo-index="${index}">
                         <div class="intervalo-tiempo-header" onclick="toggleIntervalo(this.parentElement)">
@@ -9380,23 +9482,40 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="intervalo-trabajadora">
-                                <label>👷 Trabajadora Asignada:</label>
-                                <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
-                                    <option value="">Seleccionar trabajadora...</option>
-                                    ${workerOptions}
-                                </select>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                                <div class="intervalo-trabajadora">
+                                    <label>👷 Trabajadora Asignada:</label>
+                                    <select class="intervalo-worker" data-selected="${intervalo.trabajadoraId || ''}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                        <option value="">Seleccionar trabajadora...</option>
+                                        ${workerOptions}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label>📋 Estado de la Tarea:</label>
+                                    <select class="intervalo-status" data-selected="${intervaloStatus}" onchange="updateIntervaloSummary(this.closest('.intervalo-tiempo'))">
+                                        <option value="in_progress">⏳ En Proceso</option>
+                                        <option value="completed">✅ Completado</option>
+                                        <option value="pending">📋 Pendiente</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `;
             }).join('');
             
-            // Set selected workers and update summaries after rendering
+            // Set selected workers and status, and update summaries after rendering
             container.querySelectorAll('.intervalo-worker').forEach(select => {
                 const selectedId = select.dataset.selected;
                 if (selectedId) {
                     select.value = selectedId;
+                }
+            });
+            
+            container.querySelectorAll('.intervalo-status').forEach(select => {
+                const selectedStatus = select.dataset.selected;
+                if (selectedStatus) {
+                    select.value = selectedStatus;
                 }
             });
             
@@ -9515,6 +9634,8 @@
                 const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
                 
                 const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
+                const statusInput = intervaloEl.querySelector('.intervalo-status');
+                const status = statusInput ? statusInput.value : 'in_progress';
                 
                 let inicio = null;
                 let fin = null;
@@ -9539,7 +9660,8 @@
                             intervalos.push({ 
                                 inicio, 
                                 fin, 
-                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
+                                status: status
                             });
                             totalHoras += diffHours;
                             if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
@@ -9549,7 +9671,8 @@
                         intervalos.push({ 
                             inicio, 
                             fin: null, 
-                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null 
+                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
+                            status: status
                         });
                         if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                     }
@@ -10193,6 +10316,204 @@
             document.body.removeChild(link);
             
             alert(`✅ Reporte exportado correctamente.\n\nBeneficio/Pérdida Total: ${totalBeneficio >= 0 ? '+' : ''}${totalBeneficio.toFixed(2)}€\nHoras Estimadas: ${totalHorasEstimadas.toFixed(2)}h\nHoras Reales: ${totalHorasReales.toFixed(2)}h`);
+        }
+
+        // NEW: Generate detailed interval statistics report
+        function generarReporteIntervalosDetallado() {
+            const fechaActual = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            
+            let csv = `Reporte de Intervalos y Grupos - ${fechaActual}\n\n`;
+            
+            // Section 1: Group statistics
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'ESTADÍSTICAS DE GRUPOS\n';
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'Grupo,Código Modelo,Vestidos en Grupo,Vestidos Activos,Horas Totales,Horas por Vestido,Estado\n';
+            
+            let gruposTotales = 0;
+            let vestidosEnGrupos = 0;
+            
+            Object.keys(vestidosGrupos).forEach(grupoId => {
+                const grupo = vestidosGrupos[grupoId];
+                const grupoSizeOriginal = grupo.sizeOriginal || grupo.vestidosIds.length;
+                
+                // Count active dresses in group
+                const vestidosActivos = grupo.vestidosIds.filter(id => {
+                    const v = vestidos.find(vestido => vestido.id === id);
+                    return v && v.estado !== 'enviado' && v.estado !== 'pagado';
+                }).length;
+                
+                // Calculate total hours for group
+                let horasTotalesGrupo = 0;
+                let tieneIntervalos = false;
+                
+                grupo.vestidosIds.forEach(vestidoId => {
+                    const horas = horasConfeccion[vestidoId];
+                    if (horas && horas.horasTotales > 0) {
+                        horasTotalesGrupo = horas.horasTotales; // Groups share the same hours
+                        tieneIntervalos = true;
+                    }
+                });
+                
+                const horasPorVestido = grupoSizeOriginal > 0 ? horasTotalesGrupo / grupoSizeOriginal : 0;
+                const estado = vestidosActivos > 0 ? 'Activo' : 'Completado';
+                
+                csv += `"${grupo.nombre}","${grupo.codigoModelo}",${grupoSizeOriginal},${vestidosActivos},${horasTotalesGrupo.toFixed(2)},${horasPorVestido.toFixed(2)},${estado}\n`;
+                
+                gruposTotales++;
+                vestidosEnGrupos += grupoSizeOriginal;
+            });
+            
+            csv += `\nTOTAL GRUPOS: ${gruposTotales} | VESTIDOS EN GRUPOS: ${vestidosEnGrupos}\n\n`;
+            
+            // Section 2: Interval statistics by status
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'ESTADÍSTICAS POR ESTADO DE TAREA\n';
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'Estado,Cantidad,Total Horas,Promedio Horas\n';
+            
+            const estadosStats = {
+                'pending': { count: 0, horas: 0, label: '📋 Pendiente' },
+                'in_progress': { count: 0, horas: 0, label: '⏳ En Proceso' },
+                'completed': { count: 0, horas: 0, label: '✅ Completado' }
+            };
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        const status = intervalo.status || 'in_progress';
+                        if (estadosStats[status]) {
+                            estadosStats[status].count++;
+                            if (intervalo.inicio && intervalo.fin) {
+                                const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                                estadosStats[status].horas += diffHours;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            Object.keys(estadosStats).forEach(key => {
+                const stats = estadosStats[key];
+                const promedio = stats.count > 0 ? stats.horas / stats.count : 0;
+                csv += `"${stats.label}",${stats.count},${stats.horas.toFixed(2)},${promedio.toFixed(2)}\n`;
+            });
+            
+            csv += '\n';
+            
+            // Section 3: Worker performance
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'RENDIMIENTO POR TRABAJADORA\n';
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'Trabajadora,Intervalos,Horas Completadas,Horas Promedio/Intervalo,Tareas Pendientes,Tareas en Proceso,Tareas Completadas\n';
+            
+            const trabajadoraStats = {};
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        const trabajadoraId = intervalo.trabajadoraId;
+                        const trabajadora = workers.find(w => w.id === trabajadoraId);
+                        const nombre = trabajadora ? trabajadora.nombre : 'Sin asignar';
+                        const status = intervalo.status || 'in_progress';
+                        
+                        if (!trabajadoraStats[nombre]) {
+                            trabajadoraStats[nombre] = {
+                                intervalos: 0,
+                                horas: 0,
+                                pending: 0,
+                                in_progress: 0,
+                                completed: 0
+                            };
+                        }
+                        
+                        trabajadoraStats[nombre].intervalos++;
+                        trabajadoraStats[nombre][status]++;
+                        
+                        if (intervalo.inicio && intervalo.fin) {
+                            const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                            trabajadoraStats[nombre].horas += diffHours;
+                        }
+                    });
+                }
+            });
+            
+            Object.keys(trabajadoraStats).forEach(nombre => {
+                const stats = trabajadoraStats[nombre];
+                const promedio = stats.intervalos > 0 ? stats.horas / stats.intervalos : 0;
+                csv += `"${nombre}",${stats.intervalos},${stats.horas.toFixed(2)},${promedio.toFixed(2)},${stats.pending},${stats.in_progress},${stats.completed}\n`;
+            });
+            
+            csv += '\n';
+            
+            // Section 4: Daily breakdown (last 30 days)
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'DESGLOSE ÚLTIMOS 30 DÍAS\n';
+            csv += '═══════════════════════════════════════════════\n';
+            csv += 'Fecha,Intervalos,Horas Totales,Vestidos Trabajados,Trabajadoras Activas\n';
+            
+            const hoy = new Date();
+            const hace30Dias = new Date(hoy);
+            hace30Dias.setDate(hoy.getDate() - 30);
+            
+            const diasStats = {};
+            
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio) {
+                            const fecha = intervalo.inicio.split('T')[0];
+                            const fechaDate = new Date(fecha);
+                            
+                            if (fechaDate >= hace30Dias && fechaDate <= hoy) {
+                                if (!diasStats[fecha]) {
+                                    diasStats[fecha] = {
+                                        intervalos: 0,
+                                        horas: 0,
+                                        vestidos: new Set(),
+                                        trabajadoras: new Set()
+                                    };
+                                }
+                                
+                                diasStats[fecha].intervalos++;
+                                diasStats[fecha].vestidos.add(vestidoId);
+                                if (intervalo.trabajadoraId) {
+                                    diasStats[fecha].trabajadoras.add(intervalo.trabajadoraId);
+                                }
+                                
+                                if (intervalo.fin) {
+                                    const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                                    diasStats[fecha].horas += diffHours;
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Sort by date
+            const fechasOrdenadas = Object.keys(diasStats).sort();
+            fechasOrdenadas.forEach(fecha => {
+                const stats = diasStats[fecha];
+                const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES');
+                csv += `${fechaFormateada},${stats.intervalos},${stats.horas.toFixed(2)},${stats.vestidos.size},${stats.trabajadoras.size}\n`;
+            });
+            
+            // Download CSV
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `reporte_intervalos_detallado_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert(`✅ Reporte de intervalos exportado correctamente.\n\nGrupos: ${gruposTotales}\nVestidos en grupos: ${vestidosEnGrupos}\nÚltimos 30 días analizados`);
         }
 
         // Enhanced month-end export with real vs. estimated hours comparison
