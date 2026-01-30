@@ -8027,14 +8027,10 @@
             if (planificacion[fechaStr]) {
                 planificacion[fechaStr].forEach(entrada => {
                     const vestido = vestidos.find(v => v.id === entrada.vestidoId);
-                    // Don't show sent dresses in automatic planning on future dates
-                    const esEnviado = vestido && (vestido.estado === 'enviado' || vestido.estado === 'pagado');
-                    const hoy = new Date().toISOString().split('T')[0];
+                    // FIXED: Show sent dresses in automatic planning regardless of date
+                    // They should appear on dates where they have planned work
                     if (vestido && !resultado.find(v => v.id === vestido.id)) {
-                        // Only add if not sent OR if the date is in the past
-                        if (!esEnviado || fechaStr <= hoy) {
-                            resultado.push(vestido);
-                        }
+                        resultado.push(vestido);
                     }
                 });
             }
@@ -8164,7 +8160,8 @@
                 }
                 
                 // Category: En Proceso (dresses with assigned hours/intervals)
-                if (tieneIntervalos && !esEnviado) {
+                // FIXED: Include sent dresses with intervals so they appear on work dates
+                if (tieneIntervalos) {
                     categorias.push('en_proceso');
                 }
                 
