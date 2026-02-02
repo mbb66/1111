@@ -7633,7 +7633,7 @@
                 let trabajadorasHtml = '';
                 // Workers are no longer shown in calendar view to focus on workload organization
                 
-                // Generate hours badge - show only free hours (simplified format matching calendar-extracted.html)
+                // Generate hours badge - show used and free hours for better visibility
                 let horasBadge = '';
                 let horasLibres = 0;
                 let diaCompleto = false;
@@ -7642,12 +7642,17 @@
                     horasLibres = horasDisponibles - horasTotales;
                     diaCompleto = horasLibres <= 0;
                     
-                    // Simplified format: show only free hours
-                    if (horasLibres >= 0) {
-                        const colorClass = horasLibres === 0 ? 'negativo' : '';
-                        horasBadge = `<span class="horas-libres ${colorClass}" style="font-size: 0.75em; color: var(--color-exito); font-weight: 600; margin-top: 5px; display: block;">${horasLibres.toFixed(1)}h libres</span>`;
+                    // Enhanced format: show both used and free hours for clarity
+                    if (horasTotales > 0) {
+                        // When hours are assigned, show used/total
+                        const colorClass = horasLibres <= 0 ? 'negativo' : '';
+                        horasBadge = `<span class="horas-libres ${colorClass}" style="font-size: 0.7em; font-weight: 600; margin-top: 5px; display: block;">
+                            <span style="color: var(--color-info);">${horasTotales.toFixed(1)}h usado</span> / 
+                            <span style="color: ${horasLibres >= 0 ? 'var(--color-exito)' : 'var(--color-error)'};">${horasLibres >= 0 ? horasLibres.toFixed(1) + 'h libre' : Math.abs(horasLibres).toFixed(1) + 'h exceso'}</span>
+                        </span>`;
                     } else {
-                        horasBadge = `<span class="horas-libres negativo" style="font-size: 0.75em; color: var(--color-error); font-weight: 600; margin-top: 5px; display: block;">${Math.abs(horasLibres).toFixed(1)}h exceso</span>`;
+                        // When no hours assigned, show only free hours
+                        horasBadge = `<span class="horas-libres" style="font-size: 0.75em; color: var(--color-exito); font-weight: 600; margin-top: 5px; display: block;">${horasLibres.toFixed(1)}h libres</span>`;
                     }
                 }
                 
