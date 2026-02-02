@@ -5994,6 +5994,65 @@
             return horasDisponibles;
         }
 
+        // Helper function to get the next workday (skips weekends and holidays)
+        function obtenerSiguienteDiaLaboral(fecha) {
+            let nextDate = new Date(fecha + 'T12:00:00Z');
+            let intentos = 0;
+            const maxIntentos = 30; // Prevent infinite loop
+            
+            do {
+                nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+                intentos++;
+                const fechaStr = nextDate.toISOString().split('T')[0];
+                const diaSemana = nextDate.getUTCDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+                const esFestivo = holidays.some(h => h.fecha === fechaStr);
+                
+                if (!esFinDeSemana && !esFestivo) {
+                    return fechaStr;
+                }
+            } while (intentos < maxIntentos);
+            
+            return null; // No workday found within 30 days
+        }
+
+        // Helper function to calculate hours already used on a date
+        function calcularHorasUsadas(fecha, vestidosExcluir = []) {
+            let horasYaUsadas = 0;
+            
+            // Count hours from automatic planning
+            if (planificacion[fecha]) {
+                planificacion[fecha].forEach(entrada => {
+                    // Skip if this dress is being excluded
+                    if (vestidosExcluir.some(v => v.id === entrada.vestidoId)) return;
+                    horasYaUsadas += entrada.horas || 0;
+                });
+            }
+            
+            // Count hours from manual intervals
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vid = parseInt(vestidoId);
+                // Skip if this dress is being excluded
+                if (vestidosExcluir.some(v => v.id === vid)) return;
+                
+                const horas = horasConfeccion[vestidoId];
+                if (horas && horas.intervalos) {
+                    horas.intervalos.forEach(intervalo => {
+                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fecha) {
+                            if (intervalo.fin) {
+                                const inicioDate = new Date(intervalo.inicio);
+                                const finDate = new Date(intervalo.fin);
+                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                                horasYaUsadas += diffHours;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            return horasYaUsadas;
+        }
+
         function limpiarPlanificacion() {
             if (!confirm('¿Estás segura de que quieres limpiar TODA la planificación? Esta acción no se puede deshacer.')) return;
             planificacion = {};
@@ -6954,52 +7013,76 @@
                 }
             });
             
-            // Calculate current hours used on destination date (excluding dresses being moved if they're already there)
-            let horasYaUsadas = 0;
-            
-            // Count hours from automatic planning
-            if (planificacion[fechaDestino]) {
-                planificacion[fechaDestino].forEach(entrada => {
-                    // Skip if this dress is being moved
-                    if (vestidosAMover.some(v => v.id === entrada.vestidoId)) return;
-                    horasYaUsadas += entrada.horas || 0;
-                });
-            }
-            
-            // Count hours from manual intervals
-            Object.keys(horasConfeccion).forEach(vestidoId => {
-                const vid = parseInt(vestidoId);
-                // Skip if this dress is being moved
-                if (vestidosAMover.some(v => v.id === vid)) return;
-                
-                const horas = horasConfeccion[vestidoId];
-                if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
-                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaDestino) {
-                            if (intervalo.fin) {
-                                const inicioDate = new Date(intervalo.inicio);
-                                const finDate = new Date(intervalo.fin);
-                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
-                                horasYaUsadas += diffHours;
-                            }
-                        }
-                    });
-                }
-            });
+            // Calculate current hours used on destination date (use helper function)
+            const horasYaUsadas = calcularHorasUsadas(fechaDestino, vestidosAMover);
             
             // Get available capacity for destination date
             const capacidadDisponible = obtenerLimiteHoras(fechaDestino);
             const horasTotalesDestino = horasYaUsadas + horasNecesarias;
             
-            // Validate capacity
-            if (horasTotalesDestino > capacidadDisponible) {
-                const exceso = (horasTotalesDestino - capacidadDisponible).toFixed(1);
-                if (!confirm(`⚠️ ADVERTENCIA: Esta operación excederá la capacidad del día.\n\nCapacidad disponible: ${capacidadDisponible.toFixed(1)}h\nHoras ya usadas: ${horasYaUsadas.toFixed(1)}h\nHoras necesarias: ${horasNecesarias.toFixed(1)}h\nTotal: ${horasTotalesDestino.toFixed(1)}h\nExceso: ${exceso}h\n\n¿Deseas continuar de todas formas?`)) {
+            // Issue #2: Handle capacity overflow by splitting dress across consecutive days
+            let horasRestantes = horasNecesarias;
+            let horasDisponiblesPrimerDia = capacidadDisponible - horasYaUsadas;
+            let necesitaDividir = horasTotalesDestino > capacidadDisponible;
+            
+            // For automatic planning, prepare the distribution across days
+            let distribucionDias = [];
+            if (necesitaDividir && horasDisponiblesPrimerDia > 0) {
+                // Calculate how hours will be distributed across consecutive days
+                let fechaActual = fechaDestino;
+                let horasPorAsignar = horasRestantes;
+                let parte = 1;
+                
+                while (horasPorAsignar > 0 && fechaActual) {
+                    const capacidad = obtenerLimiteHoras(fechaActual);
+                    const usadas = calcularHorasUsadas(fechaActual, vestidosAMover);
+                    const disponibles = capacidad - usadas;
+                    
+                    if (disponibles > 0) {
+                        const horasEnEsteDia = Math.min(horasPorAsignar, disponibles);
+                        distribucionDias.push({
+                            fecha: fechaActual,
+                            horas: horasEnEsteDia,
+                            parte: parte
+                        });
+                        horasPorAsignar -= horasEnEsteDia;
+                        parte++;
+                    }
+                    
+                    // Get next workday
+                    if (horasPorAsignar > 0) {
+                        fechaActual = obtenerSiguienteDiaLaboral(fechaActual);
+                        if (!fechaActual) {
+                            // No more workdays available
+                            alert('⚠️ No hay suficientes días laborables disponibles para asignar todas las horas.\n\nSe asignarán las horas que quepan en los días disponibles.');
+                            break;
+                        }
+                    }
+                }
+                
+                // Show confirmation message
+                const mensaje = `⚠️ La capacidad del día ${fechaDestino} es insuficiente.\n\n` +
+                    `Capacidad disponible: ${capacidadDisponible.toFixed(1)}h\n` +
+                    `Horas ya usadas: ${horasYaUsadas.toFixed(1)}h\n` +
+                    `Horas necesarias: ${horasNecesarias.toFixed(1)}h\n` +
+                    `Exceso: ${(horasTotalesDestino - capacidadDisponible).toFixed(1)}h\n\n` +
+                    `Se dividirá el vestido en ${distribucionDias.length} parte(s):\n` +
+                    distribucionDias.map(d => `  - ${d.fecha}: ${d.horas.toFixed(1)}h (Parte ${d.parte})`).join('\n') +
+                    `\n\n¿Deseas continuar?`;
+                
+                if (!confirm(mensaje)) {
                     draggedVestidoId = null;
                     draggedGrupoId = null;
                     draggedVestidoFechaOrigen = null;
                     return;
                 }
+            } else if (horasTotalesDestino > capacidadDisponible && horasDisponiblesPrimerDia <= 0) {
+                // No space at all on the destination date
+                alert(`⚠️ No hay capacidad disponible en ${fechaDestino}.\n\nCapacidad: ${capacidadDisponible.toFixed(1)}h\nYa usadas: ${horasYaUsadas.toFixed(1)}h\nDisponibles: ${horasDisponiblesPrimerDia.toFixed(1)}h`);
+                draggedVestidoId = null;
+                draggedGrupoId = null;
+                draggedVestidoFechaOrigen = null;
+                return;
             }
             
             // Problem 4: Move all dresses in the group or individual dress
@@ -7015,43 +7098,32 @@
                     // Handle automatic planning - move the dress entries
                     const entradasOrigen = planificacion[draggedVestidoFechaOrigen].filter(e => e.vestidoId === vestido.id);
                     
-                    // Check if this dress has multiple parts in the planning
-                    let todasLasPartes = [];
+                    // Remove all existing parts of this dress from planning
                     Object.keys(planificacion).forEach(f => {
-                        planificacion[f].forEach(e => {
-                            if (e.vestidoId === vestido.id) {
-                                todasLasPartes.push({ fecha: f, ...e });
-                            }
-                        });
+                        planificacion[f] = planificacion[f].filter(e => e.vestidoId !== vestido.id);
+                        if (planificacion[f].length === 0) delete planificacion[f];
                     });
                     
-                    // Sort by parte number to find if we're dragging part 1
-                    todasLasPartes.sort((a, b) => (a.parte || 0) - (b.parte || 0));
-                    const esPrimeraParticion = todasLasPartes.length > 0 && todasLasPartes[0].fecha === draggedVestidoFechaOrigen;
-                    
-                    if (esPrimeraParticion && todasLasPartes.length > 1) {
-                        // We're dragging part 1 - move ALL parts to the new date
-                        Object.keys(planificacion).forEach(f => {
-                            planificacion[f] = planificacion[f].filter(e => e.vestidoId !== vestido.id);
-                            if (planificacion[f].length === 0) delete planificacion[f];
-                        });
-                        
-                        // Add all parts to the destination date
-                        if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
-                        todasLasPartes.forEach(parte => {
-                            planificacion[fechaDestino].push({ vestidoId: vestido.id, horas: parte.horas, parte: parte.parte });
+                    // Issue #2: Use distribution across days if capacity was exceeded
+                    if (necesitaDividir && distribucionDias.length > 0) {
+                        // Split dress across consecutive days
+                        distribucionDias.forEach(dia => {
+                            if (!planificacion[dia.fecha]) planificacion[dia.fecha] = [];
+                            planificacion[dia.fecha].push({ 
+                                vestidoId: vestido.id, 
+                                horas: dia.horas, 
+                                parte: dia.parte 
+                            });
                         });
                     } else {
-                        // Only move the part(s) from the origin date
-                        entradasOrigen.forEach(entrada => {
-                            // Remove from origin
-                            planificacion[draggedVestidoFechaOrigen] = planificacion[draggedVestidoFechaOrigen].filter(e => 
-                                !(e.vestidoId === vestido.id && e.parte === entrada.parte));
-                            if (planificacion[draggedVestidoFechaOrigen].length === 0) delete planificacion[draggedVestidoFechaOrigen];
-                            
-                            // Add to destination
-                            if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
-                            planificacion[fechaDestino].push({ vestidoId: vestido.id, horas: entrada.horas, parte: entrada.parte });
+                        // No splitting needed - place entire dress on destination date
+                        if (!planificacion[fechaDestino]) planificacion[fechaDestino] = [];
+                        // Calculate total hours from original entries
+                        const totalHoras = entradasOrigen.reduce((sum, e) => sum + (e.horas || 0), 0);
+                        planificacion[fechaDestino].push({ 
+                            vestidoId: vestido.id, 
+                            horas: totalHoras, 
+                            parte: null 
                         });
                     }
                     
