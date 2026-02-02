@@ -7629,6 +7629,26 @@
                     }
                 });
                 
+                // FIX: Add hours from automatically planned dresses in planificacion object
+                // Use real hours if available, otherwise use estimated hours
+                if (planificacion[fechaStr]) {
+                    planificacion[fechaStr].forEach(entrada => {
+                        const vestido = vestidos.find(v => v.id === entrada.vestidoId);
+                        if (vestido) {
+                            // Check if this dress already has manual intervals (avoid double counting)
+                            const tieneIntervalosManual = horasConfeccion[vestido.id] && 
+                                                         horasConfeccion[vestido.id].intervalos && 
+                                                         horasConfeccion[vestido.id].intervalos.length > 0;
+                            
+                            if (!tieneIntervalosManual) {
+                                // Use the hours specified in the planificacion entry
+                                // (which were calculated from real or estimated hours during planning)
+                                horasTotales += entrada.horas;
+                            }
+                        }
+                    });
+                }
+                
                 // Generate workers summary - REMOVED per requirement to simplify calendar view
                 let trabajadorasHtml = '';
                 // Workers are no longer shown in calendar view to focus on workload organization
@@ -14048,11 +14068,11 @@
             const ultimoDia = new Date(Date.UTC(anio, mes, 0));
 
             // Obtener día de la semana del primer día (0 = domingo, 1 = lunes, etc.)
-            let diaSemanaInicio = primerDia.getUTCDay();
-            if (diaSemanaInicio === 0) diaSemanaInicio = 7; // Ajustar domingo
+            // Convertir a sistema donde Lunes = 0, Domingo = 6 para alinearse con el header
+            let diaSemanaInicio = primerDia.getUTCDay() === 0 ? 6 : primerDia.getUTCDay() - 1;
 
             // Añadir celdas vacías al principio
-            for (let i = 1; i < diaSemanaInicio; i++) {
+            for (let i = 0; i < diaSemanaInicio; i++) {
                 const celda = document.createElement('div');
                 celda.className = 'dia-calendario otro-mes';
                 celda.style.backgroundColor = '#f8f9fa';
