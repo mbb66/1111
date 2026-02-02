@@ -6338,7 +6338,8 @@
 
         function guardarYRecargarPlanificacion() {
             guardarTodo();
-            cargarPlanificacion();
+            cargarPlanificacionNueva();
+            generarCalendarioPlanificacion();
             if (modoPlanificacionManual) cargarVestidosParaPlanificar();
         }
 
