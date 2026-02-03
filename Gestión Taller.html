@@ -839,12 +839,55 @@
 
         .finanzas-subtab-content.active {
             display: block;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Finance content container improvements for full-width distribution */
+        .finanzas-container {
+            width: 100%;
+            max-width: 100%;
         }
 
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
+            width: 100%;
+        }
+
+        /* Enhanced grid utilities for Finance tabs */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            width: 100%;
+        }
+
+        /* Full width stats cards */
+        .stats-card {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Table improvements for full width */
+        table {
+            width: 100%;
+            table-layout: auto;
         }
 
         .kpi-card {
@@ -2543,6 +2586,8 @@
         }
     </style>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
 <body>
@@ -13433,7 +13478,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('resumen-general')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('resumen-general')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -13536,7 +13581,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('eficiencia-modelo')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('eficiencia-modelo')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -13641,7 +13686,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('rentabilidad')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('rentabilidad')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -13672,7 +13717,7 @@
                     const ingresosPorTrabajadora = ingresosVestido / numTrabajadoras;
 
                     horasData.trabajadoras.forEach(trabajadoraId => {
-                        const trabajadora = trabajadoras.find(t => t.id === trabajadoraId);
+                        const trabajadora = workers.find(t => t.id === trabajadoraId);
                         if (trabajadora) {
                             if (!trabajadorasData[trabajadoraId]) {
                                 trabajadorasData[trabajadoraId] = {
@@ -13737,7 +13782,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('informe-trabajadora')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('informe-trabajadora')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -13811,7 +13856,7 @@
                 `).join('')}
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('analisis-proveedores')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('analisis-proveedores')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -13895,7 +13940,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('facturas')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('facturas')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -14010,7 +14055,7 @@
                 `}
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('desviaciones-criticas')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('desviaciones-criticas')">📄 Descargar Informe</button>
                 </div>
             `;
 
@@ -14073,7 +14118,7 @@
                 </div>
 
                 <div class="stats-card" style="margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarInformePDF('tendencias')">📄 Exportar PDF</button>
+                    <button class="btn btn-success" onclick="exportarInformePDF('tendencias')">📄 Descargar Informe</button>
                     <button class="btn btn-info" onclick="exportarInformeAcumulativoGeneral()">📊 Informe Acumulativo General</button>
                 </div>
             `;
@@ -14165,9 +14210,125 @@
         /**
          * Export PDF for specific subtab
          */
-        function exportarInformePDF(subtab) {
-            alert(`📄 Generando PDF para ${subtab}...\n\nEsta funcionalidad generará un PDF profesional con los datos mostrados en pantalla.`);
-            // TODO: Implement actual PDF generation using a library like jsPDF
+        async function exportarInformePDF(subtab) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                
+                // Get current period info
+                const { fechaInicio, fechaFin, texto } = getPeriodoSeleccionadoConTexto();
+                
+                // Pastel color palette
+                const colors = {
+                    primary: [55, 65, 81],      // #374151
+                    success: [16, 185, 129],    // #10B981
+                    info: [3, 105, 161],        // #0369A1
+                    warning: [245, 158, 11],    // #F59E0B
+                    error: [239, 68, 68],       // #EF4444
+                    pastelBlue: [224, 242, 254], // #E0F2FE
+                    pastelPink: [252, 231, 243], // #FCE7F3
+                    pastelGreen: [220, 252, 231], // #DCFCE7
+                    lightGray: [243, 244, 246]   // #F3F4F6
+                };
+                
+                // Helper to convert RGB array to string
+                const rgb = (arr) => arr;
+                
+                let yPos = 20;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const margin = 20;
+                const contentWidth = pageWidth - (2 * margin);
+                
+                // Header with pastel background
+                doc.setFillColor(...colors.pastelBlue);
+                doc.rect(0, 0, pageWidth, 40, 'F');
+                
+                // Title
+                doc.setFontSize(20);
+                doc.setTextColor(...colors.primary);
+                doc.text('Taller Novias - Informe Financiero', pageWidth / 2, 15, { align: 'center' });
+                
+                // Subtitle - tab name
+                doc.setFontSize(14);
+                const subtabNames = {
+                    'resumen-general': 'Resumen General',
+                    'eficiencia-modelo': 'Eficiencia por Modelo',
+                    'rentabilidad': 'Rentabilidad',
+                    'informe-trabajadora': 'Informe por Trabajadora',
+                    'analisis-proveedores': 'Análisis de Proveedores',
+                    'facturas': 'Facturas',
+                    'desviaciones-criticas': 'Desviaciones Críticas',
+                    'tendencias': 'Tendencias'
+                };
+                doc.setTextColor(60, 60, 60);
+                doc.text(subtabNames[subtab] || subtab, pageWidth / 2, 25, { align: 'center' });
+                
+                // Period info
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(`Periodo: ${texto}`, pageWidth / 2, 33, { align: 'center' });
+                
+                yPos = 50;
+                
+                // Get content element
+                const contentElement = document.getElementById(subtab + '-content');
+                if (!contentElement) {
+                    throw new Error('No se encontró el contenido del informe');
+                }
+                
+                // Use html2canvas to capture the content
+                const canvas = await html2canvas(contentElement, {
+                    scale: 2,
+                    backgroundColor: '#FFFFFF',
+                    logging: false,
+                    width: contentElement.scrollWidth,
+                    height: contentElement.scrollHeight
+                });
+                
+                const imgData = canvas.toDataURL('image/png');
+                const imgWidth = contentWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Check if content fits on one page
+                let heightLeft = imgHeight;
+                let position = yPos;
+                
+                // Add image to PDF
+                doc.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+                heightLeft -= (pageHeight - position - 20);
+                
+                // Add additional pages if needed
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight + 20;
+                    doc.addPage();
+                    doc.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+                    heightLeft -= (pageHeight - 20);
+                }
+                
+                // Footer on last page
+                const totalPages = doc.internal.pages.length - 1;
+                for (let i = 1; i <= totalPages; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150, 150, 150);
+                    doc.text(`Generado el ${new Date().toLocaleDateString('es-ES')} - Página ${i} de ${totalPages}`, 
+                             pageWidth / 2, pageHeight - 10, { align: 'center' });
+                }
+                
+                // Save PDF
+                const filename = `Informe_${subtabNames[subtab].replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                doc.save(filename);
+                
+                // Success message
+                setTimeout(() => {
+                    alert(`✅ PDF generado exitosamente:\n${filename}`);
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert(`❌ Error al generar PDF: ${error.message}\n\nPor favor, intenta de nuevo.`);
+            }
         }
 
         /**
