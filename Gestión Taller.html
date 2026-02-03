@@ -3006,12 +3006,21 @@
             <div class="finanzas-container">
                 <div class="finanzas-subtabs">
                     <button class="finanzas-subtab active"
-                        onclick="openFinanceSubTab('dashboard', this)">Dashboard</button>
+                        onclick="openFinanceSubTab('resumen-general', this)">📊 Resumen General</button>
                     <button class="finanzas-subtab"
-                        onclick="openFinanceSubTab('movimientos', this)">Movimientos</button>
-                    <button class="finanzas-subtab" onclick="openFinanceSubTab('impuestos', this)">Impuestos</button>
-                    <button class="finanzas-subtab" id="finanzas-tab-no-rentable"
-                        onclick="openFinanceSubTab('finanzas-no-rentable-content', this)">Modelos no rentables</button>
+                        onclick="openFinanceSubTab('eficiencia-modelo', this)">⏱️ Eficiencia por Modelo</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('rentabilidad', this)">💰 Rentabilidad</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('informe-trabajadora', this)">👷 Informe por Trabajadora</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('analisis-proveedores', this)">🏢 Análisis de Proveedores</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('facturas', this)">📄 Facturas</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('desviaciones-criticas', this)">⚠️ Desviaciones Críticas</button>
+                    <button class="finanzas-subtab"
+                        onclick="openFinanceSubTab('tendencias', this)">📈 Tendencias</button>
                 </div>
                 <div class="stats-card" style="margin-bottom: 20px;">
                     <div class="grid-3">
@@ -3058,68 +3067,29 @@
                     </div>
                     <div id="finanzas-periodo-texto" style="margin-top: 10px;"></div>
                 </div>
-                <div id="dashboard" class="finanzas-subtab-content active">
-                    <div id="dashboard-content"></div>
+                <div id="resumen-general" class="finanzas-subtab-content active">
+                    <div id="resumen-general-content"></div>
                 </div>
-                <div id="movimientos" class="finanzas-subtab-content">
-                    <div id="edit-movimiento-container" style="margin-bottom: 20px;"></div>
-                    <div class="movimientos-grid">
-                        <div class="stats-card" id="gasto-form-container"></div>
-                        <div class="stats-card" id="otro-ingreso-form-container"></div>
-                    </div>
-                    <div class="stats-card" style="margin-top: 20px;">
-                        <h3>Listado de Movimientos del Periodo</h3>
-                        <div id="movimientos-list-container"></div>
-                    </div>
+                <div id="eficiencia-modelo" class="finanzas-subtab-content">
+                    <div id="eficiencia-modelo-content"></div>
                 </div>
-                <div id="impuestos" class="finanzas-subtab-content">
-                    <div id="impuestos-content"></div>
+                <div id="rentabilidad" class="finanzas-subtab-content">
+                    <div id="rentabilidad-content"></div>
                 </div>
-                <div id="finanzas-no-rentable-content" class="finanzas-subtab-content">
-                    <div class="stats-card" style="margin-bottom: 20px;">
-                        <h3>📊 Análisis de Modelos No Rentables</h3>
-                        <div class="grid-3" style="margin-top: 15px;">
-                            <div class="form-group">
-                                <label for="no-rentable-proveedor">Proveedor:</label>
-                                <select id="no-rentable-proveedor" onchange="actualizarModelosNoRentables()">
-                                    <option value="todos">Todos los proveedores</option>
-                                    <option value="pronovias">Pronovias</option>
-                                    <option value="rosa_clara">Rosa Clará</option>
-                                    <option value="traka">Traka</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="no-rentable-margen-minimo">Margen Mínimo (%):</label>
-                                <input type="number" id="no-rentable-margen-minimo" value="20" min="0" max="100"
-                                    step="5" onchange="actualizarModelosNoRentables()">
-                            </div>
-                            <div class="form-group">
-                                <label for="no-rentable-precio-hora-minimo">Precio/hora Mínimo (€):</label>
-                                <input type="number" id="no-rentable-precio-hora-minimo" value="15" min="0" step="1"
-                                    onchange="actualizarModelosNoRentables()">
-                            </div>
-                        </div>
-                        <div class="grid-2" style="margin-top: 10px;">
-                            <div class="form-group">
-                                <label class="toggle-btn">
-                                    <input type="checkbox" id="no-rentable-incluir-sin-datos"
-                                        onchange="actualizarModelosNoRentables()">
-                                    <span class="toggle-label">Incluir modelos sin datos de confección</span>
-                                </label>
-                            </div>
-                            <div class="form-group">
-                                <label class="toggle-btn">
-                                    <input type="checkbox" id="no-rentable-solo-activos" checked
-                                        onchange="actualizarModelosNoRentables()">
-                                    <span class="toggle-label">Solo modelos con vestidos en el periodo</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="stats-card">
-                        <h3>Modelos Detectados</h3>
-                        <div id="no-rentable-resultados"></div>
-                    </div>
+                <div id="informe-trabajadora" class="finanzas-subtab-content">
+                    <div id="informe-trabajadora-content"></div>
+                </div>
+                <div id="analisis-proveedores" class="finanzas-subtab-content">
+                    <div id="analisis-proveedores-content"></div>
+                </div>
+                <div id="facturas" class="finanzas-subtab-content">
+                    <div id="facturas-content"></div>
+                </div>
+                <div id="desviaciones-criticas" class="finanzas-subtab-content">
+                    <div id="desviaciones-criticas-content"></div>
+                </div>
+                <div id="tendencias" class="finanzas-subtab-content">
+                    <div id="tendencias-content"></div>
                 </div>
             </div>
         </div>
@@ -5510,6 +5480,7 @@
             container.innerHTML = total === 0 ? '<div class="vestido-card" style="text-align:center;">No hay modelos guardados.</div>' : modelosPaginados.map(modelo => {
                 const promedioHorasReales = calcularPromedioHorasReales(modelo);
                 const horasRealesDisplay = promedioHorasReales ? ` | 📊 ${promedioHorasReales}h reales (promedio)` : '';
+                const historialLink = agregarEnlaceDescargaHistorialModelo(modelo.codigo);
                 
                 return `
                 <div class="vestido-card">
@@ -5521,6 +5492,7 @@
                         <div>
                             <button class="btn btn-editar" onclick="editarModelo(${modelo.id})">Editar</button>
                             <button class="btn btn-eliminar" onclick="eliminarModelo(${modelo.id})">Eliminar</button>
+                            ${historialLink}
                         </div>
                     </div>
                     <div id="form-editar-modelo-${modelo.id}" style="display: none; margin-top: 15px; padding: 15px; background: var(--color-neutro-suave); border-radius: 8px;"></div>
@@ -5609,6 +5581,8 @@
                 
                 // Store manual hours override if different from calculated average
                 const promedioCalculado = calcularPromedioHorasReales(modelo);
+                const oldHorasReales = modelo.horasRealesManual || promedioCalculado;
+                
                 if (horasRealesInput && horasRealesInput !== promedioCalculado) {
                     modelo.horasRealesManual = horasRealesInput;
                 } else if (!horasRealesInput) {
@@ -5617,6 +5591,13 @@
                 } else {
                     // Same as calculated, no need to store manual override
                     delete modelo.horasRealesManual;
+                }
+
+                // Track real hours change if different
+                const newHorasReales = modelo.horasRealesManual || promedioCalculado;
+                if (newHorasReales && newHorasReales !== oldHorasReales) {
+                    const numVestidos = vestidos.filter(v => v.codigoModelo === modelo.codigo && v.estado !== 'en_taller').length;
+                    trackRealHoursChange(modelo, newHorasReales, numVestidos);
                 }
 
                 let vestidosActualizados = 0;
@@ -5660,6 +5641,210 @@
                 filtrarModelos();
             }
         }
+
+        // ===============================================
+        // === REAL HOURS HISTORY SYSTEM =================
+        // ===============================================
+
+        /**
+         * Initialize real hours history storage
+         */
+        function initializeRealHoursHistory() {
+            if (!localStorage.getItem('realHoursHistory')) {
+                localStorage.setItem('realHoursHistory', JSON.stringify({}));
+            }
+        }
+
+        /**
+         * Get real hours history for all models
+         */
+        function getRealHoursHistory() {
+            const historyStr = localStorage.getItem('realHoursHistory');
+            return historyStr ? JSON.parse(historyStr) : {};
+        }
+
+        /**
+         * Save real hours history
+         */
+        function saveRealHoursHistory(history) {
+            localStorage.setItem('realHoursHistory', JSON.stringify(history));
+        }
+
+        /**
+         * Track real hours change for a model
+         * Called when real hours average changes
+         */
+        function trackRealHoursChange(modelo, newRealHours, numVestidos) {
+            const history = getRealHoursHistory();
+            const modelKey = modelo.codigo;
+
+            if (!history[modelKey]) {
+                history[modelKey] = {
+                    modeloCodigo: modelo.codigo,
+                    modeloNombre: modelo.nombre,
+                    cambios: []
+                };
+            }
+
+            // Add new change record
+            const cambio = {
+                fecha: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString(),
+                horasReales: newRealHours,
+                numVestidos: numVestidos,
+                horasRealesDecimal: convertirHorasHHMMaDecimal(newRealHours)
+            };
+
+            // Check if this is actually a change (not the same as last record)
+            const ultimoCambio = history[modelKey].cambios[history[modelKey].cambios.length - 1];
+            if (!ultimoCambio || ultimoCambio.horasReales !== newRealHours) {
+                history[modelKey].cambios.push(cambio);
+                saveRealHoursHistory(history);
+                
+                // Generate PDF for this model (placeholder for now)
+                console.log(`📄 Real hours changed for ${modelo.codigo}: ${newRealHours}h`);
+                return true;
+            }
+            
+            return false;
+        }
+
+        /**
+         * Get real hours history for a specific model
+         */
+        function getModelRealHoursHistory(modeloCodigo) {
+            const history = getRealHoursHistory();
+            return history[modeloCodigo] || null;
+        }
+
+        /**
+         * Generate PDF report for a model's real hours history
+         */
+        function generarPDFHistorialHorasModelo(modeloCodigo) {
+            const modeloHistory = getModelRealHoursHistory(modeloCodigo);
+            if (!modeloHistory || modeloHistory.cambios.length === 0) {
+                alert('⚠️ No hay historial de horas reales para este modelo.');
+                return;
+            }
+
+            const modelo = modelos.find(m => m.codigo === modeloCodigo);
+            if (!modelo) return;
+
+            // Create HTML for PDF (would use jsPDF or similar library)
+            let html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1 style="color: #374151;">Historial de Horas Reales</h1>
+                    <h2 style="color: #6B7280;">${modelo.codigo} - ${modelo.nombre}</h2>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                        <p><strong>Horas Estimadas:</strong> ${modelo.horas.toFixed(2)}h</p>
+                        <p><strong>Precio Base:</strong> ${modelo.precio.toFixed(2)}€</p>
+                        <p><strong>Total de Registros:</strong> ${modeloHistory.cambios.length}</p>
+                    </div>
+
+                    <h3>Evolución Histórica</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #F3F4F6;">
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Fecha</th>
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Horas Reales</th>
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Vestidos Base</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${modeloHistory.cambios.map(c => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB;">${c.fecha}</td>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB; font-weight: bold;">${c.horasReales}h</td>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB;">${c.numVestidos}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // For now, show in a new window (would be replaced with actual PDF generation)
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            
+            alert('📄 Historial generado. En producción, esto generaría un PDF descargable.');
+        }
+
+        /**
+         * Generate cumulative PDF report for all models' real hours history
+         */
+        function generarPDFHistorialAcumulativo() {
+            const history = getRealHoursHistory();
+            const modelosConHistorial = Object.values(history).filter(h => h.cambios.length > 0);
+
+            if (modelosConHistorial.length === 0) {
+                alert('⚠️ No hay historial de horas reales disponible.');
+                return;
+            }
+
+            let html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1 style="color: #374151;">Informe Acumulativo - Historial de Horas Reales</h1>
+                    <p style="color: #6B7280;">Generado: ${new Date().toLocaleString('es-ES')}</p>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                        <p><strong>Total de Modelos con Historial:</strong> ${modelosConHistorial.length}</p>
+                        <p><strong>Total de Registros:</strong> ${modelosConHistorial.reduce((sum, m) => sum + m.cambios.length, 0)}</p>
+                    </div>
+
+                    ${modelosConHistorial.map(modeloHist => {
+                        const modelo = modelos.find(m => m.codigo === modeloHist.modeloCodigo);
+                        return `
+                            <div style="page-break-inside: avoid; margin: 30px 0; padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                                <h2 style="color: #374151;">${modeloHist.modeloCodigo} - ${modeloHist.modeloNombre}</h2>
+                                ${modelo ? `<p><strong>Horas Estimadas:</strong> ${modelo.horas.toFixed(2)}h | <strong>Precio:</strong> ${modelo.precio.toFixed(2)}€</p>` : ''}
+                                
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                    <thead>
+                                        <tr style="background: #E5E7EB;">
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Fecha</th>
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Horas Reales</th>
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Vestidos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${modeloHist.cambios.map(c => `
+                                            <tr>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB;">${c.fecha}</td>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB; font-weight: bold;">${c.horasReales}h</td>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB;">${c.numVestidos}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            
+            alert('📊 Informe acumulativo generado. En producción, esto generaría un PDF descargable.');
+        }
+
+        /**
+         * Add download link for model real hours history in Base de Modelos tab
+         */
+        function agregarEnlaceDescargaHistorialModelo(modeloCodigo) {
+            const history = getModelRealHoursHistory(modeloCodigo);
+            if (history && history.cambios.length > 0) {
+                return `<button class="btn btn-small btn-info" onclick="generarPDFHistorialHorasModelo('${modeloCodigo}')" style="margin-left: 5px;">📊 Historial Horas</button>`;
+            }
+            return '';
+        }
+
+        // Initialize on load
+        initializeRealHoursHistory();
 
         // ===============================================
         // === PLANIFICACIÓN =============================
@@ -11512,7 +11697,7 @@
 
                 document.getElementById('finanzasPeriodo').value = 'mes_actual';
                 handlePeriodChange();
-                openFinanceSubTab('dashboard', document.querySelector('.finanzas-subtab[onclick*="dashboard"]'));
+                openFinanceSubTab('resumen-general', document.querySelector('.finanzas-subtab[onclick*="resumen-general"]'));
             }
         }
 
@@ -11547,10 +11732,14 @@
             const periodoTextoDiv = document.getElementById('finanzas-periodo-texto');
             if (periodoTextoDiv) periodoTextoDiv.innerHTML = `<div style="padding: 12px; background: var(--color-neutro-suave); border-radius: 6px;"><strong>Periodo:</strong> ${texto}</div>`;
             const actions = {
-                dashboard: renderDashboardTab,
-                movimientos: renderMovimientosTab,
-                impuestos: renderImpuestosTab,
-                'finanzas-no-rentable-content': actualizarModelosNoRentables
+                'resumen-general': renderResumenGeneralTab,
+                'eficiencia-modelo': renderEficienciaModeloTab,
+                'rentabilidad': renderRentabilidadTab,
+                'informe-trabajadora': renderInformeTrabajadoraTab,
+                'analisis-proveedores': renderAnalisisProveedoresTab,
+                'facturas': renderFacturasTab,
+                'desviaciones-criticas': renderDesviacionesCriticasTab,
+                'tendencias': renderTendenciasTab
             };
             if (actions[activeTab]) actions[activeTab](fechaInicio, fechaFin);
         }
@@ -13131,6 +13320,861 @@
             } catch (e) {
                 chartContainer.innerHTML = '<p style="text-align: center; color: var(--color-texto-secundario);">Gráfico no disponible.</p>';
             }
+        }
+
+        /**
+         * ===================================================================
+         * NEW FINANCE TAB RENDER FUNCTIONS - REVENUE & PROFITABILITY FOCUSED
+         * ===================================================================
+         */
+
+        /**
+         * 1. Resumen General - General Summary with key revenue and profitability indicators
+         */
+        function renderResumenGeneralTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('resumen-general-content');
+            if (!container) return;
+
+            const data = calcularDatosFinancieros(fechaInicio, fechaFin);
+            const config = obtenerConfiguracionTaller();
+            
+            // Calculate revenue-focused metrics
+            const totalIngresos = data.ingresos.totalConIva;
+            const totalHorasFacturadas = data.horasFacturadas;
+            const beneficioNeto = totalIngresos - data.gastos.totalConIva;
+            const rentabilidadGlobal = totalIngresos > 0 ? (beneficioNeto / totalIngresos) * 100 : 0;
+            const precioHoraMedio = totalHorasFacturadas > 0 ? data.ingresos.base / totalHorasFacturadas : 0;
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>📊 Indicadores Clave de Ingresos y Rentabilidad</h3>
+                    <div class="dashboard-grid">
+                        <div class="kpi-card" style="background: linear-gradient(135deg, #E0F2FE 0%, #BAE6FD 100%); border-left: 4px solid #0EA5E9;">
+                            <div class="kpi-title">💵 Ingresos Totales</div>
+                            <div class="kpi-value" style="color: #0369A1;">${totalIngresos.toFixed(2)}€</div>
+                            <p class="kpi-subvalue">${data.ingresos.count} vestidos facturados</p>
+                            <p class="kpi-subvalue">Base: ${data.ingresos.base.toFixed(2)}€ + IVA</p>
+                        </div>
+                        <div class="kpi-card" style="background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%); border-left: 4px solid #10B981;">
+                            <div class="kpi-title">📈 Beneficio Neto</div>
+                            <div class="kpi-value" style="color: ${beneficioNeto >= 0 ? '#047857' : '#DC2626'}">${beneficioNeto.toFixed(2)}€</div>
+                            <p class="kpi-subvalue">Ingresos - Gastos totales</p>
+                            <p class="kpi-subvalue">Margen: ${rentabilidadGlobal.toFixed(1)}%</p>
+                        </div>
+                        <div class="kpi-card" style="background: linear-gradient(135deg, #E9D5FF 0%, #DDD6FE 100%); border-left: 4px solid #A78BFA;">
+                            <div class="kpi-title">🎯 Rentabilidad Global</div>
+                            <div class="kpi-value" style="color: #7C3AED;">${rentabilidadGlobal.toFixed(1)}%</div>
+                            <p class="kpi-subvalue">Beneficio / Ingresos totales</p>
+                            <p class="kpi-subvalue">${rentabilidadGlobal >= 20 ? '✅ Excelente' : rentabilidadGlobal >= 10 ? '⚠️ Aceptable' : '❌ Mejorar'}</p>
+                        </div>
+                        <div class="kpi-card" style="background: linear-gradient(135deg, #FED7AA 0%, #FDBA74 100%); border-left: 4px solid #F59E0B;">
+                            <div class="kpi-title">💰 Precio/Hora Medio</div>
+                            <div class="kpi-value" style="color: #D97706;">${precioHoraMedio.toFixed(2)}€</div>
+                            <p class="kpi-subvalue">Objetivo: ${config.precioHoraObjetivo}€/h</p>
+                            <p class="kpi-subvalue">${totalHorasFacturadas.toFixed(2)}h facturadas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>⏱️ Resumen de Horas</h3>
+                    <div class="grid-3">
+                        <div>
+                            <p><strong>Horas Facturadas:</strong></p>
+                            <p style="font-size: 1.3em; color: #0369A1;">${totalHorasFacturadas.toFixed(2)}h</p>
+                        </div>
+                        <div>
+                            <p><strong>Horas Disponibles:</strong></p>
+                            <p style="font-size: 1.3em; color: #047857;">${data.capacidadDisponible.toFixed(2)}h</p>
+                        </div>
+                        <div>
+                            <p><strong>Utilización:</strong></p>
+                            <p style="font-size: 1.3em; color: #7C3AED;">${data.capacidadUsadaPct.toFixed(1)}%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h3>🏢 Desglose por Proveedor</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Proveedor</th>
+                                <th>Vestidos</th>
+                                <th>Ingresos</th>
+                                <th>Horas</th>
+                                <th>€/Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: var(--color-pronovias);">
+                                <td><strong>Pronovias</strong></td>
+                                <td>${data.porProveedor.pronovias.cantidad}</td>
+                                <td>${data.porProveedor.pronovias.importe.toFixed(2)}€</td>
+                                <td>${data.porProveedor.pronovias.horas.toFixed(2)}h</td>
+                                <td>${data.porProveedor.pronovias.precioHoraMedio.toFixed(2)}€</td>
+                            </tr>
+                            <tr style="background: var(--color-rosa_clara);">
+                                <td><strong>Rosa Clará</strong></td>
+                                <td>${data.porProveedor.rosa_clara.cantidad}</td>
+                                <td>${data.porProveedor.rosa_clara.importe.toFixed(2)}€</td>
+                                <td>${data.porProveedor.rosa_clara.horas.toFixed(2)}h</td>
+                                <td>${data.porProveedor.rosa_clara.precioHoraMedio.toFixed(2)}€</td>
+                            </tr>
+                            <tr style="background: var(--color-traka);">
+                                <td><strong>Traka</strong></td>
+                                <td>${data.porProveedor.traka.cantidad}</td>
+                                <td>${data.porProveedor.traka.importe.toFixed(2)}€</td>
+                                <td>${data.porProveedor.traka.horas.toFixed(2)}h</td>
+                                <td>${data.porProveedor.traka.precioHoraMedio.toFixed(2)}€</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('resumen-general')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 2. Eficiencia por Modelo - Compare estimated vs real hours
+         */
+        function renderEficienciaModeloTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('eficiencia-modelo-content');
+            if (!container) return;
+
+            // Get all invoiced dresses in period
+            const vestidosPeriodo = vestidos.filter(v => 
+                v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin
+            );
+
+            // Group by model
+            const modelosMap = {};
+            vestidosPeriodo.forEach(v => {
+                const key = v.codigoModelo;
+                if (!modelosMap[key]) {
+                    modelosMap[key] = {
+                        codigo: v.codigoModelo,
+                        nombre: v.nombreModelo,
+                        proveedor: v.proveedor,
+                        cantidad: 0,
+                        horasEstimadasTotal: 0,
+                        horasRealesTotal: 0
+                    };
+                }
+                modelosMap[key].cantidad++;
+                modelosMap[key].horasEstimadasTotal += v.horasEstimadas || 0;
+                modelosMap[key].horasRealesTotal += obtenerHorasRealesVestido(v) || v.horasEstimadas || 0;
+            });
+
+            // Calculate efficiency
+            const modelosArray = Object.values(modelosMap).map(m => {
+                const horasEstimadasMedia = m.cantidad > 0 ? m.horasEstimadasTotal / m.cantidad : 0;
+                const horasRealesMedia = m.cantidad > 0 ? m.horasRealesTotal / m.cantidad : 0;
+                const desviacion = horasRealesMedia - horasEstimadasMedia;
+                const desviacionPct = horasEstimadasMedia > 0 ? (desviacion / horasEstimadasMedia) * 100 : 0;
+                const eficiencia = horasRealesMedia > 0 ? (horasEstimadasMedia / horasRealesMedia) * 100 : 100;
+                
+                return {
+                    ...m,
+                    horasEstimadasMedia,
+                    horasRealesMedia,
+                    desviacion,
+                    desviacionPct,
+                    eficiencia
+                };
+            }).sort((a, b) => Math.abs(b.desviacionPct) - Math.abs(a.desviacionPct));
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>⏱️ Comparativa Horas Estimadas vs Horas Reales</h3>
+                    <p style="color: var(--color-texto-secundario);">Análisis de eficiencia por modelo basado en vestidos facturados en el periodo seleccionado.</p>
+                </div>
+
+                <div class="stats-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Proveedor</th>
+                                <th>Cantidad</th>
+                                <th>H. Estimadas (Media)</th>
+                                <th>H. Reales (Media)</th>
+                                <th>Desviación</th>
+                                <th>Eficiencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${modelosArray.length > 0 ? modelosArray.map(m => `
+                                <tr>
+                                    <td><strong>${m.codigo}</strong></td>
+                                    <td>${m.nombre}</td>
+                                    <td><span style="padding: 3px 8px; border-radius: 4px; font-size: 12px; background: var(--color-${m.proveedor}); color: var(--color-texto-principal);">${m.proveedor}</span></td>
+                                    <td>${m.cantidad}</td>
+                                    <td>${m.horasEstimadasMedia.toFixed(2)}h</td>
+                                    <td>${m.horasRealesMedia.toFixed(2)}h</td>
+                                    <td style="color: ${m.desviacion > 0 ? 'var(--color-error)' : 'var(--color-exito)'};">
+                                        ${m.desviacion > 0 ? '+' : ''}${m.desviacion.toFixed(2)}h (${m.desviacionPct.toFixed(1)}%)
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; height: 8px; background: var(--color-neutro-suave); border-radius: 4px; overflow: hidden;">
+                                                <div style="width: ${Math.min(m.eficiencia, 100)}%; height: 100%; background: ${m.eficiencia >= 90 ? '#10B981' : m.eficiencia >= 70 ? '#F59E0B' : '#EF4444'};"></div>
+                                            </div>
+                                            <span style="min-width: 60px; text-align: right; color: ${m.eficiencia >= 90 ? '#047857' : m.eficiencia >= 70 ? '#D97706' : '#DC2626'};">${m.eficiencia.toFixed(1)}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--color-texto-secundario);">No hay datos disponibles para el periodo seleccionado</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('eficiencia-modelo')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 3. Rentabilidad - Revenue vs hours worked with breakdowns
+         */
+        function renderRentabilidadTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('rentabilidad-content');
+            if (!container) return;
+
+            const data = calcularDatosFinancieros(fechaInicio, fechaFin);
+            const config = obtenerConfiguracionTaller();
+
+            // Calculate rentability per model
+            const vestidosPeriodo = vestidos.filter(v => 
+                v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin
+            );
+
+            const modelosMap = {};
+            vestidosPeriodo.forEach(v => {
+                const key = v.codigoModelo;
+                if (!modelosMap[key]) {
+                    modelosMap[key] = {
+                        codigo: v.codigoModelo,
+                        nombre: v.nombreModelo,
+                        proveedor: v.proveedor,
+                        cantidad: 0,
+                        ingresos: 0,
+                        horas: 0
+                    };
+                }
+                modelosMap[key].cantidad++;
+                modelosMap[key].ingresos += v.precioBase;
+                modelosMap[key].horas += obtenerHorasRealesVestido(v) || v.horasEstimadas || 0;
+            });
+
+            const modelosArray = Object.values(modelosMap).map(m => ({
+                ...m,
+                precioHora: m.horas > 0 ? m.ingresos / m.horas : 0,
+                rentabilidad: m.horas > 0 ? ((m.ingresos / m.horas) - config.precioHoraObjetivo) : 0
+            })).sort((a, b) => b.precioHora - a.precioHora);
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>💰 Análisis de Rentabilidad</h3>
+                    <p style="color: var(--color-texto-secundario);">Relación entre ingresos generados y horas trabajadas por modelo.</p>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>📊 Resumen General</h4>
+                    <div class="grid-3">
+                        <div style="padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                            <p><strong>Ingresos Totales:</strong></p>
+                            <p style="font-size: 1.3em; color: #0369A1;">${data.ingresos.base.toFixed(2)}€</p>
+                        </div>
+                        <div style="padding: 15px; background: #D1FAE5; border-radius: 8px;">
+                            <p><strong>Horas Facturadas:</strong></p>
+                            <p style="font-size: 1.3em; color: #047857;">${data.horasFacturadas.toFixed(2)}h</p>
+                        </div>
+                        <div style="padding: 15px; background: #E9D5FF; border-radius: 8px;">
+                            <p><strong>€/Hora Promedio:</strong></p>
+                            <p style="font-size: 1.3em; color: #7C3AED;">${data.precioMedioPorHora.toFixed(2)}€</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h4>📈 Rentabilidad por Modelo</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Proveedor</th>
+                                <th>Cantidad</th>
+                                <th>Ingresos</th>
+                                <th>Horas</th>
+                                <th>€/Hora</th>
+                                <th>Rentabilidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${modelosArray.length > 0 ? modelosArray.map(m => `
+                                <tr>
+                                    <td><strong>${m.codigo}</strong></td>
+                                    <td>${m.nombre}</td>
+                                    <td><span style="padding: 3px 8px; border-radius: 4px; font-size: 12px; background: var(--color-${m.proveedor});">${m.proveedor}</span></td>
+                                    <td>${m.cantidad}</td>
+                                    <td>${m.ingresos.toFixed(2)}€</td>
+                                    <td>${m.horas.toFixed(2)}h</td>
+                                    <td style="font-weight: bold; color: ${m.precioHora >= config.precioHoraObjetivo ? '#047857' : '#DC2626'};">${m.precioHora.toFixed(2)}€</td>
+                                    <td style="color: ${m.rentabilidad >= 0 ? '#047857' : '#DC2626'};">
+                                        ${m.rentabilidad >= 0 ? '✅' : '❌'} ${m.rentabilidad >= 0 ? '+' : ''}${m.rentabilidad.toFixed(2)}€/h
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--color-texto-secundario);">No hay datos disponibles</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('rentabilidad')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 4. Informe por Trabajadora - Hours and revenue per worker
+         */
+        function renderInformeTrabajadoraTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('informe-trabajadora-content');
+            if (!container) return;
+
+            // Get worker data from localStorage (horasConfeccion structure)
+            const trabajadorasData = {};
+            const vestidosPeriodo = vestidos.filter(v => 
+                v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin
+            );
+
+            // Calculate hours and revenue per worker
+            vestidosPeriodo.forEach(v => {
+                const horasData = horasConfeccion[v.id];
+                if (horasData && horasData.trabajadoras) {
+                    const horasVestido = obtenerHorasRealesVestido(v) || v.horasEstimadas || 0;
+                    const ingresosVestido = v.precioBase;
+                    const numTrabajadoras = horasData.trabajadoras.length || 1;
+                    const horasPorTrabajadora = horasVestido / numTrabajadoras;
+                    const ingresosPorTrabajadora = ingresosVestido / numTrabajadoras;
+
+                    horasData.trabajadoras.forEach(trabajadoraId => {
+                        const trabajadora = trabajadoras.find(t => t.id === trabajadoraId);
+                        if (trabajadora) {
+                            if (!trabajadorasData[trabajadoraId]) {
+                                trabajadorasData[trabajadoraId] = {
+                                    id: trabajadoraId,
+                                    nombre: trabajadora.nombre,
+                                    horas: 0,
+                                    ingresos: 0,
+                                    vestidos: 0
+                                };
+                            }
+                            trabajadorasData[trabajadoraId].horas += horasPorTrabajadora;
+                            trabajadorasData[trabajadoraId].ingresos += ingresosPorTrabajadora;
+                            trabajadorasData[trabajadoraId].vestidos++;
+                        }
+                    });
+                }
+            });
+
+            const trabajadorasArray = Object.values(trabajadorasData).map(t => ({
+                ...t,
+                precioHora: t.horas > 0 ? t.ingresos / t.horas : 0
+            })).sort((a, b) => b.ingresos - a.ingresos);
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>👷 Informe por Trabajadora</h3>
+                    <p style="color: var(--color-texto-secundario);">Desglose de horas trabajadas e ingresos generados por cada trabajadora en el periodo seleccionado.</p>
+                </div>
+
+                <div class="stats-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Trabajadora</th>
+                                <th>Vestidos Trabajados</th>
+                                <th>Horas Totales</th>
+                                <th>Ingresos Generados</th>
+                                <th>€/Hora</th>
+                                <th>Rendimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${trabajadorasArray.length > 0 ? trabajadorasArray.map(t => `
+                                <tr>
+                                    <td><strong>${t.nombre}</strong></td>
+                                    <td>${t.vestidos}</td>
+                                    <td>${t.horas.toFixed(2)}h</td>
+                                    <td>${t.ingresos.toFixed(2)}€</td>
+                                    <td style="font-weight: bold; color: #0369A1;">${t.precioHora.toFixed(2)}€</td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <div style="flex: 1; height: 8px; background: var(--color-neutro-suave); border-radius: 4px; overflow: hidden;">
+                                                <div style="width: ${Math.min((t.precioHora / 20) * 100, 100)}%; height: 100%; background: #10B981;"></div>
+                                            </div>
+                                            <span style="min-width: 80px; text-align: right;">${((t.precioHora / 20) * 100).toFixed(0)}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--color-texto-secundario);">No hay datos disponibles para el periodo seleccionado</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('informe-trabajadora')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 5. Análisis de Proveedores - Hours and revenue by provider
+         */
+        function renderAnalisisProveedoresTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('analisis-proveedores-content');
+            if (!container) return;
+
+            const data = calcularDatosFinancieros(fechaInicio, fechaFin);
+            const config = obtenerConfiguracionTaller();
+
+            const proveedoresData = [
+                { nombre: 'Pronovias', key: 'pronovias', color: '#E0F2FE', ...data.porProveedor.pronovias },
+                { nombre: 'Rosa Clará', key: 'rosa_clara', color: '#FCE7F3', ...data.porProveedor.rosa_clara },
+                { nombre: 'Traka', key: 'traka', color: '#DCFCE7', ...data.porProveedor.traka }
+            ];
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>🏢 Análisis de Proveedores</h3>
+                    <p style="color: var(--color-texto-secundario);">Relación entre horas estimadas y reales por proveedor, e ingresos generados.</p>
+                </div>
+
+                ${proveedoresData.map(p => `
+                    <div class="stats-card" style="margin-bottom: 20px; background: ${p.color};">
+                        <h4 style="margin-bottom: 15px;">${p.nombre}</h4>
+                        <div class="grid-3">
+                            <div>
+                                <p><strong>📦 Vestidos Facturados:</strong></p>
+                                <p style="font-size: 1.3em;">${p.cantidad}</p>
+                            </div>
+                            <div>
+                                <p><strong>💶 Ingresos:</strong></p>
+                                <p style="font-size: 1.3em; color: #047857;">${p.importe.toFixed(2)}€</p>
+                            </div>
+                            <div>
+                                <p><strong>⏱️ Horas Facturadas:</strong></p>
+                                <p style="font-size: 1.3em; color: #0369A1;">${p.horas.toFixed(2)}h</p>
+                            </div>
+                        </div>
+                        <div class="grid-3" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(0,0,0,0.1);">
+                            <div>
+                                <p><strong>💰 €/Hora Promedio:</strong></p>
+                                <p style="font-size: 1.3em; font-weight: bold; color: ${p.precioHoraMedio >= config.precioHoraObjetivo ? '#047857' : '#DC2626'};">${p.precioHoraMedio.toFixed(2)}€</p>
+                            </div>
+                            <div>
+                                <p><strong>📤 Enviados en Periodo:</strong></p>
+                                <p style="font-size: 1.3em;">${p.enviadosPeriodo}</p>
+                            </div>
+                            <div>
+                                <p><strong>💳 Pagados en Periodo:</strong></p>
+                                <p style="font-size: 1.3em;">${p.pagadosPeriodo}</p>
+                            </div>
+                        </div>
+                        <div class="grid-2" style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(0,0,0,0.1);">
+                            <div>
+                                <p><strong>⚠️ Devueltos (Tara Taller):</strong></p>
+                                <p style="font-size: 1.2em; color: #DC2626;">${p.tarasTallerPeriodo}</p>
+                            </div>
+                            <div>
+                                <p><strong>⚠️ Devueltos (Tara Empresa):</strong></p>
+                                <p style="font-size: 1.2em; color: #F59E0B;">${p.tarasEmpresaPeriodo}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('analisis-proveedores')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 6. Facturas - Invoice summaries showing revenue
+         */
+        function renderFacturasTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('facturas-content');
+            if (!container) return;
+
+            // Get invoiced dresses
+            const vestidosFacturados = vestidos.filter(v => 
+                v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin
+            ).sort((a, b) => b.fechaFactura.localeCompare(a.fechaFactura));
+
+            // Calculate totals
+            const totalIngresos = vestidosFacturados.reduce((sum, v) => sum + v.precioBase, 0);
+            const totalIVA = totalIngresos * 0.21;
+            const totalConIVA = totalIngresos + totalIVA;
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>📄 Resumen de Facturas</h3>
+                    <p style="color: var(--color-texto-secundario);">Vestidos facturados en el periodo seleccionado con ingresos asociados.</p>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>💵 Totales del Periodo</h4>
+                    <div class="grid-3">
+                        <div style="padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                            <p><strong>Ingresos (Base):</strong></p>
+                            <p style="font-size: 1.3em; color: #0369A1;">${totalIngresos.toFixed(2)}€</p>
+                        </div>
+                        <div style="padding: 15px; background: #DCFCE7; border-radius: 8px;">
+                            <p><strong>IVA (21%):</strong></p>
+                            <p style="font-size: 1.3em; color: #047857;">${totalIVA.toFixed(2)}€</p>
+                        </div>
+                        <div style="padding: 15px; background: #E9D5FF; border-radius: 8px;">
+                            <p><strong>Total con IVA:</strong></p>
+                            <p style="font-size: 1.3em; color: #7C3AED; font-weight: bold;">${totalConIVA.toFixed(2)}€</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card">
+                    <h4>📋 Detalle de Facturas (${vestidosFacturados.length} vestidos)</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha Factura</th>
+                                <th>Código</th>
+                                <th>Modelo</th>
+                                <th>Proveedor</th>
+                                <th>Lote</th>
+                                <th>Base</th>
+                                <th>IVA</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${vestidosFacturados.length > 0 ? vestidosFacturados.map(v => {
+                                const iva = v.precioBase * 0.21;
+                                const total = v.precioBase + iva;
+                                return `
+                                <tr>
+                                    <td>${v.fechaFactura}</td>
+                                    <td><strong>${v.codigo}</strong></td>
+                                    <td>${v.nombreModelo}</td>
+                                    <td><span style="padding: 3px 8px; border-radius: 4px; font-size: 12px; background: var(--color-${v.proveedor});">${v.proveedor}</span></td>
+                                    <td>${v.lote || '-'}</td>
+                                    <td>${v.precioBase.toFixed(2)}€</td>
+                                    <td>${iva.toFixed(2)}€</td>
+                                    <td style="font-weight: bold;">${total.toFixed(2)}€</td>
+                                </tr>
+                            `}).join('') : '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--color-texto-secundario);">No hay facturas en el periodo seleccionado</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('facturas')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 7. Desviaciones Críticas - Models exceeding deviation thresholds
+         */
+        function renderDesviacionesCriticasTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('desviaciones-criticas-content');
+            if (!container) return;
+
+            const umbralDesviacion = 20; // 20% deviation threshold
+
+            // Get dresses with critical deviations
+            const vestidosPeriodo = vestidos.filter(v => 
+                v.fechaFactura && v.fechaFactura >= fechaInicio && v.fechaFactura <= fechaFin
+            );
+
+            // Group by model and calculate deviations
+            const modelosMap = {};
+            vestidosPeriodo.forEach(v => {
+                const key = v.codigoModelo;
+                const horasEstimadas = v.horasEstimadas || 0;
+                const horasReales = obtenerHorasRealesVestido(v) || horasEstimadas;
+                const desviacion = horasReales - horasEstimadas;
+                const desviacionPct = horasEstimadas > 0 ? (desviacion / horasEstimadas) * 100 : 0;
+
+                if (Math.abs(desviacionPct) >= umbralDesviacion) {
+                    if (!modelosMap[key]) {
+                        modelosMap[key] = {
+                            codigo: v.codigoModelo,
+                            nombre: v.nombreModelo,
+                            proveedor: v.proveedor,
+                            casos: [],
+                            desviacionPromedioHoras: 0,
+                            desviacionPromedioPct: 0
+                        };
+                    }
+                    modelosMap[key].casos.push({
+                        vestido: v,
+                        horasEstimadas,
+                        horasReales,
+                        desviacion,
+                        desviacionPct
+                    });
+                }
+            });
+
+            // Calculate averages
+            const modelosArray = Object.values(modelosMap).map(m => {
+                const totalDesviacionHoras = m.casos.reduce((sum, c) => sum + c.desviacion, 0);
+                const totalDesviacionPct = m.casos.reduce((sum, c) => sum + c.desviacionPct, 0);
+                return {
+                    ...m,
+                    desviacionPromedioHoras: totalDesviacionHoras / m.casos.length,
+                    desviacionPromedioPct: totalDesviacionPct / m.casos.length,
+                    cantidadCasos: m.casos.length
+                };
+            }).sort((a, b) => Math.abs(b.desviacionPromedioPct) - Math.abs(a.desviacionPromedioPct));
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>⚠️ Desviaciones Críticas</h3>
+                    <p style="color: var(--color-texto-secundario);">Modelos con desviaciones superiores al ${umbralDesviacion}% entre horas estimadas y reales.</p>
+                </div>
+
+                ${modelosArray.length > 0 ? `
+                    <div class="stats-card">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Proveedor</th>
+                                    <th>Casos</th>
+                                    <th>Desviación Promedio</th>
+                                    <th>% Desviación</th>
+                                    <th>Criticidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${modelosArray.map(m => `
+                                    <tr>
+                                        <td><strong>${m.codigo}</strong></td>
+                                        <td>${m.nombre}</td>
+                                        <td><span style="padding: 3px 8px; border-radius: 4px; font-size: 12px; background: var(--color-${m.proveedor});">${m.proveedor}</span></td>
+                                        <td>${m.cantidadCasos}</td>
+                                        <td style="color: ${m.desviacionPromedioHoras > 0 ? '#DC2626' : '#047857'};">
+                                            ${m.desviacionPromedioHoras > 0 ? '+' : ''}${m.desviacionPromedioHoras.toFixed(2)}h
+                                        </td>
+                                        <td style="font-weight: bold; color: ${m.desviacionPromedioPct > 0 ? '#DC2626' : '#047857'};">
+                                            ${m.desviacionPromedioPct > 0 ? '+' : ''}${m.desviacionPromedioPct.toFixed(1)}%
+                                        </td>
+                                        <td>
+                                            <span style="padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; ${Math.abs(m.desviacionPromedioPct) >= 50 ? 'background: #FEE2E2; color: #DC2626;' : Math.abs(m.desviacionPromedioPct) >= 30 ? 'background: #FEF3C7; color: #D97706;' : 'background: #E0F2FE; color: #0369A1;'}">
+                                                ${Math.abs(m.desviacionPromedioPct) >= 50 ? '🔴 Crítico' : Math.abs(m.desviacionPromedioPct) >= 30 ? '🟠 Alto' : '🟡 Moderado'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : `
+                    <div class="stats-card">
+                        <p style="text-align: center; padding: 40px; color: var(--color-exito); font-size: 1.2em;">
+                            ✅ No se detectaron desviaciones críticas en el periodo seleccionado
+                        </p>
+                    </div>
+                `}
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('desviaciones-criticas')">📄 Exportar PDF</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 8. Tendencias - Historical charts of revenue and profitability
+         */
+        function renderTendenciasTab(fechaInicio, fechaFin) {
+            const container = document.getElementById('tendencias-content');
+            if (!container) return;
+
+            // Calculate monthly trends for the last 12 months
+            const hoy = new Date();
+            const mesesData = [];
+            
+            for (let i = 11; i >= 0; i--) {
+                const fecha = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+                const mesInicio = new Date(fecha.getFullYear(), fecha.getMonth(), 1).toISOString().split('T')[0];
+                const mesFin = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0).toISOString().split('T')[0];
+                
+                const data = calcularDatosFinancieros(mesInicio, mesFin);
+                const beneficio = data.ingresos.totalConIva - data.gastos.totalConIva;
+                const rentabilidad = data.ingresos.totalConIva > 0 ? (beneficio / data.ingresos.totalConIva) * 100 : 0;
+                
+                mesesData.push({
+                    mes: fecha.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' }),
+                    ingresos: data.ingresos.totalConIva,
+                    beneficio: beneficio,
+                    rentabilidad: rentabilidad,
+                    horas: data.horasFacturadas
+                });
+            }
+
+            let html = `
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h3>📈 Tendencias Históricas</h3>
+                    <p style="color: var(--color-texto-secundario);">Gráficos de evolución de ingresos, beneficios y rentabilidad de los últimos 12 meses.</p>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>💵 Evolución de Ingresos</h4>
+                    <div id="chart-ingresos" style="width: 100%; height: 300px;"></div>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>📊 Evolución de Beneficios</h4>
+                    <div id="chart-beneficios" style="width: 100%; height: 300px;"></div>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>📈 Evolución de Rentabilidad (%)</h4>
+                    <div id="chart-rentabilidad" style="width: 100%; height: 300px;"></div>
+                </div>
+
+                <div class="stats-card" style="margin-bottom: 20px;">
+                    <h4>⏱️ Evolución de Horas Facturadas</h4>
+                    <div id="chart-horas" style="width: 100%; height: 300px;"></div>
+                </div>
+
+                <div class="stats-card" style="margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarInformePDF('tendencias')">📄 Exportar PDF</button>
+                    <button class="btn btn-info" onclick="exportarInformeAcumulativoGeneral()">📊 Informe Acumulativo General</button>
+                </div>
+            `;
+
+            container.innerHTML = html;
+
+            // Render charts using simple canvas-based rendering
+            renderTrendChart('chart-ingresos', mesesData, 'ingresos', '#0EA5E9');
+            renderTrendChart('chart-beneficios', mesesData, 'beneficio', '#10B981');
+            renderTrendChart('chart-rentabilidad', mesesData, 'rentabilidad', '#A78BFA');
+            renderTrendChart('chart-horas', mesesData, 'horas', '#F59E0B');
+        }
+
+        /**
+         * Helper function to render a simple trend chart using canvas
+         */
+        function renderTrendChart(containerId, data, field, color) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = container.offsetWidth || 800;
+            canvas.height = 300;
+            container.appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            const padding = 50;
+            const chartWidth = canvas.width - 2 * padding;
+            const chartHeight = canvas.height - 2 * padding;
+
+            // Find min and max values
+            const values = data.map(d => d[field]);
+            const maxValue = Math.max(...values, 0);
+            const minValue = Math.min(...values, 0);
+            const range = maxValue - minValue;
+
+            // Draw axes
+            ctx.strokeStyle = '#E0E0E0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+
+            // Draw data points and lines
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            data.forEach((d, i) => {
+                const x = padding + (i / (data.length - 1)) * chartWidth;
+                const y = canvas.height - padding - ((d[field] - minValue) / range) * chartHeight;
+
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+
+                // Draw point
+                ctx.fillRect(x - 3, y - 3, 6, 6);
+            });
+
+            ctx.stroke();
+
+            // Draw labels
+            ctx.fillStyle = '#6B7280';
+            ctx.font = '12px Inter';
+            ctx.textAlign = 'center';
+            data.forEach((d, i) => {
+                const x = padding + (i / (data.length - 1)) * chartWidth;
+                if (i % 2 === 0) { // Show every other label to avoid crowding
+                    ctx.fillText(d.mes, x, canvas.height - padding + 20);
+                }
+            });
+
+            // Draw value labels
+            ctx.textAlign = 'right';
+            const numLabels = 5;
+            for (let i = 0; i <= numLabels; i++) {
+                const value = minValue + (range / numLabels) * i;
+                const y = canvas.height - padding - (i / numLabels) * chartHeight;
+                ctx.fillText(value.toFixed(1), padding - 10, y + 4);
+            }
+        }
+
+        /**
+         * Export PDF for specific subtab
+         */
+        function exportarInformePDF(subtab) {
+            alert(`📄 Generando PDF para ${subtab}...\n\nEsta funcionalidad generará un PDF profesional con los datos mostrados en pantalla.`);
+            // TODO: Implement actual PDF generation using a library like jsPDF
+        }
+
+        /**
+         * Export cumulative general report
+         */
+        function exportarInformeAcumulativoGeneral() {
+            generarPDFHistorialAcumulativo();
         }
 
         /**
