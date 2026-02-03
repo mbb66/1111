@@ -572,17 +572,14 @@
         }
 
         .calendario-mensual {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 4px;
-            padding: 4px;
-            background: var(--color-borde);
-            border: 1px solid var(--color-borde);
-            border-radius: 0 0 12px 12px;
-            overflow: hidden;
-            box-shadow: var(--sombra-media);
+            display: block;
             width: 100%;
             max-width: 100%;
+            background: var(--color-borde);
+            border: 1px solid var(--color-borde);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--sombra-media);
         }
 
         .calendario-grid-body {
@@ -592,6 +589,7 @@
             width: 100%;
             min-height: 600px;
             padding: 4px;
+            background: var(--color-borde);
         }
 
         .dia-calendario {
@@ -3261,35 +3259,6 @@
                         </div>
                         <button class="btn btn-success" onclick="aplicarEstadoBulk()">✅ Aplicar</button>
                     </div>
-                    <div class="stats-card">
-                        <h4>Recurrencia Semanal</h4>
-                        <div class="form-group">
-                            <label>Día de la semana:</label>
-                            <select id="recurrencia-dia">
-                                <option value="1">Lunes</option>
-                                <option value="2">Martes</option>
-                                <option value="3">Miércoles</option>
-                                <option value="4">Jueves</option>
-                                <option value="5">Viernes</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Modo:</label>
-                            <select id="recurrencia-modo" onchange="toggleRecurrenciaCampos()">
-                                <option value="count">Número de repeticiones</option>
-                                <option value="until">Hasta fecha</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="recurrencia-count-group">
-                            <label>Número de repeticiones:</label>
-                            <input type="number" id="recurrencia-count" min="1" max="52" value="4">
-                        </div>
-                        <div class="form-group" id="recurrencia-until-group" style="display:none;">
-                            <label>Hasta fecha:</label>
-                            <input type="date" id="recurrencia-until">
-                        </div>
-                        <button class="btn btn-info" onclick="aplicarRecurrencia()">🔄 Aplicar Recurrencia</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -4886,9 +4855,22 @@
                 const totalConIva = totalBase * 1.21;
                 
                 // Calculate total real and estimated hours
+                const gruposProcesados = new Set(); // Track processed groups
                 const totalHorasReales = lista.reduce((sum, v) => {
                     const horas = horasConfeccion[v.id];
-                    return sum + (horas && horas.horasTotales ? horas.horasTotales : 0);
+                    if (!horas || !horas.horasTotales) return sum;
+                    
+                    // Check if dress is in a group
+                    const grupoId = horas.grupoId;
+                    if (grupoId) {
+                        // Only count once per group
+                        if (gruposProcesados.has(grupoId)) {
+                            return sum; // Skip - already counted this group
+                        }
+                        gruposProcesados.add(grupoId);
+                    }
+                    
+                    return sum + horas.horasTotales;
                 }, 0);
                 
                 const totalHorasEstimadas = lista.reduce((sum, v) => {
@@ -4918,7 +4900,22 @@
                     <div class="grupo-detalles">
                         <ul>${lista.map(v => {
                             const horas = horasConfeccion[v.id];
-                            const horasReales = horas && horas.horasTotales ? horas.horasTotales.toFixed(2) : '0.00';
+                            let horasReales = '0.00';
+                            
+                            // Check if dress is in a group and divide hours accordingly
+                            if (horas && horas.horasTotales) {
+                                const grupoId = horas.grupoId;
+                                const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                                
+                                if (grupo) {
+                                    // Divide hours by original group size
+                                    const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
+                                    horasReales = (horas.horasTotales / grupoSizeOriginal).toFixed(2);
+                                } else {
+                                    horasReales = horas.horasTotales.toFixed(2);
+                                }
+                            }
+                            
                             const modelo = modelos.find(m => m.codigo === v.codigoModelo);
                             const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
                             return `<li>${v.nombreModelo} (Lote: ${v.lote || 'N/A'}${v.proveedor === 'pronovias' && v.numeroOF ? `, OF: ${v.numeroOF}` : ''}${v.proveedor === 'rosa_clara' && v.numeroSerie ? `, Serie: ${v.numeroSerie}` : ''}) - ${v.precioBase.toFixed(2)}€ | ⏱️ ${horasReales}h / ${horasEstimadas}h est.</li>`;
@@ -14599,12 +14596,14 @@
             `).join('');
         }
 
+        /* REMOVED: Weekly recurrence feature
         // Toggle campos de recurrencia
         function toggleRecurrenciaCampos() {
             const modo = document.getElementById('recurrencia-modo').value;
             document.getElementById('recurrencia-count-group').style.display = modo === 'count' ? 'block' : 'none';
             document.getElementById('recurrencia-until-group').style.display = modo === 'until' ? 'block' : 'none';
         }
+        */
 
         // Aplicar estado en bulk
         function aplicarEstadoBulk() {
@@ -14662,6 +14661,7 @@
             alert(`✅ Se han aplicado ${count} registros.`);
         }
 
+        /* REMOVED: Weekly recurrence feature
         // Aplicar recurrencia
         function aplicarRecurrencia() {
             const checkboxes = document.querySelectorAll('#bulk-workers-selection input:checked');
@@ -14730,6 +14730,7 @@
             cargarSaldosVacaciones();
             alert(`✅ Se han aplicado ${count} registros con recurrencia.`);
         }
+        */
 
         // ============ GESTIÓN DE FESTIVOS ============
 
