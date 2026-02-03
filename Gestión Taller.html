@@ -4964,7 +4964,8 @@
             let textoTabular = `Albarán ${numeroAlbaran}\n`;
             
             // Build data rows with space separation for table-like alignment
-            vestidosDelAlbaran.forEach(v => {
+            // First pass: collect all rows to calculate column widths
+            const rows = vestidosDelAlbaran.map(v => {
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : '';
                 
@@ -4989,7 +4990,7 @@
                 const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
                 
                 // Format: Modelo Talla Código Lote OF/Serie Precio HorasReales HorasEstimadas
-                const row = [
+                return [
                     v.nombreModelo,
                     v.talla || '',
                     v.codigoModelo,
@@ -4999,7 +5000,21 @@
                     horasReales + 'h',
                     horasEstimadas + 'h'
                 ];
-                textoTabular += row.join(' ') + '\n';
+            });
+            
+            // Calculate maximum width for each column
+            const columnWidths = [];
+            for (let colIndex = 0; colIndex < 8; colIndex++) {
+                columnWidths[colIndex] = Math.max(...rows.map(row => row[colIndex].length));
+            }
+            
+            // Second pass: format rows with proper padding
+            rows.forEach(row => {
+                const paddedRow = row.map((cell, index) => {
+                    // Pad each cell to match the column width
+                    return cell.padEnd(columnWidths[index], ' ');
+                });
+                textoTabular += paddedRow.join('   ') + '\n';
             });
 
             navigator.clipboard.writeText(textoTabular).then(() => {
