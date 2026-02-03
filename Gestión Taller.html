@@ -5480,6 +5480,7 @@
             container.innerHTML = total === 0 ? '<div class="vestido-card" style="text-align:center;">No hay modelos guardados.</div>' : modelosPaginados.map(modelo => {
                 const promedioHorasReales = calcularPromedioHorasReales(modelo);
                 const horasRealesDisplay = promedioHorasReales ? ` | 📊 ${promedioHorasReales}h reales (promedio)` : '';
+                const historialLink = agregarEnlaceDescargaHistorialModelo(modelo.codigo);
                 
                 return `
                 <div class="vestido-card">
@@ -5491,6 +5492,7 @@
                         <div>
                             <button class="btn btn-editar" onclick="editarModelo(${modelo.id})">Editar</button>
                             <button class="btn btn-eliminar" onclick="eliminarModelo(${modelo.id})">Eliminar</button>
+                            ${historialLink}
                         </div>
                     </div>
                     <div id="form-editar-modelo-${modelo.id}" style="display: none; margin-top: 15px; padding: 15px; background: var(--color-neutro-suave); border-radius: 8px;"></div>
@@ -5579,6 +5581,8 @@
                 
                 // Store manual hours override if different from calculated average
                 const promedioCalculado = calcularPromedioHorasReales(modelo);
+                const oldHorasReales = modelo.horasRealesManual || promedioCalculado;
+                
                 if (horasRealesInput && horasRealesInput !== promedioCalculado) {
                     modelo.horasRealesManual = horasRealesInput;
                 } else if (!horasRealesInput) {
@@ -5587,6 +5591,13 @@
                 } else {
                     // Same as calculated, no need to store manual override
                     delete modelo.horasRealesManual;
+                }
+
+                // Track real hours change if different
+                const newHorasReales = modelo.horasRealesManual || promedioCalculado;
+                if (newHorasReales && newHorasReales !== oldHorasReales) {
+                    const numVestidos = vestidos.filter(v => v.codigoModelo === modelo.codigo && v.estado !== 'en_taller').length;
+                    trackRealHoursChange(modelo, newHorasReales, numVestidos);
                 }
 
                 let vestidosActualizados = 0;
@@ -5630,6 +5641,210 @@
                 filtrarModelos();
             }
         }
+
+        // ===============================================
+        // === REAL HOURS HISTORY SYSTEM =================
+        // ===============================================
+
+        /**
+         * Initialize real hours history storage
+         */
+        function initializeRealHoursHistory() {
+            if (!localStorage.getItem('realHoursHistory')) {
+                localStorage.setItem('realHoursHistory', JSON.stringify({}));
+            }
+        }
+
+        /**
+         * Get real hours history for all models
+         */
+        function getRealHoursHistory() {
+            const historyStr = localStorage.getItem('realHoursHistory');
+            return historyStr ? JSON.parse(historyStr) : {};
+        }
+
+        /**
+         * Save real hours history
+         */
+        function saveRealHoursHistory(history) {
+            localStorage.setItem('realHoursHistory', JSON.stringify(history));
+        }
+
+        /**
+         * Track real hours change for a model
+         * Called when real hours average changes
+         */
+        function trackRealHoursChange(modelo, newRealHours, numVestidos) {
+            const history = getRealHoursHistory();
+            const modelKey = modelo.codigo;
+
+            if (!history[modelKey]) {
+                history[modelKey] = {
+                    modeloCodigo: modelo.codigo,
+                    modeloNombre: modelo.nombre,
+                    cambios: []
+                };
+            }
+
+            // Add new change record
+            const cambio = {
+                fecha: new Date().toISOString().split('T')[0],
+                timestamp: new Date().toISOString(),
+                horasReales: newRealHours,
+                numVestidos: numVestidos,
+                horasRealesDecimal: convertirHorasHHMMaDecimal(newRealHours)
+            };
+
+            // Check if this is actually a change (not the same as last record)
+            const ultimoCambio = history[modelKey].cambios[history[modelKey].cambios.length - 1];
+            if (!ultimoCambio || ultimoCambio.horasReales !== newRealHours) {
+                history[modelKey].cambios.push(cambio);
+                saveRealHoursHistory(history);
+                
+                // Generate PDF for this model (placeholder for now)
+                console.log(`📄 Real hours changed for ${modelo.codigo}: ${newRealHours}h`);
+                return true;
+            }
+            
+            return false;
+        }
+
+        /**
+         * Get real hours history for a specific model
+         */
+        function getModelRealHoursHistory(modeloCodigo) {
+            const history = getRealHoursHistory();
+            return history[modeloCodigo] || null;
+        }
+
+        /**
+         * Generate PDF report for a model's real hours history
+         */
+        function generarPDFHistorialHorasModelo(modeloCodigo) {
+            const modeloHistory = getModelRealHoursHistory(modeloCodigo);
+            if (!modeloHistory || modeloHistory.cambios.length === 0) {
+                alert('⚠️ No hay historial de horas reales para este modelo.');
+                return;
+            }
+
+            const modelo = modelos.find(m => m.codigo === modeloCodigo);
+            if (!modelo) return;
+
+            // Create HTML for PDF (would use jsPDF or similar library)
+            let html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1 style="color: #374151;">Historial de Horas Reales</h1>
+                    <h2 style="color: #6B7280;">${modelo.codigo} - ${modelo.nombre}</h2>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                        <p><strong>Horas Estimadas:</strong> ${modelo.horas.toFixed(2)}h</p>
+                        <p><strong>Precio Base:</strong> ${modelo.precio.toFixed(2)}€</p>
+                        <p><strong>Total de Registros:</strong> ${modeloHistory.cambios.length}</p>
+                    </div>
+
+                    <h3>Evolución Histórica</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #F3F4F6;">
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Fecha</th>
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Horas Reales</th>
+                                <th style="padding: 10px; border: 1px solid #E5E7EB;">Vestidos Base</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${modeloHistory.cambios.map(c => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB;">${c.fecha}</td>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB; font-weight: bold;">${c.horasReales}h</td>
+                                    <td style="padding: 10px; border: 1px solid #E5E7EB;">${c.numVestidos}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            // For now, show in a new window (would be replaced with actual PDF generation)
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            
+            alert('📄 Historial generado. En producción, esto generaría un PDF descargable.');
+        }
+
+        /**
+         * Generate cumulative PDF report for all models' real hours history
+         */
+        function generarPDFHistorialAcumulativo() {
+            const history = getRealHoursHistory();
+            const modelosConHistorial = Object.values(history).filter(h => h.cambios.length > 0);
+
+            if (modelosConHistorial.length === 0) {
+                alert('⚠️ No hay historial de horas reales disponible.');
+                return;
+            }
+
+            let html = `
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h1 style="color: #374151;">Informe Acumulativo - Historial de Horas Reales</h1>
+                    <p style="color: #6B7280;">Generado: ${new Date().toLocaleString('es-ES')}</p>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background: #E0F2FE; border-radius: 8px;">
+                        <p><strong>Total de Modelos con Historial:</strong> ${modelosConHistorial.length}</p>
+                        <p><strong>Total de Registros:</strong> ${modelosConHistorial.reduce((sum, m) => sum + m.cambios.length, 0)}</p>
+                    </div>
+
+                    ${modelosConHistorial.map(modeloHist => {
+                        const modelo = modelos.find(m => m.codigo === modeloHist.modeloCodigo);
+                        return `
+                            <div style="page-break-inside: avoid; margin: 30px 0; padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                                <h2 style="color: #374151;">${modeloHist.modeloCodigo} - ${modeloHist.modeloNombre}</h2>
+                                ${modelo ? `<p><strong>Horas Estimadas:</strong> ${modelo.horas.toFixed(2)}h | <strong>Precio:</strong> ${modelo.precio.toFixed(2)}€</p>` : ''}
+                                
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                    <thead>
+                                        <tr style="background: #E5E7EB;">
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Fecha</th>
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Horas Reales</th>
+                                            <th style="padding: 8px; border: 1px solid #D1D5DB;">Vestidos</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${modeloHist.cambios.map(c => `
+                                            <tr>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB;">${c.fecha}</td>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB; font-weight: bold;">${c.horasReales}h</td>
+                                                <td style="padding: 8px; border: 1px solid #D1D5DB;">${c.numVestidos}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            const win = window.open('', '_blank');
+            win.document.write(html);
+            win.document.close();
+            
+            alert('📊 Informe acumulativo generado. En producción, esto generaría un PDF descargable.');
+        }
+
+        /**
+         * Add download link for model real hours history in Base de Modelos tab
+         */
+        function agregarEnlaceDescargaHistorialModelo(modeloCodigo) {
+            const history = getModelRealHoursHistory(modeloCodigo);
+            if (history && history.cambios.length > 0) {
+                return `<button class="btn btn-small btn-info" onclick="generarPDFHistorialHorasModelo('${modeloCodigo}')" style="margin-left: 5px;">📊 Historial Horas</button>`;
+            }
+            return '';
+        }
+
+        // Initialize on load
+        initializeRealHoursHistory();
 
         // ===============================================
         // === PLANIFICACIÓN =============================
@@ -13959,8 +14174,7 @@
          * Export cumulative general report
          */
         function exportarInformeAcumulativoGeneral() {
-            alert(`📊 Generando Informe Acumulativo General...\n\nEste informe consolidará todos los datos de la pestaña de Finanzas en un único PDF.`);
-            // TODO: Implement cumulative report generation
+            generarPDFHistorialAcumulativo();
         }
 
         /**
