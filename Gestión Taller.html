@@ -582,6 +582,15 @@
             box-shadow: var(--sombra-media);
         }
 
+        /* Specific fix for Calendario Laboral grid layout */
+        #calendario-laboral-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            padding: 4px;
+            min-height: 600px;
+        }
+
         .calendario-grid-body {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -645,6 +654,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
 
         .dia-calendario.fin-semana .numero-dia {
@@ -701,13 +711,17 @@
 
         .horas-libres {
             position: absolute;
-            bottom: 5px;
-            right: 5px;
+            top: 5px;
+            left: 5px;
             font-size: 10px;
+            font-weight: 600;
             color: var(--color-texto-secundario);
             background: var(--color-neutro-suave);
             padding: 2px 4px;
             border-radius: 3px;
+            z-index: 10;
+            white-space: nowrap;
+            box-shadow: var(--sombra-suave);
         }
 
         .horas-libres.negativo {
@@ -4945,43 +4959,32 @@
                 return;
             };
 
-            // Problem 6 fix: Use fixed-width columns to prevent misalignment
+            // Fix for Issue 3: Use tab-separated values for proper alignment in Excel/spreadsheets
             const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie'];
-            const separator = '-'.repeat(100);
             
-            // Build header row with fixed widths
-            let textoTabular = `ALBARÁN ${numeroAlbaran} - ${proveedor.toUpperCase()}\n`;
-            textoTabular += separator + '\n';
+            // Build header with title
+            let textoTabular = `ALBARÁN ${numeroAlbaran} - ${proveedor.toUpperCase()}\n\n`;
             
-            // Use padEnd to create fixed-width columns
-            const colWidths = [30, 15, 10, 12, 15]; // Column widths
-            textoTabular += headers.map((h, i) => h.padEnd(colWidths[i])).join('') + '\n';
-            textoTabular += separator + '\n';
+            // Use tabs for column separation (better for Excel/spreadsheet pasting)
+            textoTabular += headers.join('\t') + '\n';
             
-            // Build data rows with fixed widths
+            // Build data rows with tab separation
             vestidosDelAlbaran.forEach(v => {
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : 'N/A';
                 
-                // Truncate long names to fit column width
-                const modelo = v.nombreModelo.length > colWidths[0] - 1 
-                    ? v.nombreModelo.substring(0, colWidths[0] - 4) + '...' 
-                    : v.nombreModelo;
-                
                 const row = [
-                    modelo.padEnd(colWidths[0]),
-                    v.codigoModelo.padEnd(colWidths[1]),
-                    (v.talla || 'N/A').padEnd(colWidths[2]),
-                    (v.lote || 'N/A').padEnd(colWidths[3]),
-                    ofSerie.padEnd(colWidths[4])
+                    v.nombreModelo,
+                    v.codigoModelo,
+                    v.talla || 'N/A',
+                    v.lote || 'N/A',
+                    ofSerie
                 ];
-                textoTabular += row.join('') + '\n';
+                textoTabular += row.join('\t') + '\n';
             });
-            
-            textoTabular += separator + '\n';
 
             navigator.clipboard.writeText(textoTabular).then(() => {
-                alert(`✅ Detalles del albarán ${numeroAlbaran} (${proveedor}) copiados al portapapeles en formato tabular.`);
+                alert(`✅ Detalles del albarán ${numeroAlbaran} (${proveedor}) copiados al portapapeles en formato tabular.\n\nPega en Excel u otra hoja de cálculo para ver el formato correcto.`);
             }, (err) => {
                 alert('❌ Error al copiar los detalles.');
                 console.error('Error al copiar: ', err);
@@ -5629,9 +5632,9 @@
                 const horasLibres = limiteHoras - horasOcupadas;
 
                 html += `<div class="dia-calendario ${esFinDeSemana ? 'fin-semana' : ''} ${esHoy ? 'hoy' : ''}" ondrop="soltarEnCalendario(event, '${fecha}')" ondragover="permitirSoltar(event)">
+                    <div class="horas-libres ${horasLibres < 0 ? 'negativo' : ''}">${horasLibres.toFixed(2)}h</div>
                     <div class="numero-dia">${dia}</div>
                     <div id="vestidos-${fecha}">${vestidosDia.map(v => renderizarVestidoPlanificado(v, fecha)).join('')}</div>
-                    <div class="horas-libres ${horasLibres < 0 ? 'negativo' : ''}">${horasLibres.toFixed(2)}h</div>
                 </div>`;
             }
             html += `</div>`;
@@ -7740,13 +7743,13 @@
                     if (horasTotales > 0) {
                         // When hours are assigned, show used/total
                         const colorClass = horasLibres <= 0 ? 'negativo' : '';
-                        horasBadge = `<span class="horas-libres ${colorClass}" style="font-size: 0.7em; font-weight: 600; margin-top: 5px; display: block;">
+                        horasBadge = `<span class="horas-libres ${colorClass}">
                             <span style="color: var(--color-info);">${horasTotales.toFixed(1)}h usado</span> / 
                             <span style="color: ${horasLibres >= 0 ? 'var(--color-exito)' : 'var(--color-error)'};">${horasLibres >= 0 ? horasLibres.toFixed(1) + 'h libre' : Math.abs(horasLibres).toFixed(1) + 'h exceso'}</span>
                         </span>`;
                     } else {
                         // When no hours assigned, show only free hours
-                        horasBadge = `<span class="horas-libres" style="font-size: 0.75em; color: var(--color-exito); font-weight: 600; margin-top: 5px; display: block;">${horasLibres.toFixed(1)}h libres</span>`;
+                        horasBadge = `<span class="horas-libres">${horasLibres.toFixed(1)}h libres</span>`;
                     }
                 }
                 
@@ -8022,9 +8025,9 @@
                          ondragover="onDragOverCalendario(event)"
                          ondragleave="onDragLeaveCalendario(event)"
                          data-fecha="${fechaStr}">
+                        ${horasBadge}
                         <div class="numero-dia">
                             <span>${dia}</span>
-                            ${horasBadge}
                         </div>
                         ${vestidosHtml}
                         ${trabajadorasHtml}
