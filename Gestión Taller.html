@@ -4969,42 +4969,20 @@
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : '';
                 
-                // Get hours information
-                const horas = horasConfeccion[v.id];
-                let horasReales = '0.00';
-                
-                if (horas && horas.horasTotales) {
-                    const grupoId = horas.grupoId;
-                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
-                    
-                    if (grupo) {
-                        // Divide hours by original group size
-                        const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
-                        horasReales = (horas.horasTotales / grupoSizeOriginal).toFixed(2);
-                    } else {
-                        horasReales = horas.horasTotales.toFixed(2);
-                    }
-                }
-                
-                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
-                const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
-                
-                // Format: Modelo Talla Código Lote OF/Serie Precio HorasReales HorasEstimadas
+                // Format: Modelo Talla Lote Código OF/Serie ID
                 return [
                     v.nombreModelo,
                     v.talla || '',
-                    v.codigoModelo,
                     v.lote || '',
+                    v.codigoModelo,
                     ofSerie,
-                    v.precioBase.toFixed(2) + '€',
-                    horasReales + 'h',
-                    horasEstimadas + 'h'
+                    v.id.toString()
                 ];
             });
             
             // Calculate maximum width for each column
             const columnWidths = [];
-            for (let colIndex = 0; colIndex < 8; colIndex++) {
+            for (let colIndex = 0; colIndex < 6; colIndex++) {
                 columnWidths[colIndex] = Math.max(...rows.map(row => row[colIndex].length));
             }
             
@@ -5014,7 +4992,7 @@
                     // Pad each cell to match the column width
                     return cell.padEnd(columnWidths[index], ' ');
                 });
-                textoTabular += paddedRow.join('   ') + '\n';
+                textoTabular += paddedRow.join('    ') + '\n';
             });
 
             navigator.clipboard.writeText(textoTabular).then(() => {
