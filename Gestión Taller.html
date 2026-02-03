@@ -2996,7 +2996,7 @@
                             <span style="font-weight: 500;">⏰ Fecha Fin</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-en-proceso" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-en-proceso-calendario" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">⚙️ En Proceso</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
@@ -5903,7 +5903,9 @@
         }
 
         function cargarPlanificacion() {
-            const mesSeleccionado = document.getElementById('mesPlanificacion').value;
+            const mesPlanificacionEl = document.getElementById('mesPlanificacion');
+            if (!mesPlanificacionEl) return;
+            const mesSeleccionado = mesPlanificacionEl.value;
             if (!mesSeleccionado) return;
             const [anio, mes] = mesSeleccionado.split('-').map(Number);
             generarCalendario(anio, mes);
@@ -5914,6 +5916,7 @@
             modoPlanificacionManual = !modoPlanificacionManual;
             const panel = document.getElementById('planificacion-panel-lateral');
             const btn = document.getElementById('btnPlanificacionManual');
+            if (!panel || !btn) return;
             panel.classList.toggle('visible', modoPlanificacionManual);
             btn.textContent = modoPlanificacionManual ? '✅ Finalizar Planificación' : '👋 Planificación Manual';
             if (modoPlanificacionManual) {
@@ -8368,7 +8371,7 @@
             const filtroEnviadosEl = document.getElementById('filtro-enviados');
             const filtroAlbaranesEl = document.getElementById('filtro-albaranes');
             const filtroFechaFinEl = document.getElementById('filtro-fecha-fin');
-            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso');
+            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso-calendario');
             const filtroProduccionEl = document.getElementById('filtro-produccion');
             
             if (!filtroProveedorEl) {
@@ -8406,7 +8409,7 @@
             document.getElementById('filtro-enviados').checked = isChecked;
             document.getElementById('filtro-albaranes').checked = isChecked;
             document.getElementById('filtro-fecha-fin').checked = isChecked;
-            document.getElementById('filtro-en-proceso').checked = isChecked;
+            document.getElementById('filtro-en-proceso-calendario').checked = isChecked;
             document.getElementById('filtro-produccion').checked = isChecked;
             
             // Uncheck "Ninguno"
@@ -8425,7 +8428,7 @@
                 document.getElementById('filtro-enviados').checked = false;
                 document.getElementById('filtro-albaranes').checked = false;
                 document.getElementById('filtro-fecha-fin').checked = false;
-                document.getElementById('filtro-en-proceso').checked = false;
+                document.getElementById('filtro-en-proceso-calendario').checked = false;
                 document.getElementById('filtro-produccion').checked = false;
                 document.getElementById('filtro-todos').checked = false;
                 
@@ -11671,6 +11674,59 @@
             };
         }
 
+        function obtenerHorasDiaTrabajadoras() {
+            let horasDia = 0;
+            workers.forEach(w => {
+                horasDia += w.jornada_maxima || 8;
+            });
+            if (horasDia === 0) horasDia = 24; // 8 + 8 + 8 default
+            return horasDia;
+        }
+
+        function calcularHorasConfeccionDisponiblesPeriodo(fechaInicio, fechaFin) {
+            const config = obtenerConfiguracionTaller();
+            const inicio = new Date(`${fechaInicio}T12:00:00Z`);
+            const fin = new Date(`${fechaFin}T12:00:00Z`);
+
+            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+                return { horasDisponibles: 0, diasLaborables: 0, horasAdminTotal: 0, horasTotales: 0 };
+            }
+
+            let diasLaborables = 0;
+            let horasAdminTotal = 0;
+            let horasTotales = 0;
+            const horasDia = obtenerHorasDiaTrabajadoras();
+            const adminExtraPrimerDia = Math.max(0, horasDia - config.horasAdminDiarias);
+            const mesesConExtra = new Set();
+
+            for (let fecha = new Date(inicio); fecha <= fin; fecha.setUTCDate(fecha.getUTCDate() + 1)) {
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const diaSemana = fecha.getUTCDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+                const esFestivo = holidays.some(h => h.fecha === fechaStr);
+                if (esFinDeSemana || esFestivo) continue;
+
+                diasLaborables++;
+                horasTotales += horasDia;
+                horasAdminTotal += config.horasAdminDiarias;
+
+                const mesKey = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`;
+                if (!mesesConExtra.has(mesKey)) {
+                    mesesConExtra.add(mesKey);
+                    horasAdminTotal += adminExtraPrimerDia;
+                }
+            }
+
+            const horasDisponibles = horasTotales - horasAdminTotal;
+
+            return {
+                horasDisponibles,
+                diasLaborables,
+                horasAdminTotal,
+                horasTotales
+            };
+        }
+
         // Configuración del taller - ahora usa los datos de workers cuando estén disponibles
         function obtenerConfigTaller() {
             const config = obtenerConfiguracionTaller();
@@ -11800,10 +11856,10 @@
             switch (selector) {
                 case 'mes_actual':
                     const mesActualNum = hoy.getMonth();
-                    const anioActual = hoy.getFullYear();
+                    const anioActual = Number.isFinite(anio) ? anio : hoy.getFullYear();
                     fechaInicio = new Date(anioActual, mesActualNum, 1);
                     fechaFin = new Date(anioActual, mesActualNum + 1, 0);
-                    texto = hoy.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                    texto = new Date(anioActual, mesActualNum, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
                     break;
                 case 'trimestre_1': fechaInicio = new Date(anio, 0, 1); fechaFin = new Date(anio, 3, 0); texto = `Trimestre 1 (${anio})`; break;
                 case 'trimestre_2': fechaInicio = new Date(anio, 3, 1); fechaFin = new Date(anio, 6, 0); texto = `Trimestre 2 (${anio})`; break;
@@ -11960,7 +12016,7 @@
             const precioMedioPorHora = horasFacturadas > 0 ? totalIngresosBase / horasFacturadas : config.precioHoraObjetivo;
 
             // Capacidad utilizada: basado en horas USADAS (vestidos enviados) vs disponibles
-            const capacidadDisponible = config.horasMes;
+            const capacidadDisponible = calcularHorasConfeccionDisponiblesPeriodo(fechaInicio, fechaFin).horasDisponibles;
             const capacidadUsadaPct = capacidadDisponible > 0 ? (horasUsadas / capacidadDisponible) * 100 : 0;
 
             // Punto de equilibrio (horas necesarias para cubrir gastos fijos)
