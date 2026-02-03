@@ -712,7 +712,7 @@
         .horas-libres {
             position: absolute;
             top: 5px;
-            left: 5px;
+            right: 5px;
             font-size: 10px;
             font-weight: 600;
             color: var(--color-texto-secundario);
@@ -4903,7 +4903,8 @@
                         <div class="grupo-header-acciones">
                             ${!esAlbaran ?
                         `<button class="btn-edit-date" title="Editar fecha de factura" onclick="event.stopPropagation(); editarFechaFactura('${numero}', '${fecha}')">📅</button>
-                         <button class="btn-edit-date" title="Editar vestidos de la factura" onclick="event.stopPropagation(); editarVestidosFactura('${numero}')">✏️</button>` :
+                         <button class="btn-edit-date" title="Editar vestidos de la factura" onclick="event.stopPropagation(); editarVestidosFactura('${numero}')">✏️</button>
+                         <button class="btn-copy-group" title="Copiar detalles de la factura" onclick="event.stopPropagation(); copiarDetallesFactura('${numero}')">📋</button>` :
                         `<button class="btn-edit-date" title="Editar fecha de albarán" onclick="event.stopPropagation(); editarFechaAlbaran('${numero}', '${proveedor}', '${fecha}')">📅</button>
                          <button class="btn-edit-date" title="Editar vestidos del albarán" onclick="event.stopPropagation(); editarVestidosAlbaran('${numero}', '${proveedor}')">✏️</button>
                          <button class="btn-copy-group" title="Copiar detalles del albarán" onclick="event.stopPropagation(); copiarDetallesAlbaran('${numero}', '${proveedor}')">📋</button>`
@@ -4959,8 +4960,8 @@
                 return;
             };
 
-            // Fix for Issue 3: Use tab-separated values for proper alignment in Excel/spreadsheets
-            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie'];
+            // Use tab-separated values for proper alignment in Excel/spreadsheets
+            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie', 'Precio Base', 'Horas Reales', 'Horas Est.'];
             
             // Build header with title
             let textoTabular = `ALBARÁN ${numeroAlbaran} - ${proveedor.toUpperCase()}\n\n`;
@@ -4973,18 +4974,120 @@
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : 'N/A';
                 
+                // Get hours information
+                const horas = horasConfeccion[v.id];
+                let horasReales = '0.00';
+                
+                if (horas && horas.horasTotales) {
+                    const grupoId = horas.grupoId;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    
+                    if (grupo) {
+                        // Divide hours by original group size
+                        const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
+                        horasReales = (horas.horasTotales / grupoSizeOriginal).toFixed(2);
+                    } else {
+                        horasReales = horas.horasTotales.toFixed(2);
+                    }
+                }
+                
+                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
+                
                 const row = [
                     v.nombreModelo,
                     v.codigoModelo,
                     v.talla || 'N/A',
                     v.lote || 'N/A',
-                    ofSerie
+                    ofSerie,
+                    v.precioBase.toFixed(2) + '€',
+                    horasReales + 'h',
+                    horasEstimadas + 'h'
                 ];
                 textoTabular += row.join('\t') + '\n';
             });
 
+            // Add totals
+            const totalBase = vestidosDelAlbaran.reduce((sum, v) => sum + (v.precioBase || 0), 0);
+            const totalConIva = totalBase * 1.21;
+            
+            textoTabular += '\n';
+            textoTabular += `Total Base:\t${totalBase.toFixed(2)}€\n`;
+            textoTabular += `Total (IVA incl.):\t${totalConIva.toFixed(2)}€\n`;
+
             navigator.clipboard.writeText(textoTabular).then(() => {
                 alert(`✅ Detalles del albarán ${numeroAlbaran} (${proveedor}) copiados al portapapeles en formato tabular.\n\nPega en Excel u otra hoja de cálculo para ver el formato correcto.`);
+            }, (err) => {
+                alert('❌ Error al copiar los detalles.');
+                console.error('Error al copiar: ', err);
+            });
+        }
+
+        function copiarDetallesFactura(numeroFactura) {
+            const vestidosDeFactura = vestidos.filter(v => v.numeroFactura === numeroFactura);
+
+            if (vestidosDeFactura.length === 0) {
+                alert('No se encontraron vestidos para esta factura.');
+                return;
+            }
+
+            // Use tab-separated values for proper alignment in Excel/spreadsheets
+            const headers = ['Modelo', 'Código', 'Talla', 'Lote', 'OF/Serie', 'Precio Base', 'Horas Reales', 'Horas Est.'];
+            
+            // Build header with title
+            let textoTabular = `FACTURA ${numeroFactura}\n\n`;
+            
+            // Use tabs for column separation (better for Excel/spreadsheet pasting)
+            textoTabular += headers.join('\t') + '\n';
+            
+            // Build data rows with tab separation
+            vestidosDeFactura.forEach(v => {
+                const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
+                               v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : 'N/A';
+                
+                // Get hours information
+                const horas = horasConfeccion[v.id];
+                let horasReales = '0.00';
+                
+                if (horas && horas.horasTotales) {
+                    const grupoId = horas.grupoId;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    
+                    if (grupo) {
+                        // Divide hours by original group size
+                        const grupoSizeOriginal = grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length;
+                        horasReales = (horas.horasTotales / grupoSizeOriginal).toFixed(2);
+                    } else {
+                        horasReales = horas.horasTotales.toFixed(2);
+                    }
+                }
+                
+                const modelo = modelos.find(m => m.codigo === v.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas.toFixed(2) : '0.00';
+                
+                const row = [
+                    v.nombreModelo,
+                    v.codigoModelo,
+                    v.talla || 'N/A',
+                    v.lote || 'N/A',
+                    ofSerie,
+                    v.precioBase.toFixed(2) + '€',
+                    horasReales + 'h',
+                    horasEstimadas + 'h'
+                ];
+                textoTabular += row.join('\t') + '\n';
+            });
+
+            // Add totals
+            const totalBase = vestidosDeFactura.reduce((sum, v) => sum + (v.precioBase || 0), 0);
+            const totalConIva = totalBase * 1.21;
+            
+            textoTabular += '\n';
+            textoTabular += `Total Base:\t${totalBase.toFixed(2)}€\n`;
+            textoTabular += `Total (IVA incl.):\t${totalConIva.toFixed(2)}€\n`;
+
+            navigator.clipboard.writeText(textoTabular).then(() => {
+                alert(`✅ Detalles de la factura ${numeroFactura} copiados al portapapeles en formato tabular.\n\nPega en Excel u otra hoja de cálculo para ver el formato correcto.`);
             }, (err) => {
                 alert('❌ Error al copiar los detalles.');
                 console.error('Error al copiar: ', err);
