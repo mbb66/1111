@@ -11355,7 +11355,7 @@
                     loteDisplay += `(${vestido.numeroSerie})`;
                 }
                 const horas = horasConfeccion[vestido.id];
-                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
+                const horasCalculadas = horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0;
                 
                 listaHtml += `
                     <div onclick="mostrarDetallesVestido(${vestido.id}); cerrarModalVestidosEnviadosDia();" 
@@ -11414,7 +11414,7 @@
             vestidosEnviados.forEach(v => {
                 const horas = horasConfeccion[v.id];
                 const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
-                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
+                const horasCalculadas = horas ? calcularHorasIntervalos(horas.intervalos) : 0;
                 const horasTotales = tieneIntervalos ? horasCalculadas.toFixed(2) : '0.00';
                 
                 // Check if dress is in a group
@@ -11451,9 +11451,7 @@
                     // Calculate total hours for the group
                     const totalHoras = vestidosGrupo.reduce((sum, v) => {
                         const h = horasConfeccion[v.id];
-                        if (!h) return sum;
-                        const horasGrupo = h.horasTotales ? h.horasTotales : (h.intervalos ? calcularHorasIntervalos(h.intervalos) : 0);
-                        return sum + horasGrupo;
+                        return sum + (h && h.intervalos ? calcularHorasIntervalos(h.intervalos) : 0);
                     }, 0);
                     
                     html += `
