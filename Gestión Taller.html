@@ -7974,12 +7974,14 @@
                 // Separate dresses by status: with hours (en proceso) vs without (pendientes) vs sent on delivery date vs production-only
                 const vestidosEnProceso = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    const esAlbaranDelDia = esEnviado && fechaEnvio === fechaStr;
                     return horasConfeccion[v.id] && !esAlbaranDelDia;
                 });
                 const vestidosPendientes = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    const esAlbaranDelDia = esEnviado && fechaEnvio === fechaStr;
                     const esProduccionSolo = ['en_taller', 'con_tara'].includes(v.estado) && 
                                             !horasConfeccion[v.id] && 
                                             !v.fechaLimite && 
@@ -7990,7 +7992,8 @@
                 });
                 const vestidosAlbaranDelDia = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    return esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    return esEnviado && fechaEnvio === fechaStr;
                 });
                 // NEW: Production-only vestidos (read-only reference - no planning, no deadlines, just in production)
                 const vestidosProduccionSolo = vestidosEnFecha.filter(v => {
@@ -8494,7 +8497,8 @@
                     const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                     
                     // Show sent dresses on their delivery date, regardless of whether they have intervals
-                    if (esEnviado && vestido.fechaEnvio === fechaStr) {
+                    const fechaEnvio = vestido.fechaEnvio ? vestido.fechaEnvio.split('T')[0] : '';
+                    if (esEnviado && fechaEnvio === fechaStr) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -8509,7 +8513,8 @@
                     const horas = horasConfeccion[vestido.id];
                     const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
                     
-                    if (esEnviado && vestido.fechaEnvio === fechaStr && !tieneIntervalos) {
+                    const fechaEnvio = vestido.fechaEnvio ? vestido.fechaEnvio.split('T')[0] : '';
+                    if (esEnviado && fechaEnvio === fechaStr && !tieneIntervalos) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -11390,7 +11395,7 @@
             // Get sent dresses for selected month
             const vestidosEnviados = vestidos.filter(v => {
                 if (!v.fechaEnvio) return false;
-                const fechaEnvio = new Date(v.fechaEnvio + 'T00:00:00');
+                const fechaEnvio = new Date(v.fechaEnvio.split('T')[0] + 'T00:00:00');
                 return fechaEnvio.getFullYear() === anio && (fechaEnvio.getMonth() + 1) === mes;
             });
             
