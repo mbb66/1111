@@ -604,13 +604,13 @@
         .dia-calendario {
             background: var(--color-superficie);
             padding: 8px;
-            min-height: 120px;
+            min-height: 160px;
             position: relative;
             transition: all 0.2s ease;
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            overflow: visible;
             border-radius: 6px;
             border: 1px solid var(--color-borde);
         }
@@ -2881,6 +2881,21 @@
                     <button class="btn btn-info" onclick="generarReporteIntervalosDetallado()">📈 Reporte Intervalos Detallado</button>
                 </div>
             </div>
+            <div class="stats-card" style="margin-bottom: 20px;">
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label for="reporte-fecha-inicio">Desde:</label>
+                        <input type="date" id="reporte-fecha-inicio">
+                    </div>
+                    <div class="form-group">
+                        <label for="reporte-fecha-fin">Hasta:</label>
+                        <input type="date" id="reporte-fecha-fin">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-small" onclick="resetearRangoReportes()">🔄 Mes actual</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Info about the new system -->
             <div class="autocomplete-info" style="margin-bottom: 20px;">
@@ -2996,7 +3011,7 @@
                             <span style="font-weight: 500;">⏰ Fecha Fin</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
-                            <input type="checkbox" id="filtro-en-proceso" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
+                            <input type="checkbox" id="filtro-en-proceso-calendario" onchange="onIndividualFilterChange()" checked style="margin-right: 8px; cursor: pointer; width: 18px; height: 18px;">
                             <span style="font-weight: 500;">⚙️ En Proceso</span>
                         </label>
                         <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; background: var(--color-superficie); border-radius: 6px; border: 2px solid var(--color-borde); transition: all 0.2s;">
@@ -3608,6 +3623,7 @@
             if (document.getElementById('mesPlanificacion')) {
                 document.getElementById('mesPlanificacion').value = `${anio}-${mes}`;
             }
+            inicializarRangoReportes();
 
             openTab('registro', { currentTarget: document.querySelector('.tab') });
             setInterval(() => { syncToGoogleSheets(false); }, AUTO_SYNC_INTERVAL_MIN * 60 * 1000);
@@ -5903,7 +5919,9 @@
         }
 
         function cargarPlanificacion() {
-            const mesSeleccionado = document.getElementById('mesPlanificacion').value;
+            const mesPlanificacionEl = document.getElementById('mesPlanificacion');
+            if (!mesPlanificacionEl) return;
+            const mesSeleccionado = mesPlanificacionEl.value;
             if (!mesSeleccionado) return;
             const [anio, mes] = mesSeleccionado.split('-').map(Number);
             generarCalendario(anio, mes);
@@ -5914,6 +5932,7 @@
             modoPlanificacionManual = !modoPlanificacionManual;
             const panel = document.getElementById('planificacion-panel-lateral');
             const btn = document.getElementById('btnPlanificacionManual');
+            if (!panel || !btn) return;
             panel.classList.toggle('visible', modoPlanificacionManual);
             btn.textContent = modoPlanificacionManual ? '✅ Finalizar Planificación' : '👋 Planificación Manual';
             if (modoPlanificacionManual) {
@@ -7955,12 +7974,14 @@
                 // Separate dresses by status: with hours (en proceso) vs without (pendientes) vs sent on delivery date vs production-only
                 const vestidosEnProceso = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    const esAlbaranDelDia = esEnviado && fechaEnvio === fechaStr;
                     return horasConfeccion[v.id] && !esAlbaranDelDia;
                 });
                 const vestidosPendientes = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    const esAlbaranDelDia = esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    const esAlbaranDelDia = esEnviado && fechaEnvio === fechaStr;
                     const esProduccionSolo = ['en_taller', 'con_tara'].includes(v.estado) && 
                                             !horasConfeccion[v.id] && 
                                             !v.fechaLimite && 
@@ -7971,7 +7992,8 @@
                 });
                 const vestidosAlbaranDelDia = vestidosEnFecha.filter(v => {
                     const esEnviado = v.estado === 'enviado' || v.estado === 'pagado';
-                    return esEnviado && v.fechaEnvio === fechaStr;
+                    const fechaEnvio = v.fechaEnvio ? v.fechaEnvio.split('T')[0] : '';
+                    return esEnviado && fechaEnvio === fechaStr;
                 });
                 // NEW: Production-only vestidos (read-only reference - no planning, no deadlines, just in production)
                 const vestidosProduccionSolo = vestidosEnFecha.filter(v => {
@@ -8368,7 +8390,7 @@
             const filtroEnviadosEl = document.getElementById('filtro-enviados');
             const filtroAlbaranesEl = document.getElementById('filtro-albaranes');
             const filtroFechaFinEl = document.getElementById('filtro-fecha-fin');
-            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso');
+            const filtroEnProcesoEl = document.getElementById('filtro-en-proceso-calendario');
             const filtroProduccionEl = document.getElementById('filtro-produccion');
             
             if (!filtroProveedorEl) {
@@ -8406,7 +8428,7 @@
             document.getElementById('filtro-enviados').checked = isChecked;
             document.getElementById('filtro-albaranes').checked = isChecked;
             document.getElementById('filtro-fecha-fin').checked = isChecked;
-            document.getElementById('filtro-en-proceso').checked = isChecked;
+            document.getElementById('filtro-en-proceso-calendario').checked = isChecked;
             document.getElementById('filtro-produccion').checked = isChecked;
             
             // Uncheck "Ninguno"
@@ -8425,7 +8447,7 @@
                 document.getElementById('filtro-enviados').checked = false;
                 document.getElementById('filtro-albaranes').checked = false;
                 document.getElementById('filtro-fecha-fin').checked = false;
-                document.getElementById('filtro-en-proceso').checked = false;
+                document.getElementById('filtro-en-proceso-calendario').checked = false;
                 document.getElementById('filtro-produccion').checked = false;
                 document.getElementById('filtro-todos').checked = false;
                 
@@ -8475,7 +8497,8 @@
                     const esEnviado = vestido.estado === 'enviado' || vestido.estado === 'pagado';
                     
                     // Show sent dresses on their delivery date, regardless of whether they have intervals
-                    if (esEnviado && vestido.fechaEnvio === fechaStr) {
+                    const fechaEnvio = vestido.fechaEnvio ? vestido.fechaEnvio.split('T')[0] : '';
+                    if (esEnviado && fechaEnvio === fechaStr) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -8490,7 +8513,8 @@
                     const horas = horasConfeccion[vestido.id];
                     const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
                     
-                    if (esEnviado && vestido.fechaEnvio === fechaStr && !tieneIntervalos) {
+                    const fechaEnvio = vestido.fechaEnvio ? vestido.fechaEnvio.split('T')[0] : '';
+                    if (esEnviado && fechaEnvio === fechaStr && !tieneIntervalos) {
                         if (!resultado.find(v => v.id === vestido.id)) {
                             resultado.push(vestido);
                         }
@@ -8635,24 +8659,7 @@
             
             // Get available hours info
             const horasDisponibles = obtenerLimiteHoras(fechaStr);
-            let horasTotales = 0;
-            
-            // Calculate total hours used
-            vestidosEnFecha.forEach(v => {
-                const horas = horasConfeccion[v.id];
-                if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
-                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
-                            if (intervalo.fin) {
-                                const inicioDate = new Date(intervalo.inicio);
-                                const finDate = new Date(intervalo.fin);
-                                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
-                                horasTotales += diffHours;
-                            }
-                        }
-                    });
-                }
-            });
+            const horasTotales = calcularHorasTotalesDia(fechaStr, vestidosEnFecha);
             
             const horasLibres = horasDisponibles - horasTotales;
             
@@ -8682,22 +8689,35 @@
             const fechaStr = modal.dataset.fechaSeleccionada;
             const vestidosEnFecha = obtenerVestidosParaFecha(fechaStr);
             const horasDisponibles = obtenerLimiteHoras(fechaStr);
-            let horasTotales = 0;
-            
-            vestidosEnFecha.forEach(v => {
-                const horas = horasConfeccion[v.id];
-                if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
-                        if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr && intervalo.fin) {
-                            const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
-                            horasTotales += diffHours;
-                        }
-                    });
-                }
-            });
+            const horasTotales = calcularHorasTotalesDia(fechaStr, vestidosEnFecha);
             
             const horasLibres = horasDisponibles - horasTotales;
             renderizarListaVestidosModalMejorado(fechaStr, vestidosEnFecha, horasTotales, horasDisponibles, horasLibres);
+        }
+
+        function calcularHorasTotalesDia(fechaStr, vestidosEnFecha) {
+            let horasTotales = 0;
+            const gruposProcesados = new Set();
+
+            vestidosEnFecha.forEach(v => {
+                const horas = horasConfeccion[v.id];
+                if (!horas || !horas.intervalos) return;
+
+                const grupoId = horas.grupoId;
+                if (grupoId) {
+                    if (gruposProcesados.has(grupoId)) return;
+                    gruposProcesados.add(grupoId);
+                }
+
+                horas.intervalos.forEach(intervalo => {
+                    if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr && intervalo.fin) {
+                        const diffHours = (new Date(intervalo.fin) - new Date(intervalo.inicio)) / (1000 * 60 * 60);
+                        horasTotales += diffHours;
+                    }
+                });
+            });
+
+            return horasTotales;
         }
         
         // Enhanced rendering function for the day details modal
@@ -8728,17 +8748,21 @@
                 </div>
             `;
             
-            // NEW: Section 1.5: Interval statistics by worker and status
+            // NEW: Section 1.5: Interval statistics by worker
             const intervalosPorTrabajadora = {};
-            const estadosIntervalos = { pending: 0, in_progress: 0, completed: 0 };
+            const gruposProcesados = new Set();
             
             vestidosEnFecha.forEach(v => {
                 const horas = horasConfeccion[v.id];
+                const grupoId = horas ? horas.grupoId : null;
+                if (grupoId) {
+                    if (gruposProcesados.has(grupoId)) return;
+                    gruposProcesados.add(grupoId);
+                }
                 if (horas && horas.intervalos) {
                     horas.intervalos.forEach(intervalo => {
                         if (intervalo.inicio && intervalo.inicio.split('T')[0] === fechaStr) {
                             const trabajadoraId = intervalo.trabajadoraId;
-                            const status = intervalo.status || 'in_progress';
                             const trabajadora = workers.find(w => w.id === trabajadoraId);
                             const nombreTrabajadora = trabajadora ? trabajadora.nombre : 'Sin asignar';
                             
@@ -8752,9 +8776,6 @@
                                 intervalosPorTrabajadora[nombreTrabajadora].horas += diffHours;
                             }
                             intervalosPorTrabajadora[nombreTrabajadora].intervalos += 1;
-                            
-                            // Count by status
-                            estadosIntervalos[status] = (estadosIntervalos[status] || 0) + 1;
                         }
                     });
                 }
@@ -8781,23 +8802,6 @@
                 });
                 
                 html += `
-                                </div>
-                            </div>
-                            <div>
-                                <strong style="font-size: 1em; color: var(--color-texto-principal); display: block; margin-bottom: 8px;">📋 Estado de Tareas</strong>
-                                <div style="font-size: 0.85em;">
-                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                                        <span>⏳ En Proceso</span>
-                                        <span style="font-weight: 600;">${estadosIntervalos.in_progress || 0}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                                        <span>✅ Completado</span>
-                                        <span style="font-weight: 600;">${estadosIntervalos.completed || 0}</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                                        <span>📋 Pendiente</span>
-                                        <span style="font-weight: 600;">${estadosIntervalos.pending || 0}</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -8831,6 +8835,10 @@
                         if (entrada) horasAsignadas = entrada.horas;
                     }
                     
+                    const grupoId = horas ? horas.grupoId : null;
+                    const grupo = grupoId ? vestidosGrupos[grupoId] : null;
+                    const grupoSize = grupo ? (grupo.sizeOriginal || horas.grupoSizeOriginal || grupo.vestidosIds.length) : 1;
+                    const horasAsignadasPorVestido = grupo ? horasAsignadas / grupoSize : horasAsignadas;
                     const horasEstimadas = modelo ? modelo.horas : 0;
                     const proveedor = v.proveedor;
                     
@@ -8847,7 +8855,7 @@
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <div style="font-weight: 700; color: var(--color-primario);">${horasAsignadas.toFixed(1)}h</div>
+                                <div style="font-weight: 700; color: var(--color-primario);">${horasAsignadasPorVestido.toFixed(1)}h</div>
                                 <div style="font-size: 0.75em; color: var(--color-texto-secundario);">de ${horasEstimadas.toFixed(1)}h</div>
                             </div>
                         </div>
@@ -9416,7 +9424,16 @@
             modal.style.display = 'flex';
         }
 
-        function cerrarModalHorasConfeccion() {
+        function cerrarModalHorasConfeccion(skipSave = false) {
+            if (!skipSave) {
+                const guardado = guardarHorasConfeccion({ cerrarModal: false, mostrarAlertas: false, allowEmpty: true });
+                if (!guardado) {
+                    const descartar = confirm('Hay datos incompletos en los intervalos. ¿Deseas cerrar sin guardar?');
+                    if (!descartar) {
+                        return;
+                    }
+                }
+            }
             const modal = document.getElementById('modal-horas-confeccion');
             modal.classList.remove('active');
             modal.style.display = 'none';
@@ -9429,25 +9446,9 @@
             const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
             if (!vestido) return;
 
-            // Calculate total hours from intervals
-            const container = document.getElementById('intervalos-container');
-            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
-            let totalHoras = 0;
-
-            intervalosElements.forEach(intervaloEl => {
-                const inicio = intervaloEl.querySelector('.intervalo-inicio').value;
-                const fin = intervaloEl.querySelector('.intervalo-fin').value;
-                
-                if (inicio && fin) {
-                    const inicioDate = new Date(inicio);
-                    const finDate = new Date(fin);
-                    const diffMs = finDate - inicioDate;
-                    const diffHours = diffMs / (1000 * 60 * 60);
-                    if (diffHours > 0) {
-                        totalHoras += diffHours;
-                    }
-                }
-            });
+            const datosIntervalos = obtenerDatosIntervalosDesdeModal({ mostrarAlertas: true, requireTrabajadora: true });
+            if (!datosIntervalos) return;
+            const totalHoras = datosIntervalos.totalHoras;
 
             if (totalHoras === 0) {
                 alert('⚠️ No hay horas completadas para finalizar. Asegúrate de que los intervalos tengan hora de inicio y fin.');
@@ -9486,7 +9487,8 @@
             if (!confirm) return;
 
             // Save hours first
-            guardarHorasConfeccion();
+            const guardado = guardarHorasConfeccion({ cerrarModal: false, mostrarAlertas: false });
+            if (!guardado) return;
             
             // Update dress(es) with real hours
             if (grupo) {
@@ -9846,112 +9848,137 @@
             }
         }
 
-        // Enhanced function to validate interval overlaps
         function validarSolapamientoIntervalos(intervalos) {
             const overlaps = [];
-            
-            // Sort intervals by start time
-            const sortedIntervalos = intervalos
-                .filter(i => i.inicio && i.fin)
-                .map((interval, index) => ({
-                    ...interval,
-                    originalIndex: index,
-                    inicioDate: new Date(interval.inicio),
-                    finDate: new Date(interval.fin)
-                }))
-                .sort((a, b) => a.inicioDate - b.inicioDate);
-            
-            // Check for overlaps
-            for (let i = 0; i < sortedIntervalos.length - 1; i++) {
-                for (let j = i + 1; j < sortedIntervalos.length; j++) {
-                    const int1 = sortedIntervalos[i];
-                    const int2 = sortedIntervalos[j];
-                    
-                    // Check if intervals overlap
-                    if (int1.finDate > int2.inicioDate && int1.inicioDate < int2.finDate) {
+            const intervalosPorTrabajadora = {};
+
+            intervalos
+                .filter(i => i.inicio && i.fin && i.trabajadoraId)
+                .forEach((interval, index) => {
+                    if (!intervalosPorTrabajadora[interval.trabajadoraId]) {
+                        intervalosPorTrabajadora[interval.trabajadoraId] = [];
+                    }
+                    intervalosPorTrabajadora[interval.trabajadoraId].push({
+                        ...interval,
+                        originalIndex: index,
+                        inicioDate: new Date(interval.inicio),
+                        finDate: new Date(interval.fin)
+                    });
+                });
+
+            Object.keys(intervalosPorTrabajadora).forEach(trabajadoraId => {
+                const lista = intervalosPorTrabajadora[trabajadoraId]
+                    .sort((a, b) => a.inicioDate - b.inicioDate);
+
+                for (let i = 0; i < lista.length - 1; i++) {
+                    const actual = lista[i];
+                    const siguiente = lista[i + 1];
+
+                    if (actual.finDate > siguiente.inicioDate) {
                         overlaps.push({
-                            interval1: i + 1,
-                            interval2: j + 1,
-                            start1: int1.inicioDate.toLocaleString('es-ES'),
-                            end1: int1.finDate.toLocaleString('es-ES'),
-                            start2: int2.inicioDate.toLocaleString('es-ES'),
-                            end2: int2.finDate.toLocaleString('es-ES')
+                            trabajadoraId: parseInt(trabajadoraId, 10),
+                            interval1: actual.originalIndex + 1,
+                            interval2: siguiente.originalIndex + 1,
+                            start1: actual.inicioDate.toLocaleString('es-ES'),
+                            end1: actual.finDate.toLocaleString('es-ES'),
+                            start2: siguiente.inicioDate.toLocaleString('es-ES'),
+                            end2: siguiente.finDate.toLocaleString('es-ES')
                         });
-                    }
-                }
-            }
-            
-            return overlaps;
-        }
-
-        function guardarHorasConfeccion() {
-            if (!currentEditingVestidoId) return;
-
-            const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
-            if (!vestido) return;
-
-            // Get intervals
-            const container = document.getElementById('intervalos-container');
-            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
-            const intervalos = [];
-            let totalHoras = 0;
-            const trabajadorasSet = new Set(); // Collect unique workers from intervals
-
-            intervalosElements.forEach(intervaloEl => {
-                // Use new format: separate date and time inputs
-                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
-                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
-                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
-                
-                const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
-                const statusInput = intervaloEl.querySelector('.intervalo-status');
-                const status = statusInput ? statusInput.value : 'in_progress';
-                
-                let inicio = null;
-                let fin = null;
-                
-                // New format: combine date and time
-                if (fechaInput && horaInicioInput && fechaInput.value && horaInicioInput.value) {
-                    inicio = `${fechaInput.value}T${horaInicioInput.value}`;
-                    if (horaFinInput.value) {
-                        fin = `${fechaInput.value}T${horaFinInput.value}`;
-                    }
-                }
-                
-                if (inicio) {
-                    // Allow intervals with only start time (work in progress)
-                    if (fin) {
-                        const inicioDate = new Date(inicio);
-                        const finDate = new Date(fin);
-                        const diffMs = finDate - inicioDate;
-                        const diffHours = diffMs / (1000 * 60 * 60);
-                        
-                        if (diffHours > 0) {
-                            intervalos.push({ 
-                                inicio, 
-                                fin, 
-                                trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
-                                status: status
-                            });
-                            totalHoras += diffHours;
-                            if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
-                        }
-                    } else {
-                        // Save interval in progress (without end)
-                        intervalos.push({ 
-                            inicio, 
-                            fin: null, 
-                            trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
-                            status: status
-                        });
-                        if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
                     }
                 }
             });
 
+            return overlaps;
+        }
+
+        function obtenerDatosIntervalosDesdeModal({ mostrarAlertas = true, requireTrabajadora = true } = {}) {
+            const container = document.getElementById('intervalos-container');
+            const intervalosElements = container.querySelectorAll('.intervalo-tiempo');
+            const intervalos = [];
+            let totalHoras = 0;
+            const trabajadorasSet = new Set();
+            let tieneDatos = false;
+
+            for (const intervaloEl of intervalosElements) {
+                const fechaInput = intervaloEl.querySelector('.intervalo-fecha');
+                const horaInicioInput = intervaloEl.querySelector('.intervalo-hora-inicio');
+                const horaFinInput = intervaloEl.querySelector('.intervalo-hora-fin');
+                const trabajadoraId = intervaloEl.querySelector('.intervalo-worker').value;
+                const statusInput = intervaloEl.querySelector('.intervalo-status');
+                const status = statusInput ? statusInput.value : 'in_progress';
+
+                const tieneValores = Boolean(
+                    (fechaInput && fechaInput.value) ||
+                    (horaInicioInput && horaInicioInput.value) ||
+                    (horaFinInput && horaFinInput.value) ||
+                    trabajadoraId
+                );
+
+                if (tieneValores) {
+                    tieneDatos = true;
+                }
+
+                if (fechaInput && horaInicioInput && fechaInput.value && horaInicioInput.value) {
+                    if (requireTrabajadora && !trabajadoraId) {
+                        if (mostrarAlertas) {
+                            alert('⚠️ Debes asignar una trabajadora a cada intervalo.');
+                        }
+                        return null;
+                    }
+
+                    const inicio = `${fechaInput.value}T${horaInicioInput.value}`;
+                    let fin = null;
+
+                    if (horaFinInput.value) {
+                        fin = `${fechaInput.value}T${horaFinInput.value}`;
+                        const inicioDate = new Date(inicio);
+                        const finDate = new Date(fin);
+                        const diffMs = finDate - inicioDate;
+
+                        if (diffMs <= 0) {
+                            if (mostrarAlertas) {
+                                alert('⚠️ La hora de fin debe ser posterior a la hora de inicio.');
+                            }
+                            return null;
+                        }
+
+                        const diffHours = diffMs / (1000 * 60 * 60);
+                        totalHoras += diffHours;
+                    }
+
+                    intervalos.push({
+                        inicio,
+                        fin,
+                        trabajadoraId: trabajadoraId ? parseInt(trabajadoraId) : null,
+                        status
+                    });
+
+                    if (trabajadoraId) trabajadorasSet.add(parseInt(trabajadoraId));
+                }
+            }
+
+            return { intervalos, totalHoras, trabajadorasSet, tieneDatos };
+        }
+
+        function guardarHorasConfeccion({ cerrarModal = true, mostrarAlertas = true, allowEmpty = false } = {}) {
+            if (!currentEditingVestidoId) return false;
+
+            const vestido = vestidos.find(v => v.id === currentEditingVestidoId);
+            if (!vestido) return false;
+
+            const datosIntervalos = obtenerDatosIntervalosDesdeModal({ mostrarAlertas, requireTrabajadora: true });
+            if (!datosIntervalos) return false;
+            const { intervalos, totalHoras, trabajadorasSet, tieneDatos } = datosIntervalos;
+
             if (intervalos.length === 0) {
-                alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
-                return;
+                if (allowEmpty && !tieneDatos) {
+                    if (cerrarModal) cerrarModalHorasConfeccion(true);
+                    return true;
+                }
+                if (mostrarAlertas) {
+                    alert('⚠️ Debes añadir al menos un intervalo de tiempo con hora de inicio');
+                }
+                return false;
             }
 
             // Validate overlaps between intervals
@@ -9959,13 +9986,16 @@
             if (overlaps.length > 0) {
                 let message = '⚠️ Se han detectado solapamientos entre intervalos:\n\n';
                 overlaps.forEach(overlap => {
+                    const trabajadora = workers.find(w => w.id === overlap.trabajadoraId);
+                    const nombre = trabajadora ? trabajadora.nombre : 'Trabajadora desconocida';
+                    message += `${nombre}:\n`;
                     message += `Intervalo ${overlap.interval1}: ${overlap.start1} - ${overlap.end1}\n`;
                     message += `Intervalo ${overlap.interval2}: ${overlap.start2} - ${overlap.end2}\n\n`;
                 });
                 message += '¿Deseas continuar de todos modos?';
                 
                 if (!confirm(message)) {
-                    return;
+                    return false;
                 }
             }
 
@@ -10003,12 +10033,18 @@
                             };
                         }
                     });
-                    alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h\n💡 Las horas se han aplicado a todos los ${grupo.vestidosIds.length} vestidos del grupo.\nCada vestido recibe ${(totalHoras / grupo.vestidosIds.length).toFixed(2)}h de forma proporcional.`);
+                    if (mostrarAlertas) {
+                        alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h\n💡 Las horas se han aplicado a todos los ${grupo.vestidosIds.length} vestidos del grupo.\nCada vestido recibe ${(totalHoras / grupo.vestidosIds.length).toFixed(2)}h de forma proporcional.`);
+                    }
                 } else {
-                    alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+                    if (mostrarAlertas) {
+                        alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+                    }
                 }
             } else {
-                alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+                if (mostrarAlertas) {
+                    alert(`✅ Horas guardadas correctamente: ${totalHoras.toFixed(2)}h`);
+                }
             }
 
             localStorage.setItem('horasConfeccion', JSON.stringify(horasConfeccion));
@@ -10016,9 +10052,12 @@
             // Sync with Base Modelos
             sincronizarVestidoConBaseModelos(currentEditingVestidoId);
 
-            cerrarModalHorasConfeccion();
+            if (cerrarModal) {
+                cerrarModalHorasConfeccion(true);
+            }
             cargarPlanificacionNueva();
             generarCalendarioPlanificacion(); // Update calendar
+            return true;
         }
 
         function sincronizarVestidoConBaseModelos(vestidoId) {
@@ -10075,6 +10114,58 @@
             return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}`;
         }
 
+        function inicializarRangoReportes() {
+            const inicioEl = document.getElementById('reporte-fecha-inicio');
+            const finEl = document.getElementById('reporte-fecha-fin');
+            if (!inicioEl || !finEl) return;
+            const hoy = new Date();
+            const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            inicioEl.value = inicioMes.toISOString().split('T')[0];
+            finEl.value = finMes.toISOString().split('T')[0];
+        }
+
+        function resetearRangoReportes() {
+            inicializarRangoReportes();
+        }
+
+        function obtenerRangoReportes() {
+            const inicioEl = document.getElementById('reporte-fecha-inicio');
+            const finEl = document.getElementById('reporte-fecha-fin');
+            const hoy = new Date();
+            const inicioFallback = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+            const finFallback = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).toISOString().split('T')[0];
+            return {
+                inicio: inicioEl && inicioEl.value ? inicioEl.value : inicioFallback,
+                fin: finEl && finEl.value ? finEl.value : finFallback
+            };
+        }
+
+        function obtenerIntervalosEnRango(intervalos, fechaInicio, fechaFin) {
+            return intervalos.filter(intervalo => {
+                if (!intervalo.inicio) return false;
+                const fecha = intervalo.inicio.split('T')[0];
+                return fecha >= fechaInicio && fecha <= fechaFin;
+            });
+        }
+
+        function calcularHorasIntervalos(intervalos) {
+            return intervalos.reduce((total, intervalo) => {
+                if (!intervalo.inicio || !intervalo.fin) return total;
+                const inicioDate = new Date(intervalo.inicio);
+                const finDate = new Date(intervalo.fin);
+                const diffHours = (finDate - inicioDate) / (1000 * 60 * 60);
+                return diffHours > 0 ? total + diffHours : total;
+            }, 0);
+        }
+
+        function calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin) {
+            const horas = horasConfeccion[vestidoId];
+            if (!horas || !horas.intervalos) return 0;
+            const intervalos = obtenerIntervalosEnRango(horas.intervalos, fechaInicio, fechaFin);
+            return calcularHorasIntervalos(intervalos);
+        }
+
         function exportarReporteHoras(formato) {
             if (formato === 'pdf') {
                 exportarReportePDF();
@@ -10087,6 +10178,8 @@
             // Get configuration for cost calculations
             const config = obtenerConfiguracionTaller();
             const precioHoraObjetivo = config.precioHoraObjetivo || 15;
+            const { inicio: fechaInicio, fin: fechaFin } = obtenerRangoReportes();
+            const rangoTexto = `Del ${new Date(fechaInicio + 'T00:00:00').toLocaleDateString('es-ES')} al ${new Date(fechaFin + 'T00:00:00').toLocaleDateString('es-ES')}`;
             
             // Generate enhanced PDF report with profit/loss analysis
             let reporteHtml = `
@@ -10095,6 +10188,7 @@
                 <head>
                     <title>Reporte de Horas y Beneficios - ${new Date().toLocaleDateString('es-ES')}</title>
                     <style>
+                        @page { margin: 14mm; }
                         body { font-family: Arial, sans-serif; padding: 20px; }
                         h1 { color: #374151; border-bottom: 2px solid #374151; padding-bottom: 10px; }
                         h2 { color: #374151; margin-top: 30px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
@@ -10107,6 +10201,7 @@
                         .loss { color: #ef4444; }
                         .section-summary { background: #f3f4f6; padding: 15px; margin: 20px 0; border-radius: 8px; }
                         .worker-hours { background: #dbeafe; }
+                        .report-meta { margin: 10px 0; font-size: 12px; color: #374151; }
                         @media print {
                             .page-break { page-break-before: always; }
                         }
@@ -10114,8 +10209,11 @@
                 </head>
                 <body>
                     <h1>📊 Reporte Completo de Horas y Análisis de Beneficios</h1>
-                    <p><strong>Fecha de generación:</strong> ${new Date().toLocaleString('es-ES')}</p>
-                    <p><strong>Precio/hora objetivo:</strong> ${precioHoraObjetivo}€</p>
+                    <div class="report-meta">
+                        <div><strong>Fecha de generación:</strong> ${new Date().toLocaleString('es-ES')}</div>
+                        <div><strong>Rango:</strong> ${rangoTexto}</div>
+                        <div><strong>Precio/hora objetivo:</strong> ${precioHoraObjetivo}€</div>
+                    </div>
                     
                     <h2>1. Resumen por Vestido</h2>
                     <table>
@@ -10150,7 +10248,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = horas.horasTotales;
+                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                if (horasReales === 0) return;
                 const variacion = horasReales - horasEstimadas;
                 const precioVestido = vestido.precioBase || 0;
                 const costeHoras = horasReales * precioHoraObjetivo;
@@ -10284,7 +10383,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = horas.horasTotales;
+                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                if (horasReales === 0) return;
                 const precioVestido = vestido.precioBase || 0;
                 const costeHoras = horasReales * precioHoraObjetivo;
                 const beneficio = precioVestido - costeHoras;
@@ -10374,8 +10474,8 @@
             // Group summary section
             const gruposActivos = Object.keys(vestidosGrupos).filter(gId => {
                 const grupo = vestidosGrupos[gId];
-                // Check if any dress in the group has hours tracked
-                return grupo.vestidosIds.some(vId => horasConfeccion[vId]);
+                // Check if any dress in the group has hours tracked within range
+                return grupo.vestidosIds.some(vId => calcularHorasPorVestidoEnRango(vId, fechaInicio, fechaFin) > 0);
             });
             
             if (gruposActivos.length > 0) {
@@ -10406,12 +10506,13 @@
                     let vestidosActivos = 0;
                     let vestidosEnviados = 0;
                     
-                    // Get representative hours from first dress in group
-                    const primerVestidoId = grupo.vestidosIds[0];
-                    const horasPrimerVestido = horasConfeccion[primerVestidoId];
-                    if (horasPrimerVestido) {
-                        horasTotales = horasPrimerVestido.horasTotales;
-                    }
+                    // Get representative hours from any dress in group within range
+                    grupo.vestidosIds.forEach(vestidoId => {
+                        const horasEnRango = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                        if (horasEnRango > 0) {
+                            horasTotales = Math.max(horasTotales, horasEnRango);
+                        }
+                    });
                     
                     grupo.vestidosIds.forEach(vestidoId => {
                         const vestido = vestidos.find(v => v.id === vestidoId);
@@ -10473,21 +10574,22 @@
             // Get configuration for cost calculations
             const config = obtenerConfiguracionTaller();
             const precioHoraObjetivo = config.precioHoraObjetivo || 15;
+            const { inicio: fechaInicio, fin: fechaFin } = obtenerRangoReportes();
+            const rangoTexto = `${fechaInicio} a ${fechaFin}`;
             
             // Generate enhanced CSV format (Excel compatible) with BOM for proper UTF-8 encoding
             let csv = '\uFEFF'; // UTF-8 BOM for Excel compatibility
             
             // Header section with clear formatting
             csv += `REPORTE COMPLETO DE HORAS Y BENEFICIOS\n`;
-            csv += `Fecha de generación:,${new Date().toLocaleString('es-ES')}\n`;
-            csv += `Precio por hora objetivo:,${precioHoraObjetivo.toFixed(2)} €\n`;
+            csv += `Fecha de generación;${new Date().toLocaleString('es-ES')}\n`;
+            csv += `Rango;${rangoTexto}\n`;
+            csv += `Precio por hora objetivo;${precioHoraObjetivo.toFixed(2)} €\n`;
             csv += `\n`;
             
             // Section 1: Summary by dress with improved formatting
-            csv += `==================================================\n`;
             csv += `SECCIÓN 1: RESUMEN POR VESTIDO\n`;
-            csv += `==================================================\n`;
-            csv += `Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Variación (h),Precio (€),Coste Horas (€),Beneficio/Pérdida (€)\n`;
+            csv += `Modelo;Código;Lote;Proveedor;Horas Estimadas;Horas Reales;Variación (h);Precio (€);Coste Horas (€);Beneficio/Pérdida (€)\n`;
             
             let totalHorasEstimadas = 0;
             let totalHorasReales = 0;
@@ -10503,7 +10605,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = horas.horasTotales;
+                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                if (horasReales === 0) return;
                 const variacion = horasReales - horasEstimadas;
                 const precioVestido = vestido.precioBase || 0;
                 const costeHoras = horasReales * precioHoraObjetivo;
@@ -10527,34 +10630,30 @@
                     trabajadoraStats[nombre].vestidos.add(vestidoId);
                 });
 
-                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${variacion.toFixed(2)},${precioVestido.toFixed(2)},${costeHoras.toFixed(2)},${beneficio.toFixed(2)}\n`;
+                csv += `"${vestido.nombreModelo}";"${vestido.codigoModelo}";"${vestido.lote || 'N/A'}";"${vestido.proveedor}";${horasEstimadas.toFixed(2)};${horasReales.toFixed(2)};${variacion.toFixed(2)};${precioVestido.toFixed(2)};${costeHoras.toFixed(2)};${beneficio.toFixed(2)}\n`;
             });
 
             csv += `\n`;
-            csv += `TOTALES:,,,,"${totalHorasEstimadas.toFixed(2)}","${totalHorasReales.toFixed(2)}","${(totalHorasReales - totalHorasEstimadas).toFixed(2)}","${totalPrecio.toFixed(2)}","${totalCoste.toFixed(2)}","${totalBeneficio.toFixed(2)}"\n`;
+            csv += `TOTALES;;;;"${totalHorasEstimadas.toFixed(2)}";"${totalHorasReales.toFixed(2)}";"${(totalHorasReales - totalHorasEstimadas).toFixed(2)}";"${totalPrecio.toFixed(2)}";"${totalCoste.toFixed(2)}";"${totalBeneficio.toFixed(2)}"\n`;
             csv += `\n\n`;
 
             // Section 2: Hours classification by worker with improved formatting
-            csv += `==================================================\n`;
             csv += `SECCIÓN 2: CLASIFICACIÓN DE HORAS POR TRABAJADORA\n`;
-            csv += `==================================================\n`;
-            csv += `Trabajadora,Total Horas,Vestidos Trabajados,Promedio h/vestido,% del Total\n`;
+            csv += `Trabajadora;Total Horas;Vestidos Trabajados;Promedio h/vestido;% del Total\n`;
             
             Object.keys(trabajadoraStats).sort().forEach(nombre => {
                 const stats = trabajadoraStats[nombre];
                 const promedio = stats.vestidos.size > 0 ? stats.horas / stats.vestidos.size : 0;
                 const porcentaje = totalHorasReales > 0 ? (stats.horas / totalHorasReales * 100) : 0;
                 
-                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos.size},${promedio.toFixed(2)},${porcentaje.toFixed(1)}\n`;
+                csv += `"${nombre}";${stats.horas.toFixed(2)};${stats.vestidos.size};${promedio.toFixed(2)};${porcentaje.toFixed(1)}\n`;
             });
 
             csv += `\n\n`;
 
             // Section 3: Detailed intervals by worker with improved formatting
-            csv += `==================================================\n`;
             csv += `SECCIÓN 3: DETALLE DE INTERVALOS POR TRABAJADORA\n`;
-            csv += `==================================================\n`;
-            csv += `Trabajadora,Vestido (Lote),Modelo,Fecha,Hora Inicio,Hora Fin,Duración (h)\n`;
+            csv += `Trabajadora;Vestido (Lote);Modelo;Fecha;Hora Inicio;Hora Fin;Duración (h)\n`;
 
             // Sort intervals by date for better readability
             const intervalosConDatos = [];
@@ -10563,7 +10662,7 @@
                 if (!vestido) return;
 
                 const horas = horasConfeccion[vestidoId];
-                horas.intervalos.forEach(intervalo => {
+                obtenerIntervalosEnRango(horas.intervalos, fechaInicio, fechaFin).forEach(intervalo => {
                     if (!intervalo.inicio) return;
                     
                     const trabajadoraId = intervalo.trabajadoraId;
@@ -10601,7 +10700,7 @@
             intervalosConDatos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
             
             intervalosConDatos.forEach(intervalo => {
-                csv += `"${intervalo.trabajadora}","${intervalo.lote}","${intervalo.modelo}","${intervalo.fechaStr}","${intervalo.horaInicio}","${intervalo.horaFin}",${intervalo.duracion}\n`;
+                csv += `"${intervalo.trabajadora}";"${intervalo.lote}";"${intervalo.modelo}";"${intervalo.fechaStr}";"${intervalo.horaInicio}";"${intervalo.horaFin}";${intervalo.duracion}\n`;
             });
 
             // Download CSV with UTF-8 BOM for proper Excel encoding
@@ -10620,15 +10719,16 @@
 
         // NEW: Generate detailed interval statistics report
         function generarReporteIntervalosDetallado() {
+            const { inicio: fechaInicio, fin: fechaFin } = obtenerRangoReportes();
             const fechaActual = new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
             
-            let csv = `Reporte de Intervalos y Grupos - ${fechaActual}\n\n`;
+            let csv = `Reporte de Intervalos y Grupos\n`;
+            csv += `Fecha de generación;${fechaActual}\n`;
+            csv += `Rango;${fechaInicio} a ${fechaFin}\n\n`;
             
             // Section 1: Group statistics
-            csv += '═══════════════════════════════════════════════\n';
             csv += 'ESTADÍSTICAS DE GRUPOS\n';
-            csv += '═══════════════════════════════════════════════\n';
-            csv += 'Grupo,Código Modelo,Vestidos en Grupo,Vestidos Activos,Horas Totales,Horas por Vestido,Estado\n';
+            csv += 'Grupo;Código Modelo;Vestidos en Grupo;Vestidos Activos;Horas Totales;Horas por Vestido;Estado\n';
             
             let gruposTotales = 0;
             let vestidosEnGrupos = 0;
@@ -10648,9 +10748,9 @@
                 let tieneIntervalos = false;
                 
                 grupo.vestidosIds.forEach(vestidoId => {
-                    const horas = horasConfeccion[vestidoId];
-                    if (horas && horas.horasTotales > 0) {
-                        horasTotalesGrupo = horas.horasTotales; // Groups share the same hours
+                    const horasEnRango = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                    if (horasEnRango > 0) {
+                        horasTotalesGrupo = Math.max(horasTotalesGrupo, horasEnRango);
                         tieneIntervalos = true;
                     }
                 });
@@ -10658,19 +10758,17 @@
                 const horasPorVestido = grupoSizeOriginal > 0 ? horasTotalesGrupo / grupoSizeOriginal : 0;
                 const estado = vestidosActivos > 0 ? 'Activo' : 'Completado';
                 
-                csv += `"${grupo.nombre}","${grupo.codigoModelo}",${grupoSizeOriginal},${vestidosActivos},${horasTotalesGrupo.toFixed(2)},${horasPorVestido.toFixed(2)},${estado}\n`;
+                csv += `"${grupo.nombre}";"${grupo.codigoModelo}";${grupoSizeOriginal};${vestidosActivos};${horasTotalesGrupo.toFixed(2)};${horasPorVestido.toFixed(2)};${estado}\n`;
                 
                 gruposTotales++;
                 vestidosEnGrupos += grupoSizeOriginal;
             });
             
-            csv += `\nTOTAL GRUPOS: ${gruposTotales} | VESTIDOS EN GRUPOS: ${vestidosEnGrupos}\n\n`;
+            csv += `\nTOTAL GRUPOS;${gruposTotales}\nVESTIDOS EN GRUPOS;${vestidosEnGrupos}\n\n`;
             
             // Section 2: Interval statistics by status
-            csv += '═══════════════════════════════════════════════\n';
             csv += 'ESTADÍSTICAS POR ESTADO DE TAREA\n';
-            csv += '═══════════════════════════════════════════════\n';
-            csv += 'Estado,Cantidad,Total Horas,Promedio Horas\n';
+            csv += 'Estado;Cantidad;Total Horas;Promedio Horas\n';
             
             const estadosStats = {
                 'pending': { count: 0, horas: 0, label: '📋 Pendiente' },
@@ -10681,7 +10779,7 @@
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
                 if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
+                    obtenerIntervalosEnRango(horas.intervalos, fechaInicio, fechaFin).forEach(intervalo => {
                         const status = intervalo.status || 'in_progress';
                         if (estadosStats[status]) {
                             estadosStats[status].count++;
@@ -10697,23 +10795,21 @@
             Object.keys(estadosStats).forEach(key => {
                 const stats = estadosStats[key];
                 const promedio = stats.count > 0 ? stats.horas / stats.count : 0;
-                csv += `"${stats.label}",${stats.count},${stats.horas.toFixed(2)},${promedio.toFixed(2)}\n`;
+                csv += `"${stats.label}";${stats.count};${stats.horas.toFixed(2)};${promedio.toFixed(2)}\n`;
             });
             
             csv += '\n';
             
             // Section 3: Worker performance
-            csv += '═══════════════════════════════════════════════\n';
             csv += 'RENDIMIENTO POR TRABAJADORA\n';
-            csv += '═══════════════════════════════════════════════\n';
-            csv += 'Trabajadora,Intervalos,Horas Completadas,Horas Promedio/Intervalo,Tareas Pendientes,Tareas en Proceso,Tareas Completadas\n';
+            csv += 'Trabajadora;Intervalos;Horas Completadas;Horas Promedio/Intervalo;Tareas Pendientes;Tareas en Proceso;Tareas Completadas\n';
             
             const trabajadoraStats = {};
             
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
                 if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
+                    obtenerIntervalosEnRango(horas.intervalos, fechaInicio, fechaFin).forEach(intervalo => {
                         const trabajadoraId = intervalo.trabajadoraId;
                         const trabajadora = workers.find(w => w.id === trabajadoraId);
                         const nombre = trabajadora ? trabajadora.nombre : 'Sin asignar';
@@ -10743,32 +10839,30 @@
             Object.keys(trabajadoraStats).forEach(nombre => {
                 const stats = trabajadoraStats[nombre];
                 const promedio = stats.intervalos > 0 ? stats.horas / stats.intervalos : 0;
-                csv += `"${nombre}",${stats.intervalos},${stats.horas.toFixed(2)},${promedio.toFixed(2)},${stats.pending},${stats.in_progress},${stats.completed}\n`;
+                csv += `"${nombre}";${stats.intervalos};${stats.horas.toFixed(2)};${promedio.toFixed(2)};${stats.pending};${stats.in_progress};${stats.completed}\n`;
             });
             
             csv += '\n';
             
             // Section 4: Daily breakdown (last 30 days)
-            csv += '═══════════════════════════════════════════════\n';
-            csv += 'DESGLOSE ÚLTIMOS 30 DÍAS\n';
-            csv += '═══════════════════════════════════════════════\n';
-            csv += 'Fecha,Intervalos,Horas Totales,Vestidos Trabajados,Trabajadoras Activas\n';
+            csv += 'DESGLOSE POR DÍA\n';
+            csv += 'Fecha;Intervalos;Horas Totales;Vestidos Trabajados;Trabajadoras Activas\n';
             
             const hoy = new Date();
-            const hace30Dias = new Date(hoy);
-            hace30Dias.setDate(hoy.getDate() - 30);
+            const inicioPeriodo = new Date(`${fechaInicio}T00:00:00`);
+            const finPeriodo = new Date(`${fechaFin}T23:59:59`);
             
             const diasStats = {};
             
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
                 if (horas && horas.intervalos) {
-                    horas.intervalos.forEach(intervalo => {
+                    obtenerIntervalosEnRango(horas.intervalos, fechaInicio, fechaFin).forEach(intervalo => {
                         if (intervalo.inicio) {
                             const fecha = intervalo.inicio.split('T')[0];
                             const fechaDate = new Date(fecha);
                             
-                            if (fechaDate >= hace30Dias && fechaDate <= hoy) {
+                            if (fechaDate >= inicioPeriodo && fechaDate <= finPeriodo) {
                                 if (!diasStats[fecha]) {
                                     diasStats[fecha] = {
                                         intervalos: 0,
@@ -10799,7 +10893,7 @@
             fechasOrdenadas.forEach(fecha => {
                 const stats = diasStats[fecha];
                 const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES');
-                csv += `${fechaFormateada},${stats.intervalos},${stats.horas.toFixed(2)},${stats.vestidos.size},${stats.trabajadoras.size}\n`;
+                csv += `${fechaFormateada};${stats.intervalos};${stats.horas.toFixed(2)};${stats.vestidos.size};${stats.trabajadoras.size}\n`;
             });
             
             // Download CSV
@@ -10818,12 +10912,13 @@
 
         // Enhanced month-end export with real vs. estimated hours comparison
         function exportarResumenMensual() {
-            const mesActual = new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+            const { inicio: fechaInicio, fin: fechaFin } = obtenerRangoReportes();
+            const mesActual = `${fechaInicio} a ${fechaFin}`;
             
             // Generate comprehensive CSV with real vs estimated hours
             let csv = `Resumen Mensual - ${mesActual}\n\n`;
             csv += 'RESUMEN POR VESTIDO\n';
-            csv += 'Modelo,Código,Lote,Proveedor,Horas Estimadas,Horas Reales,Diferencia,% Variación,Trabajadoras,Estado\n';
+            csv += 'Modelo;Código;Lote;Proveedor;Horas Estimadas;Horas Reales;Diferencia;% Variación;Trabajadoras;Estado\n';
             
             let totalEstimadas = 0;
             let totalReales = 0;
@@ -10836,7 +10931,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = horas.horasTotales;
+                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                if (horasReales === 0) return;
                 const diferencia = horasReales - horasEstimadas;
                 const porcentaje = horasEstimadas > 0 ? ((diferencia / horasEstimadas) * 100) : 0;
                 
@@ -10857,25 +10953,27 @@
                     trabajadoras: nombresTrabajadoras
                 });
 
-                csv += `"${vestido.nombreModelo}","${vestido.codigoModelo}","${vestido.lote || 'N/A'}","${vestido.proveedor}",${horasEstimadas.toFixed(2)},${horasReales.toFixed(2)},${diferencia.toFixed(2)},${porcentaje.toFixed(1)}%,"${nombresTrabajadoras}","${vestido.estado}"\n`;
+                csv += `"${vestido.nombreModelo}";"${vestido.codigoModelo}";"${vestido.lote || 'N/A'}";"${vestido.proveedor}";${horasEstimadas.toFixed(2)};${horasReales.toFixed(2)};${diferencia.toFixed(2)};${porcentaje.toFixed(1)}%;"${nombresTrabajadoras}";"${vestido.estado}"\n`;
             });
 
-            csv += `\nTOTAL,,,,${totalEstimadas.toFixed(2)},${totalReales.toFixed(2)},${(totalReales - totalEstimadas).toFixed(2)},${totalEstimadas > 0 ? ((totalReales - totalEstimadas) / totalEstimadas * 100).toFixed(1) : 0}%\n\n`;
+            csv += `\nTOTAL;;;;${totalEstimadas.toFixed(2)};${totalReales.toFixed(2)};${(totalReales - totalEstimadas).toFixed(2)};${totalEstimadas > 0 ? ((totalReales - totalEstimadas) / totalEstimadas * 100).toFixed(1) : 0}%\n\n`;
             
             // Add worker summary
             csv += '\nRESUMEN POR TRABAJADORA\n';
-            csv += 'Trabajadora,Total Horas,Vestidos Trabajados,Promedio horas/vestido\n';
+            csv += 'Trabajadora;Total Horas;Vestidos Trabajados;Promedio horas/vestido\n';
             
             const trabajadoraStats = {};
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
+                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                if (horasReales === 0) return;
                 horas.trabajadoras.forEach(wId => {
                     const worker = workers.find(w => w.id === wId);
                     const nombre = worker ? worker.nombre : 'Desconocida';
                     if (!trabajadoraStats[nombre]) {
                         trabajadoraStats[nombre] = { horas: 0, vestidos: 0 };
                     }
-                    trabajadoraStats[nombre].horas += horas.horasTotales / horas.trabajadoras.length; // Distribute hours evenly
+                    trabajadoraStats[nombre].horas += horasReales / horas.trabajadoras.length; // Distribute hours evenly
                     trabajadoraStats[nombre].vestidos += 1;
                 });
             });
@@ -10883,20 +10981,18 @@
             Object.keys(trabajadoraStats).forEach(nombre => {
                 const stats = trabajadoraStats[nombre];
                 const promedio = stats.vestidos > 0 ? stats.horas / stats.vestidos : 0;
-                csv += `"${nombre}",${stats.horas.toFixed(2)},${stats.vestidos},${promedio.toFixed(2)}\n`;
+                csv += `"${nombre}";${stats.horas.toFixed(2)};${stats.vestidos};${promedio.toFixed(2)}\n`;
             });
             
             // Add daily capacity summary
             csv += '\n\nRESUMEN DE CAPACIDAD DIARIA\n';
-            csv += 'Fecha,Capacidad Total,Horas Utilizadas,Horas Libres,% Uso\n';
+            csv += 'Fecha;Capacidad Total;Horas Utilizadas;Horas Libres;% Uso\n';
             
             // Get current month dates
-            const hoy = new Date();
-            const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            const ultimoDia = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            const primerDia = new Date(`${fechaInicio}T00:00:00`);
+            const ultimoDia = new Date(`${fechaFin}T00:00:00`);
             
-            for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
-                const fecha = new Date(hoy.getFullYear(), hoy.getMonth(), dia);
+            for (let fecha = new Date(primerDia); fecha <= ultimoDia; fecha.setDate(fecha.getDate() + 1)) {
                 const fechaStr = fecha.toISOString().split('T')[0];
                 const capacidad = obtenerLimiteHoras(fechaStr);
                 
@@ -10919,7 +11015,7 @@
                 const horasLibres = capacidad - horasUtilizadas;
                 const porcentajeUso = capacidad > 0 ? (horasUtilizadas / capacidad * 100) : 0;
                 
-                csv += `${fechaStr},${capacidad.toFixed(2)},${horasUtilizadas.toFixed(2)},${horasLibres.toFixed(2)},${porcentajeUso.toFixed(1)}%\n`;
+                csv += `${fechaStr};${capacidad.toFixed(2)};${horasUtilizadas.toFixed(2)};${horasLibres.toFixed(2)};${porcentajeUso.toFixed(1)}%\n`;
             }
 
             // Download CSV
@@ -11216,7 +11312,7 @@
                 modal.className = 'modal';
                 modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;';
                 modal.innerHTML = `
-                    <div class="modal-content" style="background: white; padding: 20px; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto;">
+                    <div class="modal-content" style="background: white; padding: 20px; border-radius: 12px; max-width: 700px; max-height: 80vh; overflow-y: auto; box-shadow: var(--sombra-grande);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                             <h3 id="modal-enviados-titulo" style="margin: 0;">Vestidos Enviados</h3>
                             <button onclick="cerrarModalVestidosEnviadosDia()" style="background: none; border: none; font-size: 1.5em; cursor: pointer;">×</button>
@@ -11233,7 +11329,7 @@
             document.getElementById('modal-enviados-titulo').textContent = `Vestidos Enviados - ${fechaTexto}`;
             
             // Get dresses and generate list
-            let listaHtml = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+            let listaHtml = '<div style="display: grid; gap: 12px;">';
             vestidosIds.forEach(vestidoId => {
                 const vestido = vestidos.find(v => v.id === vestidoId);
                 if (!vestido) return;
@@ -11245,17 +11341,20 @@
                 if (vestido.proveedor === 'rosa_clara' && vestido.numeroSerie) {
                     loteDisplay += `(${vestido.numeroSerie})`;
                 }
+                const horas = horasConfeccion[vestido.id];
+                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
                 
                 listaHtml += `
                     <div onclick="mostrarDetallesVestido(${vestido.id}); cerrarModalVestidosEnviadosDia();" 
-                         style="padding: 10px; background: ${colorBg}; border-left: 4px solid ${colorBorde}; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                         style="padding: 12px; background: ${colorBg}; border-left: 4px solid ${colorBorde}; border-radius: 8px; cursor: pointer; transition: all 0.2s; box-shadow: var(--sombra-suave);"
                          onmouseover="this.style.transform='translateX(5px)'" 
                          onmouseout="this.style.transform='translateX(0)'">
-                        <div style="font-weight: 600; margin-bottom: 5px;">📦 ${vestido.nombreModelo}</div>
-                        <div style="font-size: 0.85em; color: #666;">
-                            <div>Lote: ${loteDisplay}</div>
-                            ${vestido.numeroAlbaran ? `<div>Albarán: ${vestido.numeroAlbaran}</div>` : ''}
-                            ${vestido.proveedor ? `<div>Proveedor: ${vestido.proveedor.toUpperCase()}</div>` : ''}
+                        <div style="font-weight: 600; margin-bottom: 6px;">📦 ${vestido.nombreModelo}</div>
+                        <div style="font-size: 0.85em; color: #4B5563; display: grid; gap: 4px;">
+                            <div><strong>Lote:</strong> ${loteDisplay}</div>
+                            ${vestido.numeroAlbaran ? `<div><strong>Albarán:</strong> ${vestido.numeroAlbaran}</div>` : ''}
+                            ${vestido.proveedor ? `<div><strong>Proveedor:</strong> ${vestido.proveedor.toUpperCase()}</div>` : ''}
+                            <div><strong>Horas trabajadas:</strong> ${horasCalculadas.toFixed(2)}h</div>
                         </div>
                     </div>
                 `;
@@ -11283,7 +11382,7 @@
             // Get sent dresses for selected month
             const vestidosEnviados = vestidos.filter(v => {
                 if (!v.fechaEnvio) return false;
-                const fechaEnvio = new Date(v.fechaEnvio + 'T00:00:00');
+                const fechaEnvio = new Date(v.fechaEnvio.split('T')[0] + 'T00:00:00');
                 return fechaEnvio.getFullYear() === anio && (fechaEnvio.getMonth() + 1) === mes;
             });
             
@@ -11302,7 +11401,8 @@
             vestidosEnviados.forEach(v => {
                 const horas = horasConfeccion[v.id];
                 const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
-                const horasTotales = tieneIntervalos ? horas.horasTotales.toFixed(2) : '0.00';
+                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
+                const horasTotales = tieneIntervalos ? horasCalculadas.toFixed(2) : '0.00';
                 
                 // Check if dress is in a group
                 const grupoId = horas ? horas.grupoId : null;
@@ -11338,12 +11438,15 @@
                     // Calculate total hours for the group
                     const totalHoras = vestidosGrupo.reduce((sum, v) => {
                         const h = horasConfeccion[v.id];
-                        return sum + (h && h.horasTotales ? h.horasTotales : 0);
+                        if (!h) return sum;
+                        const horasGrupo = h.horasTotales ? h.horasTotales : (h.intervalos ? calcularHorasIntervalos(h.intervalos) : 0);
+                        return sum + horasGrupo;
                     }, 0);
                     
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor} ${groupedClass}" 
                              data-vestido-id="${v.id}"
+                             style="box-shadow: var(--sombra-media);"
                              ${modoAgruparSeccion === 'enviados' ? '' : `onclick="abrirModalHorasConfeccion(${v.id})"`}>
                             <div class="grupo-count-badge">${grupo.vestidosIds.length} vestidos</div>
                             <div class="grupo-card-title">🔗 ${v.nombreModelo.toUpperCase()}</div>
@@ -11373,7 +11476,7 @@
                     
                     html += `
                         <div class="vestido-card-planificacion ${v.proveedor}" 
-                             style="margin-bottom: 10px; opacity: ${tieneIntervalos ? '1' : '0.6'};"
+                             style="margin-bottom: 10px; box-shadow: var(--sombra-media); opacity: ${tieneIntervalos ? '1' : '0.6'};"
                              data-vestido-id="${v.id}"
                              ${modoAgruparSeccion === 'enviados' ? '' : `onclick="abrirModalHorasConfeccion(${v.id})"`}>
                             <div class="vestido-card-header">
@@ -11671,6 +11774,59 @@
             };
         }
 
+        function obtenerHorasDiaTrabajadoras() {
+            let horasDia = 0;
+            workers.forEach(w => {
+                horasDia += w.jornada_maxima || 8;
+            });
+            if (horasDia === 0) horasDia = 24; // 8 + 8 + 8 default
+            return horasDia;
+        }
+
+        function calcularHorasConfeccionDisponiblesPeriodo(fechaInicio, fechaFin) {
+            const config = obtenerConfiguracionTaller();
+            const inicio = new Date(`${fechaInicio}T12:00:00Z`);
+            const fin = new Date(`${fechaFin}T12:00:00Z`);
+
+            if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
+                return { horasDisponibles: 0, diasLaborables: 0, horasAdminTotal: 0, horasTotales: 0 };
+            }
+
+            let diasLaborables = 0;
+            let horasAdminTotal = 0;
+            let horasTotales = 0;
+            const horasDia = obtenerHorasDiaTrabajadoras();
+            const adminExtraPrimerDia = Math.max(0, horasDia - config.horasAdminDiarias);
+            const mesesConExtra = new Set();
+
+            for (let fecha = new Date(inicio); fecha <= fin; fecha.setUTCDate(fecha.getUTCDate() + 1)) {
+                const fechaStr = fecha.toISOString().split('T')[0];
+                const diaSemana = fecha.getUTCDay();
+                const esFinDeSemana = diaSemana === 0 || diaSemana === 6;
+                const esFestivo = holidays.some(h => h.fecha === fechaStr);
+                if (esFinDeSemana || esFestivo) continue;
+
+                diasLaborables++;
+                horasTotales += horasDia;
+                horasAdminTotal += config.horasAdminDiarias;
+
+                const mesKey = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}`;
+                if (!mesesConExtra.has(mesKey)) {
+                    mesesConExtra.add(mesKey);
+                    horasAdminTotal += adminExtraPrimerDia;
+                }
+            }
+
+            const horasDisponibles = horasTotales - horasAdminTotal;
+
+            return {
+                horasDisponibles,
+                diasLaborables,
+                horasAdminTotal,
+                horasTotales
+            };
+        }
+
         // Configuración del taller - ahora usa los datos de workers cuando estén disponibles
         function obtenerConfigTaller() {
             const config = obtenerConfiguracionTaller();
@@ -11800,10 +11956,10 @@
             switch (selector) {
                 case 'mes_actual':
                     const mesActualNum = hoy.getMonth();
-                    const anioActual = hoy.getFullYear();
+                    const anioActual = Number.isFinite(anio) ? anio : hoy.getFullYear();
                     fechaInicio = new Date(anioActual, mesActualNum, 1);
                     fechaFin = new Date(anioActual, mesActualNum + 1, 0);
-                    texto = hoy.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+                    texto = new Date(anioActual, mesActualNum, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
                     break;
                 case 'trimestre_1': fechaInicio = new Date(anio, 0, 1); fechaFin = new Date(anio, 3, 0); texto = `Trimestre 1 (${anio})`; break;
                 case 'trimestre_2': fechaInicio = new Date(anio, 3, 1); fechaFin = new Date(anio, 6, 0); texto = `Trimestre 2 (${anio})`; break;
@@ -11960,7 +12116,7 @@
             const precioMedioPorHora = horasFacturadas > 0 ? totalIngresosBase / horasFacturadas : config.precioHoraObjetivo;
 
             // Capacidad utilizada: basado en horas USADAS (vestidos enviados) vs disponibles
-            const capacidadDisponible = config.horasMes;
+            const capacidadDisponible = calcularHorasConfeccionDisponiblesPeriodo(fechaInicio, fechaFin).horasDisponibles;
             const capacidadUsadaPct = capacidadDisponible > 0 ? (horasUsadas / capacidadDisponible) * 100 : 0;
 
             // Punto de equilibrio (horas necesarias para cubrir gastos fijos)
