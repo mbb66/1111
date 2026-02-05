@@ -9428,10 +9428,7 @@
             if (!skipSave) {
                 const guardado = guardarHorasConfeccion({ cerrarModal: false, mostrarAlertas: false, allowEmpty: true });
                 if (!guardado) {
-                    const descartar = confirm('Hay datos incompletos en los intervalos. ¿Deseas cerrar sin guardar?');
-                    if (!descartar) {
-                        return;
-                    }
+                    return;
                 }
             }
             const modal = document.getElementById('modal-horas-confeccion');
@@ -11342,7 +11339,7 @@
                     loteDisplay += `(${vestido.numeroSerie})`;
                 }
                 const horas = horasConfeccion[vestido.id];
-                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
+                const horasCalculadas = horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0;
                 
                 listaHtml += `
                     <div onclick="mostrarDetallesVestido(${vestido.id}); cerrarModalVestidosEnviadosDia();" 
@@ -11401,7 +11398,7 @@
             vestidosEnviados.forEach(v => {
                 const horas = horasConfeccion[v.id];
                 const tieneIntervalos = horas && horas.intervalos && horas.intervalos.length > 0;
-                const horasCalculadas = horas && horas.horasTotales ? horas.horasTotales : (horas && horas.intervalos ? calcularHorasIntervalos(horas.intervalos) : 0);
+                const horasCalculadas = horas ? calcularHorasIntervalos(horas.intervalos) : 0;
                 const horasTotales = tieneIntervalos ? horasCalculadas.toFixed(2) : '0.00';
                 
                 // Check if dress is in a group
