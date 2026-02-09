@@ -3637,7 +3637,7 @@
         });
 
         function openTab(tabName, event) {
-            if (event) event.preventDefault();
+            if (event && event.preventDefault) event.preventDefault();
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -16846,7 +16846,7 @@
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
                 <h3 id="modal-horas-titulo">⏱️ Gestión de Horas de Confección</h3>
-                <button class="modal-close" onclick="cerrarModalHorasConfeccion()">&times;</button>
+                <button class="modal-close" onclick="cerrarModalHorasConfeccion(true)">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="modal-horas-info" style="margin-bottom: 20px; padding: 15px; background: var(--color-info-fondo); border-radius: 8px;">
@@ -16878,7 +16878,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" onclick="cerrarModalHorasConfeccion()">Cancelar</button>
+                <button class="btn" onclick="cerrarModalHorasConfeccion(true)">Cancelar</button>
                 <button class="btn btn-info" onclick="marcarComoFinalizado()">✅ Finalizado</button>
                 <button class="btn btn-success" onclick="guardarHorasConfeccion()">💾 Guardar Horas</button>
             </div>
