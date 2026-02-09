@@ -16180,12 +16180,13 @@
 
         function abrirModalFestivos() {
             const modal = document.getElementById('modal-festivos');
-            modal.style.display = 'flex';
+            modal.classList.add('active');
             cargarFestivosAnio();
         }
 
         function cerrarModalFestivos() {
-            document.getElementById('modal-festivos').style.display = 'none';
+            const modal = document.getElementById('modal-festivos');
+            modal.classList.remove('active');
         }
 
         function cargarFestivosAnio() {
