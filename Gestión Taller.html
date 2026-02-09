@@ -3637,7 +3637,7 @@
         });
 
         function openTab(tabName, event) {
-            if (event) event.preventDefault();
+            if (event && event.preventDefault) event.preventDefault();
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabName).classList.add('active');
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
