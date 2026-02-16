@@ -5990,8 +5990,6 @@
             event.dataTransfer.setData("text/plain", JSON.stringify({ vestidoId, fechaOrigen, horas, parte }));
         }
 
-        function permitirSoltar(event) { event.preventDefault(); }
-
         function soltarEnCalendario(event, fechaDestino) {
             event.preventDefault();
             const data = JSON.parse(event.dataTransfer.getData("text/plain"));
