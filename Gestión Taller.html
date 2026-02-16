@@ -10133,6 +10133,71 @@
             return calcularHorasIntervalos(intervalos);
         }
 
+        // ✅ NEW: Calculate individual hours for dresses in groups
+        function calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin) {
+            const horas = horasConfeccion[vestidoId];
+            if (!horas) return 0;
+            
+            // Get total hours worked on this dress in the range
+            const horasTotales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+            
+            // If the dress is in a group, divide the hours by the group size
+            if (horas.grupoId) {
+                const grupo = vestidosGrupos[horas.grupoId];
+                if (grupo && grupo.sizeOriginal) {
+                    return horasTotales / grupo.sizeOriginal;
+                } else if (horas.grupoSizeOriginal) {
+                    return horasTotales / horas.grupoSizeOriginal;
+                }
+            }
+            
+            // If not in a group, return the total hours
+            return horasTotales;
+        }
+
+        // ✅ NEW: Calculate cost for a single dress considering group membership
+        function calcularCostoVestido(vestidoId, fechaInicio, fechaFin, precioHoraObjetivo) {
+            const horasIndividuales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
+            return horasIndividuales * precioHoraObjetivo;
+        }
+
+        // ✅ NEW: Validate group data before generating reports
+        function validarDatosGrupos(fechaInicio, fechaFin) {
+            const warnings = [];
+            const grupos = {};
+            
+            // Identify groups with dresses in the date range
+            Object.keys(vestidosGrupos).forEach(grupoId => {
+                const grupo = vestidosGrupos[grupoId];
+                const vestidosEnRango = grupo.vestidosIds.filter(vId => 
+                    calcularHorasPorVestidoEnRango(vId, fechaInicio, fechaFin) > 0
+                );
+                
+                if (vestidosEnRango.length > 0) {
+                    grupos[grupoId] = {
+                        nombre: grupo.nombre,
+                        vestidos: vestidosEnRango.map(vId => vestidos.find(v => v.id === vId)).filter(v => v)
+                    };
+                }
+            });
+            
+            // Validate each group
+            Object.keys(grupos).forEach(grupoId => {
+                const grupo = grupos[grupoId];
+                
+                // Check for dresses without price
+                const vestidosSinPrecio = grupo.vestidos.filter(v => !v.precioBase || v.precioBase <= 0);
+                if (vestidosSinPrecio.length > 0) {
+                    warnings.push({
+                        tipo: 'warning',
+                        mensaje: `El grupo "${grupo.nombre}" tiene ${vestidosSinPrecio.length} vestido(s) sin precio asignado`
+                    });
+                }
+            });
+            
+            return { warnings };
+        }
+
         function exportarReporteHoras(formato) {
             if (formato === 'pdf') {
                 exportarReportePDF();
@@ -10350,10 +10415,13 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
-                if (horasReales === 0) return;
+                
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasIndividuales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
+                if (horasIndividuales === 0) return;
+                
                 const precioVestido = vestido.precioBase || 0;
-                const costeHoras = horasReales * precioHoraObjetivo;
+                const costeHoras = horasIndividuales * precioHoraObjetivo;
                 const beneficio = precioVestido - costeHoras;
 
                 const modeloKey = vestido.nombreModelo;
@@ -10370,7 +10438,7 @@
 
                 modeloStats[modeloKey].cantidad++;
                 modeloStats[modeloKey].horasEstimadas += horasEstimadas;
-                modeloStats[modeloKey].horasReales += horasReales;
+                modeloStats[modeloKey].horasReales += horasIndividuales;  // ✅ Use individual hours
                 modeloStats[modeloKey].precioTotal += precioVestido;
                 modeloStats[modeloKey].costeTotal += costeHoras;
                 modeloStats[modeloKey].beneficioTotal += beneficio;
@@ -10526,6 +10594,111 @@
                 reporteHtml += `<p>No hay grupos de vestidos registrados con horas trabajadas.</p>`;
             }
             
+            // ✅ NEW: Add debug section for verification
+            reporteHtml += `
+                    <div class="page-break"></div>
+                    <h2>5. Detalles Técnicos de Cálculos (Debug)</h2>
+                    <details>
+                        <summary style="cursor: pointer; font-weight: 600; font-size: 1.1em; color: #374151; padding: 10px; background: #f3f4f6; border-radius: 5px; margin-bottom: 10px;">
+                            🔍 Ver detalles técnicos de cálculos (clic para expandir)
+                        </summary>
+                        <div style="margin-top: 20px;">
+            `;
+            
+            Object.keys(modeloStats).sort().forEach(nombreModelo => {
+                const stats = modeloStats[nombreModelo];
+                const vestidosDelModelo = Object.keys(horasConfeccion)
+                    .map(vId => vestidos.find(v => v.id === parseInt(vId)))
+                    .filter(v => v && v.nombreModelo === nombreModelo);
+                
+                const vestidosAgrupados = vestidosDelModelo.filter(v => {
+                    const horas = horasConfeccion[v.id];
+                    return horas && horas.grupoId;
+                });
+                const vestidosIndividuales = vestidosDelModelo.filter(v => {
+                    const horas = horasConfeccion[v.id];
+                    return !horas || !horas.grupoId;
+                });
+                
+                reporteHtml += `
+                    <h4 style="color: #374151; margin-top: 20px;">${nombreModelo}</h4>
+                    <ul style="color: #6B7280;">
+                        <li><strong>Total vestidos:</strong> ${stats.cantidad}</li>
+                        <li><strong>Vestidos en grupos:</strong> ${vestidosAgrupados.length}</li>
+                        <li><strong>Vestidos individuales:</strong> ${vestidosIndividuales.length}</li>
+                        <li><strong>Horas totales del modelo:</strong> ${stats.horasReales.toFixed(2)} h</li>
+                        <li><strong>Beneficio total:</strong> ${stats.beneficioTotal >= 0 ? '+' : ''}${stats.beneficioTotal.toFixed(2)} €</li>
+                    </ul>
+                `;
+                
+                if (vestidosDelModelo.length > 0) {
+                    reporteHtml += `
+                        <table style="font-size: 0.9em; margin-top: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Grupo</th>
+                                    <th>H. Totales</th>
+                                    <th>H. Individuales</th>
+                                    <th>Precio</th>
+                                    <th>Costo</th>
+                                    <th>Beneficio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    vestidosDelModelo.forEach(vestido => {
+                        const horas = horasConfeccion[vestido.id];
+                        if (!horas) return;
+                        
+                        const horasTotales = calcularHorasPorVestidoEnRango(vestido.id, fechaInicio, fechaFin);
+                        const horasIndividuales = calcularHorasIndividualesPorVestido(vestido.id, fechaInicio, fechaFin);
+                        const costo = calcularCostoVestido(vestido.id, fechaInicio, fechaFin, precioHoraObjetivo);
+                        const beneficio = (vestido.precioBase || 0) - costo;
+                        
+                        let grupoInfo = '-';
+                        if (horas.grupoId) {
+                            const grupo = vestidosGrupos[horas.grupoId];
+                            if (grupo) {
+                                grupoInfo = `${grupo.nombre} (${grupo.sizeOriginal} vestidos)`;
+                            }
+                        }
+                        
+                        const destacarHoras = horasTotales !== horasIndividuales ? 'font-weight: bold; color: #3B82F6;' : '';
+                        const claseBeneficio = beneficio >= 0 ? 'color: #10b981;' : 'color: #ef4444;';
+                        
+                        reporteHtml += `
+                            <tr>
+                                <td>${vestido.codigoModelo || 'N/A'}</td>
+                                <td style="font-size: 0.85em;">${grupoInfo}</td>
+                                <td>${horasTotales.toFixed(2)} h</td>
+                                <td style="${destacarHoras}">${horasIndividuales.toFixed(2)} h</td>
+                                <td>${(vestido.precioBase || 0).toFixed(2)} €</td>
+                                <td>${costo.toFixed(2)} €</td>
+                                <td style="${claseBeneficio}"><strong>${beneficio >= 0 ? '+' : ''}${beneficio.toFixed(2)} €</strong></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    reporteHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+            });
+            
+            reporteHtml += `
+                        <div style="margin-top: 30px; padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6;">
+                            <strong>💡 Nota:</strong><br>
+                            - <strong>H. Totales:</strong> Horas trabajadas en el vestido (si está en grupo, son las horas totales del grupo)<br>
+                            - <strong>H. Individuales:</strong> Horas asignadas al vestido específico (si está en grupo, las horas totales ÷ tamaño del grupo)<br>
+                            - Las columnas con texto <span style="color: #3B82F6;">azul</span> indican vestidos en grupos donde las horas se han dividido correctamente
+                        </div>
+                    </div>
+                </details>
+            `;
+            
             reporteHtml += `
                 </body>
                 </html>
@@ -10618,8 +10791,63 @@
 
             csv += `\n\n`;
 
-            // Section 3: Detailed intervals by worker with improved formatting
-            csv += `SECCIÓN 3: DETALLE DE INTERVALOS POR TRABAJADORA\n`;
+            // ✅ NEW Section 3: Summary by Model with correct hours for grouped dresses
+            csv += `SECCIÓN 3: RESUMEN POR MODELO\n`;
+            csv += `Modelo;Cantidad;H. Est. Totales;H. Reales Totales;Variación (h);Precio Total;Coste H. Total;Beneficio/Pérdida;Prom. H. Est.;Prom. H. Reales\n`;
+            
+            const modeloStatsExcel = {};
+            Object.keys(horasConfeccion).forEach(vestidoId => {
+                const vestido = vestidos.find(v => v.id === parseInt(vestidoId));
+                if (!vestido) return;
+
+                const horas = horasConfeccion[vestidoId];
+                const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
+                const horasEstimadas = modelo ? modelo.horas : 0;
+                
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasIndividuales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
+                if (horasIndividuales === 0) return;
+                
+                const precioVestido = vestido.precioBase || 0;
+                const costeHoras = horasIndividuales * precioHoraObjetivo;
+                const beneficio = precioVestido - costeHoras;
+
+                const modeloKey = vestido.nombreModelo;
+                if (!modeloStatsExcel[modeloKey]) {
+                    modeloStatsExcel[modeloKey] = {
+                        cantidad: 0,
+                        horasEstimadas: 0,
+                        horasReales: 0,
+                        precioTotal: 0,
+                        costeTotal: 0,
+                        beneficioTotal: 0
+                    };
+                }
+
+                modeloStatsExcel[modeloKey].cantidad++;
+                modeloStatsExcel[modeloKey].horasEstimadas += horasEstimadas;
+                modeloStatsExcel[modeloKey].horasReales += horasIndividuales;  // ✅ Use individual hours
+                modeloStatsExcel[modeloKey].precioTotal += precioVestido;
+                modeloStatsExcel[modeloKey].costeTotal += costeHoras;
+                modeloStatsExcel[modeloKey].beneficioTotal += beneficio;
+            });
+            
+            // Sort models by name
+            const modelosOrdenadosExcel = Object.keys(modeloStatsExcel).sort();
+            
+            modelosOrdenadosExcel.forEach(nombreModelo => {
+                const stats = modeloStatsExcel[nombreModelo];
+                const variacion = stats.horasReales - stats.horasEstimadas;
+                const promedioEstimadas = stats.cantidad > 0 ? stats.horasEstimadas / stats.cantidad : 0;
+                const promedioReales = stats.cantidad > 0 ? stats.horasReales / stats.cantidad : 0;
+
+                csv += `"${nombreModelo}";${stats.cantidad};${stats.horasEstimadas.toFixed(2)};${stats.horasReales.toFixed(2)};${variacion.toFixed(2)};${stats.precioTotal.toFixed(2)};${stats.costeTotal.toFixed(2)};${stats.beneficioTotal.toFixed(2)};${promedioEstimadas.toFixed(2)};${promedioReales.toFixed(2)}\n`;
+            });
+
+            csv += `\n\n`;
+
+            // Section 4: Detailed intervals by worker with improved formatting
+            csv += `SECCIÓN 4: DETALLE DE INTERVALOS POR TRABAJADORA\n`;
             csv += `Trabajadora;Vestido (Lote);Modelo;Fecha;Hora Inicio;Hora Fin;Duración (h)\n`;
 
             // Sort intervals by date for better readability
