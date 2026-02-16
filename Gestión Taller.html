@@ -10280,7 +10280,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasReales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
                 if (horasReales === 0) return;
                 const variacion = horasReales - horasEstimadas;
                 const precioVestido = vestido.precioBase || 0;
@@ -10745,7 +10746,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasReales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
                 if (horasReales === 0) return;
                 const variacion = horasReales - horasEstimadas;
                 const precioVestido = vestido.precioBase || 0;
