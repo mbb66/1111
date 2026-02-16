@@ -11128,7 +11128,8 @@
                 const horas = horasConfeccion[vestidoId];
                 const modelo = modelos.find(m => m.codigo === vestido.codigoModelo);
                 const horasEstimadas = modelo ? modelo.horas : 0;
-                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasReales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
                 if (horasReales === 0) return;
                 const diferencia = horasReales - horasEstimadas;
                 const porcentaje = horasEstimadas > 0 ? ((diferencia / horasEstimadas) * 100) : 0;
@@ -11162,7 +11163,8 @@
             const trabajadoraStats = {};
             Object.keys(horasConfeccion).forEach(vestidoId => {
                 const horas = horasConfeccion[vestidoId];
-                const horasReales = calcularHorasPorVestidoEnRango(vestidoId, fechaInicio, fechaFin);
+                // ✅ FIXED: Use individual hours for grouped dresses
+                const horasReales = calcularHorasIndividualesPorVestido(vestidoId, fechaInicio, fechaFin);
                 if (horasReales === 0) return;
                 horas.trabajadoras.forEach(wId => {
                     const worker = workers.find(w => w.id === wId);
