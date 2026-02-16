@@ -575,14 +575,18 @@
         }
 
         .calendario-mensual {
-            display: block;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
             width: 100%;
             max-width: 100%;
+            padding: 4px;
             background: var(--color-borde);
             border: 1px solid var(--color-borde);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: var(--sombra-media);
+            min-height: 600px;
         }
 
         /* Specific fix for Calendario Laboral grid layout */
@@ -613,7 +617,7 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
-            overflow: visible;
+            overflow: hidden;
             border-radius: 6px;
             border: 1px solid var(--color-borde);
         }
@@ -621,7 +625,7 @@
         .dia-calendario:hover {
             background: var(--color-neutro-suave);
             transform: scale(1.01);
-            z-index: 1;
+            z-index: 10;
             box-shadow: var(--sombra-media);
         }
 
@@ -629,16 +633,16 @@
             background: var(--color-info-fondo);
             border: 2px dashed var(--color-info);
             box-shadow: var(--sombra-grande);
+            z-index: 20;
         }
 
         .dia-calendario.fin-semana {
-            background-color: #F9FAFB;
+            background-color: rgba(249, 250, 251, 0.7);
             cursor: default;
-            opacity: 0.7;
         }
 
         .dia-calendario.fin-semana:hover {
-            background-color: #F9FAFB;
+            background-color: rgba(249, 250, 251, 0.85);
             transform: none;
             box-shadow: none;
         }
