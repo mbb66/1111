@@ -4998,36 +4998,23 @@
             // Build header with title (simplified - only albaran number)
             let textoTabular = `Albarán ${numeroAlbaran}\n`;
             
-            // Build data rows with space separation for table-like alignment
-            // First pass: collect all rows to calculate column widths
+            // Build data rows with tab separation for proper alignment in spreadsheets
+            // Only copy: Número albarán (in header), Nombre modelo, Lote, OF (if applicable)
             const rows = vestidosDelAlbaran.map(v => {
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : '';
                 
-                // Format: Modelo Talla Lote Código OF/Serie ID
+                // Format: Nombre modelo, Lote, OF (only these fields)
                 return [
                     v.nombreModelo,
-                    v.talla || '',
                     v.lote || '',
-                    v.codigoModelo,
-                    ofSerie,
-                    v.id.toString()
+                    ofSerie
                 ];
             });
             
-            // Calculate maximum width for each column
-            const columnWidths = [];
-            for (let colIndex = 0; colIndex < 6; colIndex++) {
-                columnWidths[colIndex] = Math.max(...rows.map(row => row[colIndex].length));
-            }
-            
-            // Second pass: format rows with proper padding
+            // Format rows with tab separation for proper alignment
             rows.forEach(row => {
-                const paddedRow = row.map((cell, index) => {
-                    // Pad each cell to match the column width
-                    return cell.padEnd(columnWidths[index], ' ');
-                });
-                textoTabular += paddedRow.join('    ') + '\n';
+                textoTabular += row.join('\t') + '\n';
             });
 
             navigator.clipboard.writeText(textoTabular).then(() => {
