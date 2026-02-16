@@ -10594,6 +10594,111 @@
                 reporteHtml += `<p>No hay grupos de vestidos registrados con horas trabajadas.</p>`;
             }
             
+            // ✅ NEW: Add debug section for verification
+            reporteHtml += `
+                    <div class="page-break"></div>
+                    <h2>5. Detalles Técnicos de Cálculos (Debug)</h2>
+                    <details>
+                        <summary style="cursor: pointer; font-weight: 600; font-size: 1.1em; color: #374151; padding: 10px; background: #f3f4f6; border-radius: 5px; margin-bottom: 10px;">
+                            🔍 Ver detalles técnicos de cálculos (clic para expandir)
+                        </summary>
+                        <div style="margin-top: 20px;">
+            `;
+            
+            Object.keys(modeloStats).sort().forEach(nombreModelo => {
+                const stats = modeloStats[nombreModelo];
+                const vestidosDelModelo = Object.keys(horasConfeccion)
+                    .map(vId => vestidos.find(v => v.id === parseInt(vId)))
+                    .filter(v => v && v.nombreModelo === nombreModelo);
+                
+                const vestidosAgrupados = vestidosDelModelo.filter(v => {
+                    const horas = horasConfeccion[v.id];
+                    return horas && horas.grupoId;
+                });
+                const vestidosIndividuales = vestidosDelModelo.filter(v => {
+                    const horas = horasConfeccion[v.id];
+                    return !horas || !horas.grupoId;
+                });
+                
+                reporteHtml += `
+                    <h4 style="color: #374151; margin-top: 20px;">${nombreModelo}</h4>
+                    <ul style="color: #6B7280;">
+                        <li><strong>Total vestidos:</strong> ${stats.cantidad}</li>
+                        <li><strong>Vestidos en grupos:</strong> ${vestidosAgrupados.length}</li>
+                        <li><strong>Vestidos individuales:</strong> ${vestidosIndividuales.length}</li>
+                        <li><strong>Horas totales del modelo:</strong> ${stats.horasReales.toFixed(2)} h</li>
+                        <li><strong>Beneficio total:</strong> ${stats.beneficioTotal >= 0 ? '+' : ''}${stats.beneficioTotal.toFixed(2)} €</li>
+                    </ul>
+                `;
+                
+                if (vestidosDelModelo.length > 0) {
+                    reporteHtml += `
+                        <table style="font-size: 0.9em; margin-top: 10px;">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Grupo</th>
+                                    <th>H. Totales</th>
+                                    <th>H. Individuales</th>
+                                    <th>Precio</th>
+                                    <th>Costo</th>
+                                    <th>Beneficio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    vestidosDelModelo.forEach(vestido => {
+                        const horas = horasConfeccion[vestido.id];
+                        if (!horas) return;
+                        
+                        const horasTotales = calcularHorasPorVestidoEnRango(vestido.id, fechaInicio, fechaFin);
+                        const horasIndividuales = calcularHorasIndividualesPorVestido(vestido.id, fechaInicio, fechaFin);
+                        const costo = calcularCostoVestido(vestido.id, fechaInicio, fechaFin, precioHoraObjetivo);
+                        const beneficio = (vestido.precioBase || 0) - costo;
+                        
+                        let grupoInfo = '-';
+                        if (horas.grupoId) {
+                            const grupo = vestidosGrupos[horas.grupoId];
+                            if (grupo) {
+                                grupoInfo = `${grupo.nombre} (${grupo.sizeOriginal} vestidos)`;
+                            }
+                        }
+                        
+                        const destacarHoras = horasTotales !== horasIndividuales ? 'font-weight: bold; color: #3B82F6;' : '';
+                        const claseBeneficio = beneficio >= 0 ? 'color: #10b981;' : 'color: #ef4444;';
+                        
+                        reporteHtml += `
+                            <tr>
+                                <td>${vestido.codigoModelo || 'N/A'}</td>
+                                <td style="font-size: 0.85em;">${grupoInfo}</td>
+                                <td>${horasTotales.toFixed(2)} h</td>
+                                <td style="${destacarHoras}">${horasIndividuales.toFixed(2)} h</td>
+                                <td>${(vestido.precioBase || 0).toFixed(2)} €</td>
+                                <td>${costo.toFixed(2)} €</td>
+                                <td style="${claseBeneficio}"><strong>${beneficio >= 0 ? '+' : ''}${beneficio.toFixed(2)} €</strong></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    reporteHtml += `
+                            </tbody>
+                        </table>
+                    `;
+                }
+            });
+            
+            reporteHtml += `
+                        <div style="margin-top: 30px; padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6;">
+                            <strong>💡 Nota:</strong><br>
+                            - <strong>H. Totales:</strong> Horas trabajadas en el vestido (si está en grupo, son las horas totales del grupo)<br>
+                            - <strong>H. Individuales:</strong> Horas asignadas al vestido específico (si está en grupo, las horas totales ÷ tamaño del grupo)<br>
+                            - Las columnas con texto <span style="color: #3B82F6;">azul</span> indican vestidos en grupos donde las horas se han dividido correctamente
+                        </div>
+                    </div>
+                </details>
+            `;
+            
             reporteHtml += `
                 </body>
                 </html>
