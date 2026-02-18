@@ -4976,30 +4976,28 @@
                 return;
             };
 
-            // Build header with title (simplified - only albaran number)
-            let textoTabular = `Albarán ${numeroAlbaran}\n`;
+            // Build header with title and column headers in table format
+            // Only copy: Número albarán (in header), Nombre modelo, Lote, OF
+            const headers = ['Modelo', 'Lote', 'OF'];
+            
+            let textoTabular = `ALBARÁN ${numeroAlbaran}\n\n`;
+            textoTabular += headers.join('\t') + '\n';
             
             // Build data rows with tab separation for proper alignment in spreadsheets
-            // Only copy: Número albarán (in header), Nombre modelo, Lote, OF (if applicable)
-            const rows = vestidosDelAlbaran.map(v => {
+            vestidosDelAlbaran.forEach(v => {
                 const ofSerie = v.proveedor === 'pronovias' && v.numeroOF ? v.numeroOF : 
                                v.proveedor === 'rosa_clara' && v.numeroSerie ? v.numeroSerie : '';
                 
-                // Format: Nombre modelo, Lote, OF (only these fields)
-                return [
+                const row = [
                     v.nombreModelo,
                     v.lote || '',
                     ofSerie
                 ];
-            });
-            
-            // Format rows with tab separation for proper alignment
-            rows.forEach(row => {
                 textoTabular += row.join('\t') + '\n';
             });
 
             navigator.clipboard.writeText(textoTabular).then(() => {
-                alert(`✅ Detalles del albarán ${numeroAlbaran} copiados al portapapeles.`);
+                alert(`✅ Detalles del albarán ${numeroAlbaran} copiados al portapapeles en formato tabla.\n\nPega en Excel u otra hoja de cálculo para ver el formato correcto.`);
             }, (err) => {
                 alert('❌ Error al copiar los detalles.');
                 console.error('Error al copiar: ', err);
