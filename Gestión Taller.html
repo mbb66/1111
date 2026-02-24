@@ -5537,16 +5537,20 @@
             ` : '';
         }
 
-        function filtrarModelos() {
+        function obtenerModelosFiltrados() {
             const texto = document.getElementById('buscadorModelos').value.toLowerCase();
-            const modelosFiltrados = texto ? modelos.filter(m => m.nombre.toLowerCase().includes(texto) || m.codigo.toLowerCase().includes(texto)) : modelos;
+            return texto ? modelos.filter(m => m.nombre.toLowerCase().includes(texto) || m.codigo.toLowerCase().includes(texto)) : modelos;
+        }
+
+        function filtrarModelos() {
+            const modelosFiltrados = obtenerModelosFiltrados();
             paginaActualModelos = 1;
             cargarModelos(modelosFiltrados);
         }
 
         function cambiarPaginaModelos(num) {
             paginaActualModelos = num;
-            filtrarModelos();
+            cargarModelos(obtenerModelosFiltrados());
         }
 
         function editarModelo(id) {
